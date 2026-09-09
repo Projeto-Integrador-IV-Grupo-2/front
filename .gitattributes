@@ -1,0 +1,28 @@
+# Normaliza fim de linha: LF no repositório para todo texto.
+* text=auto eol=lf
+
+# Scripts específicos de plataforma
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Tipos de texto do projeto
+*.ts   text eol=lf
+*.tsx  text eol=lf
+*.js   text eol=lf
+*.jsx  text eol=lf
+*.json text eol=lf
+*.css  text eol=lf
+*.html text eol=lf
+*.md   text eol=lf
+*.svg  text eol=lf
+
+# Binários
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.woff binary
+*.woff2 binary
+*.ttf  binary
+*.eot  binary
