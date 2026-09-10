@@ -2,10 +2,15 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { routes } from './router.tsx'
+import { AuthProvider } from '../contexts/AuthContext.tsx'
 
 function renderAt(path: string) {
   const memoryRouter = createMemoryRouter(routes, { initialEntries: [path] })
-  return render(<RouterProvider router={memoryRouter} />)
+  return render(
+    <AuthProvider>
+      <RouterProvider router={memoryRouter} />
+    </AuthProvider>,
+  )
 }
 
 describe('router', () => {
