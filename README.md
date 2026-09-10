@@ -65,8 +65,28 @@ integrante mantém o seu, a partir do `.env.example`.
 | -------------- | ----------- | ------------------------------------ |
 | `VITE_API_URL` | Sim         | URL base da API (sem barra no final) |
 
-A URL nunca fica fixa no código: o cliente Axios (`src/services/api.ts`, a
-partir do Card 11) sempre lê `import.meta.env.VITE_API_URL`.
+A URL nunca fica fixa no código: o cliente Axios (`src/services/api.ts`)
+sempre lê `import.meta.env.VITE_API_URL`.
+
+---
+
+## Autenticação
+
+- `src/services/api.ts` — instância única do Axios. Anexa
+  `Authorization: Bearer <token>` em toda requisição (quando há sessão) e,
+  ao receber `401`, limpa a sessão e dispara o evento `nexo:unauthorized`.
+- `src/services/authService.ts` — chamadas `POST /api/auth/login` e
+  `GET /api/auth/me`; erros da API viram um `AuthError` tipado (`message` +
+  `status`), sem expor detalhes do Axios para a UI.
+- `src/contexts/AuthContext.tsx` + `src/hooks/useAuth.ts` — estado global de
+  autenticação (`user`, `isAuthenticated`, `isLoading`, `login`, `logout`).
+  Ao carregar a aplicação, se houver um token salvo, a sessão é restaurada
+  chamando `/api/auth/me` (por isso recarregar a página mantém o login).
+- A sessão é guardada no `localStorage` (`nexo:token`) — apenas o token;
+  o usuário é sempre revalidado contra a API.
+
+Páginas nunca chamam o Axios diretamente nem reimplementam essa lógica —
+sempre via `useAuth()`.
 
 ---
 

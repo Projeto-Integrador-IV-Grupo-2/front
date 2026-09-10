@@ -22,7 +22,13 @@ export default tseslint.config(
       ...reactHooks.configs['recommended-latest'].rules,
       'react-refresh/only-export-components': [
         'warn',
-        { allowConstantExport: true },
+        {
+          allowConstantExport: true,
+          // Contexts exportam o objeto Context junto do Provider por design
+          // (o consumo é sempre via hook próprio, ex.: useAuth) — ver
+          // src/contexts/AuthContext.tsx.
+          allowExportNames: ['AuthContext'],
+        },
       ],
       '@typescript-eslint/no-unused-vars': [
         'warn',
