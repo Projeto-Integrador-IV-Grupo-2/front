@@ -1,4 +1,4 @@
-import type { User, UserRole } from '../types/user.ts'
+import type { User } from '../types/user.ts'
 
 const TENANT_PADRAO = '11111111-1111-1111-1111-111111111111'
 
@@ -12,8 +12,4 @@ export function criarUsuario(overrides: Partial<User> = {}): User {
     papel: 'COLABORADOR',
     ...overrides,
   }
-}
-
-export function criarUsuarioComPapel(papel: UserRole): User {
-  return criarUsuario({ papel })
 }

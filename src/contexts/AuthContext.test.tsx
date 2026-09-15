@@ -54,7 +54,6 @@ function renderWithProvider() {
 
 afterEach(() => {
   vi.restoreAllMocks()
-  localStorage.clear()
 })
 
 describe('AuthProvider', () => {
@@ -125,6 +124,39 @@ describe('AuthProvider', () => {
 
     expect(screen.getByTestId('authenticated')).toHaveTextContent('false')
     expect(getStoredToken()).toBeNull()
+  })
+
+  it('não deixa a restauração antiga derrubar um login feito no meio dela', async () => {
+    const user = userEvent.setup()
+    setStoredToken('token-antigo')
+
+    // A validação da sessão antiga fica em voo e só falha depois do login.
+    let falharRestauracao!: (erro: unknown) => void
+    const restauracaoPendente = new Promise<User>((_resolve, reject) => {
+      falharRestauracao = reject
+    })
+    vi.spyOn(authService, 'fetchCurrentUser').mockReturnValueOnce(
+      restauracaoPendente,
+    )
+    vi.spyOn(authService, 'login').mockResolvedValueOnce(respostaDeLogin())
+
+    renderWithProvider()
+    expect(screen.getByTestId('loading')).toHaveTextContent('true')
+
+    await user.click(screen.getByRole('button', { name: 'login' }))
+
+    await waitFor(() =>
+      expect(screen.getByTestId('authenticated')).toHaveTextContent('true'),
+    )
+    // A tela não pode ficar presa no carregando por causa da sessão anterior.
+    expect(screen.getByTestId('loading')).toHaveTextContent('false')
+
+    falharRestauracao(new authService.AuthError('Sessão expirada', 401))
+    await Promise.resolve()
+
+    // O token do login novo sobrevive à falha da restauração antiga.
+    await waitFor(() => expect(getStoredToken()).toBe('abc123'))
+    expect(screen.getByTestId('authenticated')).toHaveTextContent('true')
   })
 
   it('encerra a sessão ao receber o evento de 401 (ex.: disparado pelo Axios)', async () => {

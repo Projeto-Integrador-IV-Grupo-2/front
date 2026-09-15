@@ -1,24 +1,23 @@
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { LoginForm } from '../components/LoginForm.tsx'
-import type { User } from '../types/user.ts'
+import { ROTAS } from '../routes/paths.ts'
 import styles from './LoginPage.module.css'
 
-function getRedirectPath(user: User): string {
-  switch (user.papel) {
-    case 'ADMIN':
-    case 'GESTOR':
-    case 'COLABORADOR':
-      // Todos os perfis caem no dashboard por enquanto — áreas específicas
-      // por perfil entram junto das rotas protegidas (próximos cards).
-      return '/dashboard'
-  }
+interface EstadoDeOrigem {
+  from?: { pathname?: string }
 }
 
 export function LoginPage() {
   const navigate = useNavigate()
+  const location = useLocation()
 
-  function handleSuccess(user: User) {
-    navigate(getRedirectPath(user), { replace: true })
+  // O ProtectedRoute guarda em `state.from` a página que o usuário tentou
+  // abrir; depois do login ele volta para lá em vez de cair sempre no
+  // dashboard. Link direto para /usuarios sobrevive ao desvio pelo login.
+  const origem = (location.state as EstadoDeOrigem | null)?.from?.pathname
+
+  function handleSuccess() {
+    navigate(origem ?? ROTAS.dashboard, { replace: true })
   }
 
   return (

@@ -75,8 +75,8 @@ sempre lê `import.meta.env.VITE_API_URL`.
 - `src/services/api.ts` — instância única do Axios. Anexa
   `Authorization: Bearer <token>` em toda requisição (quando há sessão) e,
   ao receber `401`, limpa a sessão e dispara o evento `nexo:unauthorized`.
-  Em `403` dispara `nexo:forbidden` e **mantém** a sessão: falta de permissão
-  não é sessão inválida.
+  Em `403` **mantém** a sessão e deixa o erro subir: falta de permissão não é
+  sessão inválida, e quem fez a chamada mostra a mensagem na tela.
 - `src/services/authService.ts` — chamadas `POST /api/auth/login` e
   `GET /api/auth/me`; erros da API viram um `AuthError` tipado (`message` +
   `status`), sem expor detalhes do Axios para a UI.
@@ -87,7 +87,8 @@ sempre lê `import.meta.env.VITE_API_URL`.
 - A sessão é guardada no `localStorage` (`nexo:token`, mais a validade em
   `nexo:token-expira-em`) — apenas o token; o usuário é sempre revalidado
   contra a API. Passada a validade, o token é descartado já na leitura, sem
-  esperar o primeiro `401`.
+  esperar o primeiro `401`. `expiraEm` precisa vir com fuso (o `Instant` da API
+  sai em UTC): valor sem fuso ou ilegível conta como vencido.
 
 ### Contrato com a API
 
@@ -105,12 +106,13 @@ tradução intermediária:
 
 ## Rotas e permissões
 
-| Rota             | Quem acessa                  |
-| ---------------- | ---------------------------- |
-| `/login`         | qualquer visitante           |
-| `/dashboard`     | qualquer usuário autenticado |
-| `/usuarios`      | apenas `ADMIN`               |
-| `/acesso-negado` | qualquer usuário autenticado |
+| Rota         | Quem acessa                  |
+| ------------ | ---------------------------- |
+| `/login`     | qualquer visitante           |
+| `/dashboard` | qualquer usuário autenticado |
+| `/usuarios`  | apenas `ADMIN`               |
+
+`/` leva ao dashboard, que por sua vez exige sessão.
 
 - `src/routes/paths.ts` — os caminhos ficam aqui, não espalhados em strings.
 - `src/routes/permissions.ts` — **a regra de permissão do frontend mora só
@@ -118,8 +120,9 @@ tradução intermediária:
   navegação nunca oferece algo que a rota vá recusar.
 - `src/components/auth/ProtectedRoute.tsx` — rota de layout que protege tudo
   abaixo dela. Enquanto a sessão salva é validada mostra um indicador; sem
-  sessão redireciona ao login; com sessão mas sem o perfil exigido, renderiza a
-  tela de acesso negado mantendo a URL e o histórico.
+  sessão redireciona ao login guardando o destino em `state.from` (depois de
+  entrar, o usuário volta para onde tentou ir); com sessão mas sem o perfil
+  exigido, renderiza a tela de acesso negado mantendo a URL e o histórico.
 
 Nada disso é segurança: **a autoridade final é o backend**. O frontend só
 orienta a navegação e evita telas que o usuário não poderia usar.

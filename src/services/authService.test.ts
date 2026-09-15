@@ -105,8 +105,21 @@ describe('fetchCurrentUser', () => {
 
     const result = await fetchCurrentUser()
 
-    expect(getSpy).toHaveBeenCalledWith('/api/auth/me')
+    expect(getSpy).toHaveBeenCalledWith('/api/auth/me', undefined)
     expect(result).toEqual(mockUser)
+  })
+
+  it('repassa o AbortSignal, para a restauração poder ser cancelada', async () => {
+    const getSpy = vi
+      .spyOn(api, 'get')
+      .mockResolvedValueOnce(createAxiosResponse(mockUser))
+    const controller = new AbortController()
+
+    await fetchCurrentUser({ signal: controller.signal })
+
+    expect(getSpy).toHaveBeenCalledWith('/api/auth/me', {
+      signal: controller.signal,
+    })
   })
 
   it('lança AuthError quando a sessão não é mais válida', async () => {

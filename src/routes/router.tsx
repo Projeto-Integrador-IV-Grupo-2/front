@@ -6,7 +6,6 @@ import {
 import { ProtectedRoute } from '../components/auth/ProtectedRoute.tsx'
 import { AppLayout } from '../components/layout/AppLayout.tsx'
 import { DashboardPage } from '../pages/DashboardPage.tsx'
-import { ForbiddenPage } from '../pages/ForbiddenPage.tsx'
 import { LoginPage } from '../pages/LoginPage.tsx'
 import { NotFoundPage } from '../pages/NotFoundPage.tsx'
 import { UsuariosPage } from '../pages/UsuariosPage.tsx'
@@ -24,7 +23,6 @@ export const routes: RouteObject[] = [
         element: <AppLayout />,
         children: [
           { path: ROTAS.dashboard, element: <DashboardPage /> },
-          { path: ROTAS.acessoNegado, element: <ForbiddenPage /> },
           {
             // Área administrativa: o perfil exigido fica na rota, não na página.
             element: <ProtectedRoute perfis={['ADMIN']} />,

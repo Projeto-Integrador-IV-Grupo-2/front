@@ -1,4 +1,5 @@
 import { screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, it } from 'vitest'
 import { getStoredToken, setStoredToken } from '../services/api.ts'
@@ -33,13 +34,22 @@ describe('router', () => {
   })
 
   it('restaura a sessão salva ao recarregar a página', async () => {
-    // Sem passar `usuario`: o token já está salvo e o handler padrão de
-    // /api/auth/me responde — é exatamente o cenário de um F5.
+    // Token salvo e nenhuma sessão em memória: é o cenário de um F5.
     setStoredToken('token-de-teste')
-    renderizarComProvedores({ rota: '/dashboard' })
+    server.use(
+      http.get('*/api/auth/me', () =>
+        HttpResponse.json(
+          criarUsuario({ nomeCompleto: 'Bruno Lima', papel: 'ADMIN' }),
+        ),
+      ),
+    )
 
+    renderizarComProvedores({ rota: '/usuarios' })
+
+    // Chegar à área de ADMIN prova que o usuário restaurado é o do /me, não
+    // um autenticado genérico.
     expect(
-      await screen.findByRole('heading', { name: 'Dashboard' }),
+      await screen.findByRole('heading', { name: 'Usuários' }),
     ).toBeInTheDocument()
   })
 
@@ -68,7 +78,37 @@ describe('router', () => {
     expect(
       await screen.findByRole('heading', { name: 'Acesso negado' }),
     ).toBeInTheDocument()
+    // Continua logado e navegando: o layout e o menu seguem no lugar.
     expect(getStoredToken()).not.toBeNull()
+    expect(screen.getByRole('button', { name: 'Sair' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Dashboard' })).toBeInTheDocument()
+  })
+
+  it('leva o usuário ao destino que ele tentou abrir antes do login', async () => {
+    const user = userEvent.setup()
+    server.use(
+      http.post('*/api/auth/login', () =>
+        HttpResponse.json({
+          token: 'token-de-teste',
+          tipo: 'Bearer',
+          expiraEm: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+          usuario: criarUsuario({ papel: 'ADMIN' }),
+        }),
+      ),
+      http.get('*/api/auth/me', () =>
+        HttpResponse.json(criarUsuario({ papel: 'ADMIN' })),
+      ),
+    )
+
+    renderizarComProvedores({ rota: '/usuarios' })
+
+    await user.type(await screen.findByLabelText('E-mail'), 'admin@nexo.com')
+    await user.type(screen.getByLabelText('Senha'), 'admin123')
+    await user.click(screen.getByRole('button', { name: 'Entrar' }))
+
+    expect(
+      await screen.findByRole('heading', { name: 'Usuários' }),
+    ).toBeInTheDocument()
   })
 
   it('libera a área administrativa para o administrador', async () => {

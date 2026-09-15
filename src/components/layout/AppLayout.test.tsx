@@ -120,13 +120,47 @@ describe('AppLayout', () => {
     expect(alternar).toHaveAttribute('aria-expanded', 'false')
   })
 
-  it('oferece o atalho para pular direto ao conteúdo', async () => {
+  it('oferece um atalho para o conteúdo que o teclado consegue receber', async () => {
     renderizarComProvedores({ rota: '/dashboard', usuario: criarUsuario() })
 
     const atalho = await screen.findByRole('link', {
       name: 'Pular para o conteúdo',
     })
     expect(atalho).toHaveAttribute('href', '#conteudo-principal')
-    expect(document.getElementById('conteudo-principal')).toBeInTheDocument()
+
+    // O jsdom não executa o salto por fragmento; o que importa verificar é que
+    // o destino aceita foco — sem tabIndex o pulo move só a barra de rolagem.
+    const conteudo = document.getElementById('conteudo-principal')
+    expect(conteudo).toHaveAttribute('tabindex', '-1')
+    conteudo?.focus()
+    expect(conteudo).toHaveFocus()
+  })
+
+  it('devolve o foco ao botão do menu depois de navegar em tela estreita', async () => {
+    simularTelaEstreita()
+    const user = userEvent.setup()
+    renderizarComProvedores({
+      rota: '/dashboard',
+      usuario: criarUsuario({ papel: 'ADMIN' }),
+    })
+
+    const alternar = await encontrarBotaoDoMenu()
+    await user.click(alternar)
+    await user.click(screen.getByRole('link', { name: 'Usuários' }))
+
+    // Com o menu recolhido, o link clicado some: o foco não pode cair no body.
+    await waitFor(() => expect(alternar).toHaveFocus())
+  })
+
+  it('troca o rótulo do botão conforme o menu abre e fecha', async () => {
+    simularTelaEstreita()
+    const user = userEvent.setup()
+    renderizarComProvedores({ rota: '/dashboard', usuario: criarUsuario() })
+
+    const alternar = await encontrarBotaoDoMenu()
+    expect(alternar).toHaveTextContent('Abrir menu')
+
+    await user.click(alternar)
+    expect(alternar).toHaveTextContent('Fechar menu')
   })
 })

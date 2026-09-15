@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth.ts'
 import { useMediaQuery } from '../../hooks/useMediaQuery.ts'
@@ -19,15 +19,33 @@ export function AppLayout() {
   const navigate = useNavigate()
   const isMobile = useMediaQuery(MOBILE_QUERY)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [eraMobile, setEraMobile] = useState(isMobile)
+  const alternarRef = useRef<HTMLButtonElement>(null)
+
+  // Ajuste de estado durante o render (padrão recomendado pelo React, no lugar
+  // de um efeito): ao sair da largura mobile o menu é esquecido, senão ele
+  // reapareceria sozinho ao estreitar a janela de novo.
+  if (eraMobile !== isMobile) {
+    setEraMobile(isMobile)
+    setIsMenuOpen(false)
+  }
 
   // Deriva a visibilidade real do menu do breakpoint atual, em vez de
-  // sincronizar estado por efeito — em desktop o menu nunca aparece,
-  // mesmo que isMenuOpen tenha ficado true de uma visita mobile anterior.
+  // sincronizar estado por efeito — em desktop o menu nunca aparece.
   const showMobileMenu = isMobile && isMenuOpen
 
   // O menu vem da mesma regra que protege as rotas: nada aparece aqui que
   // o ProtectedRoute vá recusar depois.
   const itens = itensMenuPara(user?.papel)
+
+  function fecharMenu() {
+    if (!isMenuOpen) {
+      return
+    }
+    setIsMenuOpen(false)
+    // O menu recolhido esconde o link clicado e o foco cairia no <body>.
+    alternarRef.current?.focus()
+  }
 
   function handleLogout() {
     logout()
@@ -47,13 +65,16 @@ export function AppLayout() {
           <span className={styles.brand}>Nexo</span>
 
           <button
+            ref={alternarRef}
             type="button"
             className={styles.menuToggle}
             aria-expanded={showMobileMenu}
             aria-controls="primary-navigation"
             onClick={() => setIsMenuOpen((open) => !open)}
           >
-            <span className="visually-hidden">Abrir menu</span>
+            <span className="visually-hidden">
+              {showMobileMenu ? 'Fechar menu' : 'Abrir menu'}
+            </span>
             <span aria-hidden="true">☰</span>
           </button>
 
@@ -66,7 +87,7 @@ export function AppLayout() {
                 key={item.to}
                 to={item.to}
                 className={navLinkClassName}
-                onClick={() => setIsMenuOpen(false)}
+                onClick={fecharMenu}
               >
                 {item.rotulo}
               </NavLink>
@@ -83,7 +104,9 @@ export function AppLayout() {
         </div>
       </header>
 
-      <main id={CONTEUDO_ID} className={styles.content}>
+      {/* tabIndex -1: sem isso o atalho acima move o indicador do navegador,
+          mas não o foco do teclado. */}
+      <main id={CONTEUDO_ID} tabIndex={-1} className={styles.content}>
         <Outlet />
       </main>
     </div>
