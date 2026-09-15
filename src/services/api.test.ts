@@ -9,6 +9,7 @@ import {
   api,
   attachAuthHeader,
   clearStoredToken,
+  FORBIDDEN_EVENT,
   getStoredToken,
   handleResponseError,
   setStoredToken,
@@ -51,6 +52,18 @@ describe('armazenamento do token', () => {
     clearStoredToken()
     expect(getStoredToken()).toBeNull()
   })
+
+  it('descarta o token quando a validade informada no login já passou', () => {
+    setStoredToken('abc123', new Date(Date.now() - 1000).toISOString())
+
+    expect(getStoredToken()).toBeNull()
+  })
+
+  it('mantém o token enquanto a validade não chega', () => {
+    setStoredToken('abc123', new Date(Date.now() + 60_000).toISOString())
+
+    expect(getStoredToken()).toBe('abc123')
+  })
 })
 
 describe('attachAuthHeader', () => {
@@ -83,6 +96,26 @@ describe('handleResponseError', () => {
     expect(listener).toHaveBeenCalledTimes(1)
 
     window.removeEventListener(UNAUTHORIZED_EVENT, listener)
+  })
+
+  it('mantém a sessão em um 403 e avisa que faltou permissão', async () => {
+    setStoredToken('abc123')
+    const semSessao = vi.fn()
+    const semPermissao = vi.fn()
+    window.addEventListener(UNAUTHORIZED_EVENT, semSessao)
+    window.addEventListener(FORBIDDEN_EVENT, semPermissao)
+
+    await expect(
+      handleResponseError(createAxiosError(403, 'Acesso negado')),
+    ).rejects.toBeInstanceOf(AxiosError)
+
+    // 403 é falta de permissão, não sessão inválida: quem está logado continua logado.
+    expect(getStoredToken()).toBe('abc123')
+    expect(semSessao).not.toHaveBeenCalled()
+    expect(semPermissao).toHaveBeenCalledTimes(1)
+
+    window.removeEventListener(UNAUTHORIZED_EVENT, semSessao)
+    window.removeEventListener(FORBIDDEN_EVENT, semPermissao)
   })
 
   it('mantém a sessão para erros que não são 401', async () => {

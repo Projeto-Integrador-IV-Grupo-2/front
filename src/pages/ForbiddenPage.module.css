@@ -1,0 +1,41 @@
+.page {
+  min-height: 60vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-5);
+}
+
+.card {
+  width: 100%;
+  max-width: 420px;
+  text-align: center;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-8) var(--space-6);
+}
+
+.code {
+  margin: 0;
+  font-size: 3rem;
+  font-weight: 700;
+  color: var(--color-danger);
+}
+
+.title {
+  margin-top: var(--space-2);
+  font-size: 1.25rem;
+}
+
+.hint {
+  margin-top: var(--space-2);
+  color: var(--color-text-muted);
+}
+
+.link {
+  display: inline-block;
+  margin-top: var(--space-5);
+  font-weight: 600;
+}

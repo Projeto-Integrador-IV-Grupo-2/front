@@ -10,12 +10,18 @@ import {
 import * as authService from '../services/authService.ts'
 import { useAuth } from '../hooks/useAuth.ts'
 import type { User } from '../types/user.ts'
+import type { LoginResponse } from '../types/auth.ts'
+import { criarUsuario } from '../test/factories.ts'
 
-const mockUser: User = {
-  id: '1',
-  name: 'Ana Souza',
-  email: 'ana@nexo.com',
-  role: 'COLABORADOR',
+const mockUser: User = criarUsuario()
+
+function respostaDeLogin(usuario: User = mockUser): LoginResponse {
+  return {
+    token: 'abc123',
+    tipo: 'Bearer',
+    expiraEm: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+    usuario,
+  }
 }
 
 function AuthConsumer() {
@@ -25,10 +31,10 @@ function AuthConsumer() {
     <div>
       <span data-testid="loading">{String(isLoading)}</span>
       <span data-testid="authenticated">{String(isAuthenticated)}</span>
-      <span data-testid="user-name">{user?.name ?? ''}</span>
+      <span data-testid="user-name">{user?.nomeCompleto ?? ''}</span>
       <button
         onClick={() => {
-          login({ email: mockUser.email, password: '123456' }).catch(() => {})
+          login({ email: mockUser.email, senha: '123456' }).catch(() => {})
         }}
       >
         login
@@ -93,10 +99,7 @@ describe('AuthProvider', () => {
 
   it('login chama o serviço, guarda o token e autentica o usuário', async () => {
     const user = userEvent.setup()
-    vi.spyOn(authService, 'login').mockResolvedValueOnce({
-      token: 'abc123',
-      user: mockUser,
-    })
+    vi.spyOn(authService, 'login').mockResolvedValueOnce(respostaDeLogin())
 
     renderWithProvider()
     await user.click(screen.getByRole('button', { name: 'login' }))
@@ -110,10 +113,7 @@ describe('AuthProvider', () => {
 
   it('logout limpa o usuário e o token salvo', async () => {
     const user = userEvent.setup()
-    vi.spyOn(authService, 'login').mockResolvedValueOnce({
-      token: 'abc123',
-      user: mockUser,
-    })
+    vi.spyOn(authService, 'login').mockResolvedValueOnce(respostaDeLogin())
 
     renderWithProvider()
     await user.click(screen.getByRole('button', { name: 'login' }))
@@ -129,10 +129,7 @@ describe('AuthProvider', () => {
 
   it('encerra a sessão ao receber o evento de 401 (ex.: disparado pelo Axios)', async () => {
     const user = userEvent.setup()
-    vi.spyOn(authService, 'login').mockResolvedValueOnce({
-      token: 'abc123',
-      user: mockUser,
-    })
+    vi.spyOn(authService, 'login').mockResolvedValueOnce(respostaDeLogin())
 
     renderWithProvider()
     await user.click(screen.getByRole('button', { name: 'login' }))

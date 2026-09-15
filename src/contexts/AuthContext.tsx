@@ -82,10 +82,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [])
 
   const login = useCallback(async (credentials: LoginRequest) => {
-    const { token, user: loggedInUser } = await requestLogin(credentials)
-    setStoredToken(token)
-    setUser(loggedInUser)
-    return loggedInUser
+    const { token, expiraEm, usuario } = await requestLogin(credentials)
+    setStoredToken(token, expiraEm)
+    setUser(usuario)
+    return usuario
   }, [])
 
   const logout = useCallback(() => {

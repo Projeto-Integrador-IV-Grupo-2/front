@@ -75,6 +75,8 @@ sempre lê `import.meta.env.VITE_API_URL`.
 - `src/services/api.ts` — instância única do Axios. Anexa
   `Authorization: Bearer <token>` em toda requisição (quando há sessão) e,
   ao receber `401`, limpa a sessão e dispara o evento `nexo:unauthorized`.
+  Em `403` dispara `nexo:forbidden` e **mantém** a sessão: falta de permissão
+  não é sessão inválida.
 - `src/services/authService.ts` — chamadas `POST /api/auth/login` e
   `GET /api/auth/me`; erros da API viram um `AuthError` tipado (`message` +
   `status`), sem expor detalhes do Axios para a UI.
@@ -82,8 +84,45 @@ sempre lê `import.meta.env.VITE_API_URL`.
   autenticação (`user`, `isAuthenticated`, `isLoading`, `login`, `logout`).
   Ao carregar a aplicação, se houver um token salvo, a sessão é restaurada
   chamando `/api/auth/me` (por isso recarregar a página mantém o login).
-- A sessão é guardada no `localStorage` (`nexo:token`) — apenas o token;
-  o usuário é sempre revalidado contra a API.
+- A sessão é guardada no `localStorage` (`nexo:token`, mais a validade em
+  `nexo:token-expira-em`) — apenas o token; o usuário é sempre revalidado
+  contra a API. Passada a validade, o token é descartado já na leitura, sem
+  esperar o primeiro `401`.
+
+### Contrato com a API
+
+O backend expõe o domínio em português e o frontend usa os mesmos nomes, sem
+tradução intermediária:
+
+| Chamada                | Envia              | Recebe                                         |
+| ---------------------- | ------------------ | ---------------------------------------------- |
+| `POST /api/auth/login` | `{ email, senha }` | `{ token, tipo, expiraEm, usuario }`           |
+| `GET /api/auth/me`     | —                  | `{ id, tenantId, nomeCompleto, email, papel }` |
+
+`papel` é `ADMIN`, `GESTOR` ou `COLABORADOR` (enum `papel_usuario` do banco).
+
+---
+
+## Rotas e permissões
+
+| Rota             | Quem acessa                  |
+| ---------------- | ---------------------------- |
+| `/login`         | qualquer visitante           |
+| `/dashboard`     | qualquer usuário autenticado |
+| `/usuarios`      | apenas `ADMIN`               |
+| `/acesso-negado` | qualquer usuário autenticado |
+
+- `src/routes/paths.ts` — os caminhos ficam aqui, não espalhados em strings.
+- `src/routes/permissions.ts` — **a regra de permissão do frontend mora só
+  aqui**. `ITENS_MENU` alimenta o menu e `temPermissao` decide a rota, então a
+  navegação nunca oferece algo que a rota vá recusar.
+- `src/components/auth/ProtectedRoute.tsx` — rota de layout que protege tudo
+  abaixo dela. Enquanto a sessão salva é validada mostra um indicador; sem
+  sessão redireciona ao login; com sessão mas sem o perfil exigido, renderiza a
+  tela de acesso negado mantendo a URL e o histórico.
+
+Nada disso é segurança: **a autoridade final é o backend**. O frontend só
+orienta a navegação e evita telas que o usuário não poderia usar.
 
 Páginas nunca chamam o Axios diretamente nem reimplementam essa lógica —
 sempre via `useAuth()`.
@@ -118,8 +157,15 @@ src/
 ├── hooks/        # hooks reutilizáveis (ex.: useMediaQuery)
 ├── types/        # tipos TypeScript compartilhados
 ├── styles/       # estilos globais e tokens de design
-└── test/         # setup dos testes (Vitest + Testing Library)
+└── test/         # setup, fábricas e mocks HTTP (Vitest + Testing Library + MSW)
 ```
+
+Nos testes, as requisições são interceptadas pelo [MSW](https://mswjs.io/):
+`src/test/msw/handlers.ts` define as respostas padrão e cada teste sobrescreve
+o que precisar com `server.use(...)`. Requisição sem handler falha de
+propósito, para nenhum teste escapar para a rede de verdade. Os caminhos dos
+handlers usam curinga (`*/api/...`) porque `VITE_API_URL` existe no ambiente
+local e não existe na etapa de testes da CI.
 
 Cada página busca dados através de um serviço (`services/`), nunca chamando
 o Axios diretamente. Estado compartilhado (sessão, usuário) vive em

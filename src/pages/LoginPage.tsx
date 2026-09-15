@@ -4,7 +4,7 @@ import type { User } from '../types/user.ts'
 import styles from './LoginPage.module.css'
 
 function getRedirectPath(user: User): string {
-  switch (user.role) {
+  switch (user.papel) {
     case 'ADMIN':
     case 'GESTOR':
     case 'COLABORADOR':

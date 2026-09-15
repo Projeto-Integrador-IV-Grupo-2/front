@@ -7,12 +7,17 @@ import * as authService from '../services/authService.ts'
 import { AuthError } from '../services/authService.ts'
 import type { LoginResponse } from '../types/auth.ts'
 import type { User } from '../types/user.ts'
+import { criarUsuario } from '../test/factories.ts'
 
-const mockUser: User = {
-  id: '1',
-  name: 'Ana Souza',
-  email: 'ana@nexo.com',
-  role: 'COLABORADOR',
+const mockUser: User = criarUsuario()
+
+function respostaDeLogin(usuario: User = mockUser): LoginResponse {
+  return {
+    token: 'abc123',
+    tipo: 'Bearer',
+    expiraEm: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+    usuario,
+  }
 }
 
 function renderForm(onSuccess = vi.fn()) {
@@ -91,16 +96,13 @@ describe('LoginForm', () => {
     await user.click(submitButton)
     expect(loginSpy).toHaveBeenCalledTimes(1)
 
-    resolveLogin({ token: 'abc123', user: mockUser })
+    resolveLogin(respostaDeLogin())
     await waitFor(() => expect(submitButton).not.toBeDisabled())
   })
 
   it('chama onSuccess com o usuário após um login válido', async () => {
     const user = userEvent.setup()
-    vi.spyOn(authService, 'login').mockResolvedValueOnce({
-      token: 'abc123',
-      user: mockUser,
-    })
+    vi.spyOn(authService, 'login').mockResolvedValueOnce(respostaDeLogin())
     const { onSuccess } = renderForm()
 
     await fillAndSubmit(user, mockUser.email, '123456')

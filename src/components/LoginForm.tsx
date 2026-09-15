@@ -71,7 +71,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
     setFormError(null)
     setIsSubmitting(true)
     try {
-      const user = await login({ email: email.trim(), password })
+      const user = await login({ email: email.trim(), senha: password })
       onSuccess(user)
     } catch (error) {
       setFormError(getErrorMessage(error))
