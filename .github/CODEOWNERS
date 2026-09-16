@@ -1,0 +1,10 @@
+# Donos de código: usados para roteamento automático de revisão e,
+# se a proteção da branch exigir "review from Code Owners", como
+# aprovadores obrigatórios.
+#
+# Ajuste para a equipe/handles reais do GitHub antes de habilitar
+# "Require review from Code Owners" na proteção da branch.
+#
+# Exemplo (descomente e ajuste):
+# *            @Projeto-Integrador-IV-Grupo-2/frontend
+# /.github/    @Projeto-Integrador-IV-Grupo-2/frontend
