@@ -1,5 +1,9 @@
 import { http, HttpResponse } from 'msw'
-import { criarUsuario } from '../factories.ts'
+import {
+  criarPaginaUsuarios,
+  criarUsuario,
+  criarUsuarioGestao,
+} from '../factories.ts'
 
 /**
  * Os caminhos usam o curinga `*` de propósito: a `baseURL` do Axios vem de
@@ -17,4 +21,16 @@ export const handlers = [
   ),
 
   http.get('*/api/auth/me', () => HttpResponse.json(criarUsuario())),
+
+  http.get('*/api/usuarios', () => HttpResponse.json(criarPaginaUsuarios())),
+
+  http.post('*/api/usuarios', () =>
+    HttpResponse.json(criarUsuarioGestao(), { status: 201 }),
+  ),
+
+  http.put('*/api/usuarios/:id', () => HttpResponse.json(criarUsuarioGestao())),
+
+  http.patch('*/api/usuarios/:id/situacao', () =>
+    HttpResponse.json(criarUsuarioGestao({ situacao: 'INATIVO' })),
+  ),
 ]

@@ -1,0 +1,119 @@
+.painel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+}
+
+.cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.cabecalho h2 {
+  font-size: 1.125rem;
+}
+
+.fechar {
+  padding: 0 var(--space-2);
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: none;
+}
+
+.form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-4);
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.campo label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.campo input,
+.campo select {
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.dica {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.erro {
+  padding: var(--space-3) var(--space-4);
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-sm);
+}
+
+.erroCampo {
+  font-size: 0.8125rem;
+  color: var(--color-danger);
+}
+
+.acoes {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: var(--space-3);
+}
+
+.salvar,
+.cancelar {
+  padding: var(--space-2) var(--space-5);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+}
+
+.salvar {
+  background: var(--color-primary);
+  color: var(--color-primary-contrast);
+  border: 1px solid var(--color-primary);
+}
+
+.salvar:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+
+.salvar:disabled,
+.cancelar:disabled {
+  opacity: 0.6;
+}
+
+.cancelar {
+  background: transparent;
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+
+@media (max-width: 640px) {
+  .painel {
+    padding: var(--space-4);
+  }
+
+  .acoes {
+    flex-direction: column-reverse;
+  }
+}
