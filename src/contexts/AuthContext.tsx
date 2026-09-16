@@ -2,6 +2,7 @@ import {
   createContext,
   useCallback,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
@@ -9,6 +10,7 @@ import {
   clearStoredToken,
   getStoredToken,
   setStoredToken,
+  temSessaoSalva,
   UNAUTHORIZED_EVENT,
 } from '../services/api.ts'
 import {
@@ -39,41 +41,49 @@ interface AuthProviderProps {
 /** Estado global de autenticação: sessão, usuário logado e login/logout. */
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null)
-  // Só há o que restaurar se já existir um token salvo de uma sessão anterior.
-  const [isLoading, setIsLoading] = useState(() => getStoredToken() !== null)
+  // Só há o que restaurar se a sessão anterior existir e ainda valer. A
+  // leitura é pura: descartar o token vencido é trabalho do efeito abaixo.
+  const [isLoading, setIsLoading] = useState(() => temSessaoSalva())
+  // Um login (ou logout) durante a restauração invalida a resposta que ainda
+  // está em voo: sem esta marca, o /me antigo falhando limparia o token novo.
+  const restauracaoValida = useRef(true)
 
   useEffect(() => {
+    const controller = new AbortController()
+
+    // Token ausente ou vencido: nada a restaurar. A chamada já descarta o
+    // vencido, e isLoading nasceu false nesse caso.
     if (!getStoredToken()) {
       return
     }
 
-    let isCancelled = false
-
-    fetchCurrentUser()
+    fetchCurrentUser({ signal: controller.signal })
       .then((currentUser) => {
-        if (!isCancelled) {
+        if (restauracaoValida.current) {
           setUser(currentUser)
         }
       })
       .catch(() => {
-        if (!isCancelled) {
+        if (restauracaoValida.current) {
           clearStoredToken()
         }
       })
       .finally(() => {
-        if (!isCancelled) {
+        if (restauracaoValida.current) {
           setIsLoading(false)
         }
       })
 
     return () => {
-      isCancelled = true
+      controller.abort()
     }
   }, [])
 
   useEffect(() => {
     function handleUnauthorized() {
+      restauracaoValida.current = false
       setUser(null)
+      setIsLoading(false)
     }
 
     window.addEventListener(UNAUTHORIZED_EVENT, handleUnauthorized)
@@ -82,15 +92,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [])
 
   const login = useCallback(async (credentials: LoginRequest) => {
-    const { token, user: loggedInUser } = await requestLogin(credentials)
-    setStoredToken(token)
-    setUser(loggedInUser)
-    return loggedInUser
+    const { token, expiraEm, usuario } = await requestLogin(credentials)
+    // A sessão nova manda: qualquer restauração pendente perde a validade e
+    // a tela não pode continuar presa no estado de carregando.
+    restauracaoValida.current = false
+    setStoredToken(token, expiraEm)
+    setUser(usuario)
+    setIsLoading(false)
+    return usuario
   }, [])
 
   const logout = useCallback(() => {
+    restauracaoValida.current = false
     clearStoredToken()
     setUser(null)
+    setIsLoading(false)
   }, [])
 
   const value: AuthContextValue = {

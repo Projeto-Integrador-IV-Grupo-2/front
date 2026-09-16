@@ -7,14 +7,10 @@ import {
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { api } from './api.ts'
 import { AuthError, fetchCurrentUser, login } from './authService.ts'
-import type { User } from '../types/user.ts'
+import { criarUsuario } from '../test/factories.ts'
 
-const mockUser: User = {
-  id: '1',
-  name: 'Ana Souza',
-  email: 'ana@nexo.com',
-  role: 'COLABORADOR',
-}
+const mockUser = criarUsuario()
+const expiraEm = new Date(Date.now() + 60 * 60 * 1000).toISOString()
 
 function createAxiosResponse<T>(data: T): AxiosResponse<T> {
   return {
@@ -42,20 +38,28 @@ afterEach(() => {
 })
 
 describe('login', () => {
-  it('chama POST /api/auth/login e retorna token e usuário', async () => {
-    const postSpy = vi
-      .spyOn(api, 'post')
-      .mockResolvedValueOnce(
-        createAxiosResponse({ token: 'abc123', user: mockUser }),
-      )
+  it('chama POST /api/auth/login com e-mail e senha e devolve token e usuário', async () => {
+    const postSpy = vi.spyOn(api, 'post').mockResolvedValueOnce(
+      createAxiosResponse({
+        token: 'abc123',
+        tipo: 'Bearer',
+        expiraEm,
+        usuario: mockUser,
+      }),
+    )
 
-    const result = await login({ email: mockUser.email, password: '123456' })
+    const result = await login({ email: mockUser.email, senha: '123456' })
 
     expect(postSpy).toHaveBeenCalledWith('/api/auth/login', {
       email: mockUser.email,
-      password: '123456',
+      senha: '123456',
     })
-    expect(result).toEqual({ token: 'abc123', user: mockUser })
+    expect(result).toEqual({
+      token: 'abc123',
+      tipo: 'Bearer',
+      expiraEm,
+      usuario: mockUser,
+    })
   })
 
   it('lança AuthError com a mensagem da API em credenciais inválidas', async () => {
@@ -64,7 +68,7 @@ describe('login', () => {
     )
 
     await expect(
-      login({ email: mockUser.email, password: 'errada' }),
+      login({ email: mockUser.email, senha: 'errada' }),
     ).rejects.toMatchObject({ message: 'Credenciais inválidas', status: 401 })
   })
 
@@ -75,7 +79,7 @@ describe('login', () => {
 
     const error: unknown = await login({
       email: mockUser.email,
-      password: '123456',
+      senha: '123456',
     }).catch((caught: unknown) => caught)
 
     expect(error).toBeInstanceOf(AuthError)
@@ -86,7 +90,7 @@ describe('login', () => {
     vi.spyOn(api, 'post').mockRejectedValueOnce(new Error('network down'))
 
     await expect(
-      login({ email: mockUser.email, password: '123456' }),
+      login({ email: mockUser.email, senha: '123456' }),
     ).rejects.toMatchObject({
       message: 'Não foi possível entrar. Tente novamente.',
     })
@@ -101,8 +105,21 @@ describe('fetchCurrentUser', () => {
 
     const result = await fetchCurrentUser()
 
-    expect(getSpy).toHaveBeenCalledWith('/api/auth/me')
+    expect(getSpy).toHaveBeenCalledWith('/api/auth/me', undefined)
     expect(result).toEqual(mockUser)
+  })
+
+  it('repassa o AbortSignal, para a restauração poder ser cancelada', async () => {
+    const getSpy = vi
+      .spyOn(api, 'get')
+      .mockResolvedValueOnce(createAxiosResponse(mockUser))
+    const controller = new AbortController()
+
+    await fetchCurrentUser({ signal: controller.signal })
+
+    expect(getSpy).toHaveBeenCalledWith('/api/auth/me', {
+      signal: controller.signal,
+    })
   })
 
   it('lança AuthError quando a sessão não é mais válida', async () => {

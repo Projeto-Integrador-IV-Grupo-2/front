@@ -10,12 +10,18 @@ import {
 import * as authService from '../services/authService.ts'
 import { useAuth } from '../hooks/useAuth.ts'
 import type { User } from '../types/user.ts'
+import type { LoginResponse } from '../types/auth.ts'
+import { criarUsuario } from '../test/factories.ts'
 
-const mockUser: User = {
-  id: '1',
-  name: 'Ana Souza',
-  email: 'ana@nexo.com',
-  role: 'COLABORADOR',
+const mockUser: User = criarUsuario()
+
+function respostaDeLogin(usuario: User = mockUser): LoginResponse {
+  return {
+    token: 'abc123',
+    tipo: 'Bearer',
+    expiraEm: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+    usuario,
+  }
 }
 
 function AuthConsumer() {
@@ -25,10 +31,10 @@ function AuthConsumer() {
     <div>
       <span data-testid="loading">{String(isLoading)}</span>
       <span data-testid="authenticated">{String(isAuthenticated)}</span>
-      <span data-testid="user-name">{user?.name ?? ''}</span>
+      <span data-testid="user-name">{user?.nomeCompleto ?? ''}</span>
       <button
         onClick={() => {
-          login({ email: mockUser.email, password: '123456' }).catch(() => {})
+          login({ email: mockUser.email, senha: '123456' }).catch(() => {})
         }}
       >
         login
@@ -48,7 +54,6 @@ function renderWithProvider() {
 
 afterEach(() => {
   vi.restoreAllMocks()
-  localStorage.clear()
 })
 
 describe('AuthProvider', () => {
@@ -93,10 +98,7 @@ describe('AuthProvider', () => {
 
   it('login chama o serviço, guarda o token e autentica o usuário', async () => {
     const user = userEvent.setup()
-    vi.spyOn(authService, 'login').mockResolvedValueOnce({
-      token: 'abc123',
-      user: mockUser,
-    })
+    vi.spyOn(authService, 'login').mockResolvedValueOnce(respostaDeLogin())
 
     renderWithProvider()
     await user.click(screen.getByRole('button', { name: 'login' }))
@@ -110,10 +112,7 @@ describe('AuthProvider', () => {
 
   it('logout limpa o usuário e o token salvo', async () => {
     const user = userEvent.setup()
-    vi.spyOn(authService, 'login').mockResolvedValueOnce({
-      token: 'abc123',
-      user: mockUser,
-    })
+    vi.spyOn(authService, 'login').mockResolvedValueOnce(respostaDeLogin())
 
     renderWithProvider()
     await user.click(screen.getByRole('button', { name: 'login' }))
@@ -127,12 +126,42 @@ describe('AuthProvider', () => {
     expect(getStoredToken()).toBeNull()
   })
 
+  it('não deixa a restauração antiga derrubar um login feito no meio dela', async () => {
+    const user = userEvent.setup()
+    setStoredToken('token-antigo')
+
+    // A validação da sessão antiga fica em voo e só falha depois do login.
+    let falharRestauracao!: (erro: unknown) => void
+    const restauracaoPendente = new Promise<User>((_resolve, reject) => {
+      falharRestauracao = reject
+    })
+    vi.spyOn(authService, 'fetchCurrentUser').mockReturnValueOnce(
+      restauracaoPendente,
+    )
+    vi.spyOn(authService, 'login').mockResolvedValueOnce(respostaDeLogin())
+
+    renderWithProvider()
+    expect(screen.getByTestId('loading')).toHaveTextContent('true')
+
+    await user.click(screen.getByRole('button', { name: 'login' }))
+
+    await waitFor(() =>
+      expect(screen.getByTestId('authenticated')).toHaveTextContent('true'),
+    )
+    // A tela não pode ficar presa no carregando por causa da sessão anterior.
+    expect(screen.getByTestId('loading')).toHaveTextContent('false')
+
+    falharRestauracao(new authService.AuthError('Sessão expirada', 401))
+    await Promise.resolve()
+
+    // O token do login novo sobrevive à falha da restauração antiga.
+    await waitFor(() => expect(getStoredToken()).toBe('abc123'))
+    expect(screen.getByTestId('authenticated')).toHaveTextContent('true')
+  })
+
   it('encerra a sessão ao receber o evento de 401 (ex.: disparado pelo Axios)', async () => {
     const user = userEvent.setup()
-    vi.spyOn(authService, 'login').mockResolvedValueOnce({
-      token: 'abc123',
-      user: mockUser,
-    })
+    vi.spyOn(authService, 'login').mockResolvedValueOnce(respostaDeLogin())
 
     renderWithProvider()
     await user.click(screen.getByRole('button', { name: 'login' }))

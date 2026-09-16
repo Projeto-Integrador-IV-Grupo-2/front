@@ -1,10 +1,18 @@
-// Perfis ainda não definidos pelo backend (auth/usuários não implementados
-// lá até este card) — ajustar aqui assim que o contrato da API for fechado.
+/**
+ * Perfis de acesso — espelham o enum `papel_usuario` do banco e o enum
+ * `Perfil` da API (ADMIN, GESTOR, COLABORADOR).
+ */
 export type UserRole = 'ADMIN' | 'GESTOR' | 'COLABORADOR'
 
+/**
+ * Usuário autenticado, no formato devolvido por `POST /api/auth/login` e
+ * `GET /api/auth/me` (record `MeResponse` da API). Os nomes acompanham a API,
+ * que usa português no domínio.
+ */
 export interface User {
   id: string
-  name: string
+  tenantId: string
+  nomeCompleto: string
   email: string
-  role: UserRole
+  papel: UserRole
 }

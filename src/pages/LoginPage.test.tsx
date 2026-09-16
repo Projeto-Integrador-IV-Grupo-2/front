@@ -6,13 +6,9 @@ import { AuthProvider } from '../contexts/AuthContext.tsx'
 import { routes } from '../routes/router.tsx'
 import * as authService from '../services/authService.ts'
 import type { User } from '../types/user.ts'
+import { criarUsuario } from '../test/factories.ts'
 
-const mockUser: User = {
-  id: '1',
-  name: 'Ana Souza',
-  email: 'ana@nexo.com',
-  role: 'COLABORADOR',
-}
+const mockUser: User = criarUsuario()
 
 afterEach(() => {
   vi.restoreAllMocks()
@@ -24,7 +20,9 @@ describe('LoginPage', () => {
     const user = userEvent.setup()
     vi.spyOn(authService, 'login').mockResolvedValueOnce({
       token: 'abc123',
-      user: mockUser,
+      tipo: 'Bearer',
+      expiraEm: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+      usuario: mockUser,
     })
 
     const memoryRouter = createMemoryRouter(routes, {

@@ -37,9 +37,11 @@ export async function login(credentials: LoginRequest): Promise<LoginResponse> {
   }
 }
 
-export async function fetchCurrentUser(): Promise<User> {
+export async function fetchCurrentUser(config?: {
+  signal?: AbortSignal
+}): Promise<User> {
   try {
-    const { data } = await api.get<User>('/api/auth/me')
+    const { data } = await api.get<User>('/api/auth/me', config)
     return data
   } catch (error) {
     throw toAuthError(error, 'Não foi possível carregar os dados do usuário.')
