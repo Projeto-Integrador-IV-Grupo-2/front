@@ -1,5 +1,6 @@
 import { http, HttpResponse } from 'msw'
 import {
+  criarArea,
   criarPaginaTrilhas,
   criarPaginaUsuarios,
   criarProgressoTrilha,
@@ -54,6 +55,9 @@ export const handlers = [
     HttpResponse.json(criarTrilhaResumo(), { status: 201 }),
   ),
 
+  // Resumo mínimo (id + nome), do jeito que o formulário de Trilha consome
+  // para popular o select de área. O CRUD completo de Área (abaixo) sempre
+  // sobrescreve este handler nos próprios testes, então os dois convivem.
   http.get('*/api/areas', () =>
     HttpResponse.json({
       content: [
@@ -61,5 +65,19 @@ export const handlers = [
       ],
       page: { size: 100, number: 0, totalElements: 1, totalPages: 1 },
     }),
+  ),
+
+  http.post('*/api/areas', () =>
+    HttpResponse.json(criarArea(), { status: 201 }),
+  ),
+
+  http.put('*/api/areas/:id', () => HttpResponse.json(criarArea())),
+
+  http.patch('*/api/areas/:id/inativar', () =>
+    HttpResponse.json(criarArea({ ativo: false })),
+  ),
+
+  http.patch('*/api/areas/:id/ativar', () =>
+    HttpResponse.json(criarArea({ ativo: true })),
   ),
 ]

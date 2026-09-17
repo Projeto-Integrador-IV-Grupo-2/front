@@ -5,6 +5,7 @@ import {
 } from 'react-router-dom'
 import { ProtectedRoute } from '../components/auth/ProtectedRoute.tsx'
 import { AppLayout } from '../components/layout/AppLayout.tsx'
+import { AreasPage } from '../pages/AreasPage.tsx'
 import { DashboardPage } from '../pages/DashboardPage.tsx'
 import { LoginPage } from '../pages/LoginPage.tsx'
 import { NotFoundPage } from '../pages/NotFoundPage.tsx'
@@ -27,6 +28,7 @@ export const routes: RouteObject[] = [
           { path: ROTAS.dashboard, element: <DashboardPage /> },
           { path: ROTAS.trilhas, element: <TrilhasPage /> },
           { path: ROTAS.trilhaDetalhe, element: <TrilhaDetalhePage /> },
+          { path: ROTAS.areas, element: <AreasPage /> },
           {
             // Área administrativa: o perfil exigido fica na rota, não na página.
             element: <ProtectedRoute perfis={['ADMIN']} />,

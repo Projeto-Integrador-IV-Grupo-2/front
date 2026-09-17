@@ -1,3 +1,4 @@
+import type { Area } from '../types/area.ts'
 import type {
   ProgressoTrilha,
   TrilhaDetalhe,
@@ -42,6 +43,21 @@ export function criarUsuarioGestao(
   }
 }
 
+/** Área de teste. Passe só o que o caso precisa distinguir. */
+export function criarArea(overrides: Partial<Area> = {}): Area {
+  return {
+    id: '00000000-0000-0000-0000-000000000010',
+    nome: 'Atendimento',
+    descricao: null,
+    ativo: true,
+    totalPessoas: 0,
+    totalConteudos: 0,
+    criadoEm: '2026-01-01T00:00:00Z',
+    atualizadoEm: '2026-01-01T00:00:00Z',
+    ...overrides,
+  }
+}
+
 /** Página do Spring com os usuários informados. */
 export function criarPaginaUsuarios(
   content: UsuarioGestao[] = [criarUsuarioGestao()],
@@ -51,6 +67,27 @@ export function criarPaginaUsuarios(
     content,
     page: {
       size: 10,
+      number: 0,
+      totalElements: content.length,
+      totalPages: 1,
+      ...overrides,
+    },
+  }
+}
+
+/**
+ * Página de teste no formato `PagedModel` do Spring, genérica — usada pela
+ * listagem de Área. `criarPaginaUsuarios`/`criarPaginaTrilhas` continuam com
+ * a própria função (mesmo formato, só o tamanho padrão de página muda).
+ */
+export function criarPagina<T>(
+  content: T[],
+  overrides: Partial<Pagina<T>['page']> = {},
+): Pagina<T> {
+  return {
+    content,
+    page: {
+      size: 20,
       number: 0,
       totalElements: content.length,
       totalPages: 1,
