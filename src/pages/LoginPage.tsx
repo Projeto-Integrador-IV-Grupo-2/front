@@ -1,5 +1,6 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 import { LoginForm } from '../components/LoginForm.tsx'
+import { LogoIcon } from '../components/Logo.tsx'
 import { ROTAS } from '../routes/paths.ts'
 import styles from './LoginPage.module.css'
 
@@ -22,9 +23,30 @@ export function LoginPage() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.card}>
-        <h1>Login</h1>
-        <LoginForm onSuccess={handleSuccess} />
+      <aside className={styles.brandPanel}>
+        <LogoIcon className={styles.logo} />
+
+        <div className={styles.brandContent}>
+          <span className={styles.brandLabel}>Nexo</span>
+          <h1 className={styles.brandHeadline}>
+            Uma central para o conhecimento e o desenvolvimento da sua equipe.
+          </h1>
+          <p className={styles.brandDescription}>
+            Documentos, códigos, processos, trilhas e planos de desenvolvimento
+            em um só lugar — com um assistente de IA que responde qualquer
+            dúvida sobre a empresa.
+          </p>
+        </div>
+
+        <p className={styles.brandFooter}>© Nexo — plataforma corporativa</p>
+      </aside>
+
+      <div className={styles.formPanel}>
+        <div className={styles.formCard}>
+          <h2>Entrar</h2>
+          <p className={styles.subtitle}>Acesse com sua conta corporativa.</p>
+          <LoginForm onSuccess={handleSuccess} />
+        </div>
       </div>
     </div>
   )

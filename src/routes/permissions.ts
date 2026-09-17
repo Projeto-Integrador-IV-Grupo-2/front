@@ -17,7 +17,7 @@ export interface ItemMenu {
 }
 
 export const ITENS_MENU: ItemMenu[] = [
-  { to: ROTAS.dashboard, rotulo: 'Dashboard' },
+  { to: ROTAS.dashboard, rotulo: 'Visão geral' },
   { to: ROTAS.usuarios, rotulo: 'Usuários', perfis: ['ADMIN'] },
 ]
 

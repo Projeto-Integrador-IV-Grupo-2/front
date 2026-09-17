@@ -12,7 +12,7 @@ describe('router', () => {
     renderizarComProvedores({ rota: '/dashboard' })
 
     expect(
-      await screen.findByRole('heading', { name: 'Login' }),
+      await screen.findByRole('heading', { name: 'Entrar' }),
     ).toBeInTheDocument()
   })
 
@@ -20,7 +20,7 @@ describe('router', () => {
     renderizarComProvedores({ rota: '/' })
 
     expect(
-      await screen.findByRole('heading', { name: 'Login' }),
+      await screen.findByRole('heading', { name: 'Entrar' }),
     ).toBeInTheDocument()
   })
 
@@ -28,7 +28,7 @@ describe('router', () => {
     renderizarComProvedores({ rota: '/dashboard', usuario: criarUsuario() })
 
     expect(
-      await screen.findByRole('heading', { name: 'Dashboard' }),
+      await screen.findByRole('heading', { name: 'Visão geral' }),
     ).toBeInTheDocument()
     expect(screen.getByText('Nexo')).toBeInTheDocument()
   })
@@ -64,7 +64,7 @@ describe('router', () => {
     renderizarComProvedores({ rota: '/dashboard' })
 
     expect(
-      await screen.findByRole('heading', { name: 'Login' }),
+      await screen.findByRole('heading', { name: 'Entrar' }),
     ).toBeInTheDocument()
     await waitFor(() => expect(getStoredToken()).toBeNull())
   })
@@ -80,8 +80,12 @@ describe('router', () => {
     ).toBeInTheDocument()
     // Continua logado e navegando: o layout e o menu seguem no lugar.
     expect(getStoredToken()).not.toBeNull()
-    expect(screen.getByRole('button', { name: 'Sair' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Dashboard' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Sair da conta' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'Visão geral' }),
+    ).toBeInTheDocument()
   })
 
   it('leva o usuário ao destino que ele tentou abrir antes do login', async () => {

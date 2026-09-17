@@ -39,7 +39,7 @@ describe('LoginPage', () => {
     await user.click(screen.getByRole('button', { name: 'Entrar' }))
 
     expect(
-      await screen.findByRole('heading', { name: 'Dashboard' }),
+      await screen.findByRole('heading', { name: 'Visão geral' }),
     ).toBeInTheDocument()
   })
 })

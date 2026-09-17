@@ -54,7 +54,9 @@ describe('AppLayout', () => {
     expect(
       await screen.findByRole('link', { name: 'Usuários' }),
     ).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Dashboard' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'Visão geral' }),
+    ).toBeInTheDocument()
   })
 
   it.each(['GESTOR', 'COLABORADOR'] as const)(
@@ -66,7 +68,7 @@ describe('AppLayout', () => {
       })
 
       expect(
-        await screen.findByRole('link', { name: 'Dashboard' }),
+        await screen.findByRole('link', { name: 'Visão geral' }),
       ).toBeInTheDocument()
       expect(
         screen.queryByRole('link', { name: 'Usuários' }),
@@ -78,10 +80,12 @@ describe('AppLayout', () => {
     const user = userEvent.setup()
     renderizarComProvedores({ rota: '/dashboard', usuario: criarUsuario() })
 
-    await user.click(await screen.findByRole('button', { name: 'Sair' }))
+    await user.click(
+      await screen.findByRole('button', { name: 'Sair da conta' }),
+    )
 
     expect(
-      await screen.findByRole('heading', { name: 'Login' }),
+      await screen.findByRole('heading', { name: 'Entrar' }),
     ).toBeInTheDocument()
     await waitFor(() => expect(getStoredToken()).toBeNull())
   })
