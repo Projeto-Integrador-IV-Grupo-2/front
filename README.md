@@ -61,12 +61,24 @@ Toda variável lida pelo Vite no código do cliente precisa começar com
 `VITE_`. O `.env` **não é versionado** (ver `.gitignore`) — cada
 integrante mantém o seu, a partir do `.env.example`.
 
-| Variável       | Obrigatória | Descrição                            |
-| -------------- | ----------- | ------------------------------------ |
-| `VITE_API_URL` | Sim         | URL base da API (sem barra no final) |
+| Variável            | Obrigatória | Descrição                                                               |
+| ------------------- | ----------- | ----------------------------------------------------------------------- |
+| `VITE_API_URL`      | Sim         | URL base da API (sem barra no final)                                    |
+| `VITE_TRILHAS_MOCK` | Não         | `true` responde as rotas de trilhas com um mock em memória (ver abaixo) |
 
 A URL nunca fica fixa no código: o cliente Axios (`src/services/api.ts`)
 sempre lê `import.meta.env.VITE_API_URL`.
+
+### Mock temporário das trilhas
+
+Enquanto o backend não expõe todos os endpoints de trilhas (cadastro e
+atualização de progresso ainda não existem), `VITE_TRILHAS_MOCK=true` faz o
+`trilhaService` responder com dados em memória
+(`src/services/mocks/trilhasMock.ts`). O mock é um _adapter_ do Axios: os
+caminhos, os corpos e os interceptors de sessão são os mesmos da API real, então
+trocar para o backend é só mudar a flag para `false`. Os dados voltam ao estado
+inicial a cada recarga da página. Os testes ignoram o `.env` e sempre falam com
+o MSW.
 
 ---
 
@@ -110,6 +122,7 @@ tradução intermediária:
 | ------------ | ---------------------------- |
 | `/login`     | qualquer visitante           |
 | `/dashboard` | qualquer usuário autenticado |
+| `/trilhas`   | qualquer usuário autenticado |
 | `/usuarios`  | apenas `ADMIN`               |
 
 `/` leva ao dashboard, que por sua vez exige sessão.
