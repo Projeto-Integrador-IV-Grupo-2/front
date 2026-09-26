@@ -19,6 +19,7 @@ const ROTULO_PERFIL: Record<UserRole, string> = {
 
 const ICONE_POR_ROTA: Record<string, ReactNode> = {
   [ROTAS.dashboard]: <GridIcon />,
+  [ROTAS.trilhas]: <TrilhasIcon />,
   [ROTAS.usuarios]: <PeopleIcon />,
 }
 
@@ -29,7 +30,6 @@ const ICONE_POR_ROTA: Record<string, ReactNode> = {
  */
 const ITENS_EM_BREVE: Array<{ rotulo: string; icone: ReactNode }> = [
   { rotulo: 'Conhecimento', icone: <BookIcon /> },
-  { rotulo: 'Trilhas', icone: <TrilhasIcon /> },
   { rotulo: 'Pessoas', icone: <PeopleIcon /> },
   { rotulo: 'Áreas', icone: <LayersIcon /> },
   { rotulo: 'IA', icone: <SparkleIcon /> },

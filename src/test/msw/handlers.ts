@@ -1,6 +1,8 @@
 import { http, HttpResponse } from 'msw'
 import {
+  criarPaginaTrilhas,
   criarPaginaUsuarios,
+  criarTrilhaResumo,
   criarUsuario,
   criarUsuarioGestao,
 } from '../factories.ts'
@@ -32,5 +34,20 @@ export const handlers = [
 
   http.patch('*/api/usuarios/:id/situacao', () =>
     HttpResponse.json(criarUsuarioGestao({ situacao: 'INATIVO' })),
+  ),
+
+  http.get('*/api/trilhas', () => HttpResponse.json(criarPaginaTrilhas())),
+
+  http.post('*/api/trilhas', () =>
+    HttpResponse.json(criarTrilhaResumo(), { status: 201 }),
+  ),
+
+  http.get('*/api/areas', () =>
+    HttpResponse.json({
+      content: [
+        { id: '33333333-3333-3333-3333-333333333333', nome: 'Tecnologia' },
+      ],
+      page: { size: 100, number: 0, totalElements: 1, totalPages: 1 },
+    }),
   ),
 ]

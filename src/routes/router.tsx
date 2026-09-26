@@ -8,6 +8,7 @@ import { AppLayout } from '../components/layout/AppLayout.tsx'
 import { DashboardPage } from '../pages/DashboardPage.tsx'
 import { LoginPage } from '../pages/LoginPage.tsx'
 import { NotFoundPage } from '../pages/NotFoundPage.tsx'
+import { TrilhasPage } from '../pages/TrilhasPage.tsx'
 import { UsuariosPage } from '../pages/UsuariosPage.tsx'
 import { ROTAS } from './paths.ts'
 
@@ -23,6 +24,7 @@ export const routes: RouteObject[] = [
         element: <AppLayout />,
         children: [
           { path: ROTAS.dashboard, element: <DashboardPage /> },
+          { path: ROTAS.trilhas, element: <TrilhasPage /> },
           {
             // Área administrativa: o perfil exigido fica na rota, não na página.
             element: <ProtectedRoute perfis={['ADMIN']} />,

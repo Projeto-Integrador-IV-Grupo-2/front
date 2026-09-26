@@ -1,3 +1,4 @@
+import type { ProgressoTrilha, TrilhaResumo } from '../types/trilha.ts'
 import type { User } from '../types/user.ts'
 import type { Pagina, Usuario as UsuarioGestao } from '../types/usuario.ts'
 
@@ -46,6 +47,51 @@ export function criarPaginaUsuarios(
     content,
     page: {
       size: 10,
+      number: 0,
+      totalElements: content.length,
+      totalPages: 1,
+      ...overrides,
+    },
+  }
+}
+
+/** Progresso de trilha (`ProgressoTrilhaResponse`), por padrão em andamento. */
+export function criarProgressoTrilha(
+  overrides: Partial<ProgressoTrilha> = {},
+): ProgressoTrilha {
+  return {
+    id: '55555555-5555-5555-5555-555555555555',
+    trilha: { id: '44444444-4444-4444-4444-444444444444', nome: 'Onboarding' },
+    status: 'EM_ANDAMENTO',
+    percentual: 50,
+    prazo: '2026-10-30',
+    atribuidoEm: '2026-09-01T12:00:00Z',
+    concluidoEm: null,
+    ...overrides,
+  }
+}
+
+/** Trilha como a listagem devolve (`TrilhaResumoResponse`). */
+export function criarTrilhaResumo(
+  overrides: Partial<TrilhaResumo> = {},
+): TrilhaResumo {
+  return {
+    id: '44444444-4444-4444-4444-444444444444',
+    nome: 'Onboarding',
+    area: { id: '33333333-3333-3333-3333-333333333333', nome: 'Tecnologia' },
+    ...overrides,
+  }
+}
+
+/** Página do Spring com as trilhas informadas. */
+export function criarPaginaTrilhas(
+  content: TrilhaResumo[] = [criarTrilhaResumo()],
+  overrides: Partial<Pagina<TrilhaResumo>['page']> = {},
+): Pagina<TrilhaResumo> {
+  return {
+    content,
+    page: {
+      size: 12,
       number: 0,
       totalElements: content.length,
       totalPages: 1,

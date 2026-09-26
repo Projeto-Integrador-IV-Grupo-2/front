@@ -18,8 +18,15 @@ export interface ItemMenu {
 
 export const ITENS_MENU: ItemMenu[] = [
   { to: ROTAS.dashboard, rotulo: 'Visão geral' },
+  { to: ROTAS.trilhas, rotulo: 'Trilhas' },
   { to: ROTAS.usuarios, rotulo: 'Usuários', perfis: ['ADMIN'] },
 ]
+
+/**
+ * Quem vê a ação "Nova trilha". Segue o protótipo (só o administrador cria);
+ * se o backend liberar para gestores, basta incluir `GESTOR` aqui.
+ */
+export const PERFIS_CRIAR_TRILHA: UserRole[] = ['ADMIN']
 
 /** `perfis` indefinido ou vazio = liberado para qualquer perfil autenticado. */
 export function temPermissao(
