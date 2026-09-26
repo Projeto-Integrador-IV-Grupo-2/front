@@ -63,7 +63,7 @@ function dataDaqui(dias: number): string {
 function estadoInicial(): RegistroTrilha[] {
   return [
     {
-      id: 't1000000-0000-4000-8000-000000000001',
+      id: 'b1000000-0000-4000-8000-000000000001',
       nome: 'Atendimento ao Cliente',
       descricao:
         'Desenvolver habilidades de comunicação e resolução de conflitos no atendimento ao cliente.',
@@ -74,7 +74,7 @@ function estadoInicial(): RegistroTrilha[] {
       ativo: true,
       criadoEm: diasAtras(40),
       progresso: {
-        id: 'p1000000-0000-4000-8000-000000000001',
+        id: 'c1000000-0000-4000-8000-000000000001',
         status: 'EM_ANDAMENTO',
         prazo: dataDaqui(9),
         atribuidoEm: diasAtras(21),
@@ -82,7 +82,7 @@ function estadoInicial(): RegistroTrilha[] {
       },
     },
     {
-      id: 't1000000-0000-4000-8000-000000000002',
+      id: 'b1000000-0000-4000-8000-000000000002',
       nome: 'Onboarding Comercial',
       descricao:
         'Trilha de entrada do time comercial: produto, processo de vendas e ferramentas.',
@@ -95,7 +95,7 @@ function estadoInicial(): RegistroTrilha[] {
       progresso: null,
     },
     {
-      id: 't1000000-0000-4000-8000-000000000003',
+      id: 'b1000000-0000-4000-8000-000000000003',
       nome: 'Fundamentos de LGPD',
       descricao:
         'Princípios da Lei Geral de Proteção de Dados aplicados à rotina de trabalho.',
@@ -106,7 +106,7 @@ function estadoInicial(): RegistroTrilha[] {
       ativo: true,
       criadoEm: diasAtras(120),
       progresso: {
-        id: 'p1000000-0000-4000-8000-000000000003',
+        id: 'c1000000-0000-4000-8000-000000000003',
         status: 'CONCLUIDA',
         prazo: dataDaqui(-20),
         atribuidoEm: diasAtras(60),
@@ -114,7 +114,7 @@ function estadoInicial(): RegistroTrilha[] {
       },
     },
     {
-      id: 't1000000-0000-4000-8000-000000000004',
+      id: 'b1000000-0000-4000-8000-000000000004',
       nome: 'Liderança para novos gestores',
       descricao:
         'Fundamentos de gestão de pessoas, feedback e condução de reuniões de equipe.',
@@ -125,7 +125,7 @@ function estadoInicial(): RegistroTrilha[] {
       ativo: true,
       criadoEm: diasAtras(30),
       progresso: {
-        id: 'p1000000-0000-4000-8000-000000000004',
+        id: 'c1000000-0000-4000-8000-000000000004',
         status: 'ATRASADA',
         prazo: dataDaqui(-3),
         atribuidoEm: diasAtras(63),
@@ -133,7 +133,7 @@ function estadoInicial(): RegistroTrilha[] {
       },
     },
     {
-      id: 't1000000-0000-4000-8000-000000000005',
+      id: 'b1000000-0000-4000-8000-000000000005',
       nome: 'Segurança da Informação 2026',
       descricao:
         'Boas práticas de segurança: senhas, phishing, dispositivos e dados sensíveis.',
@@ -194,6 +194,20 @@ function resumoDe(trilha: RegistroTrilha) {
     nome: trilha.nome,
     area: trilha.area,
     objetivos: trilha.objetivos,
+    progresso: progressoDe(trilha),
+  }
+}
+
+function detalheDe(trilha: RegistroTrilha) {
+  return {
+    id: trilha.id,
+    nome: trilha.nome,
+    descricao: trilha.descricao,
+    area: trilha.area,
+    objetivos: trilha.objetivos,
+    prazoDias: trilha.prazoDias,
+    ativo: trilha.ativo,
+    criadoEm: trilha.criadoEm,
     progresso: progressoDe(trilha),
   }
 }
@@ -298,6 +312,66 @@ function criar(config: InternalAxiosRequestConfig): AxiosResponse {
   return responder(config, 201, resumoDe(nova))
 }
 
+const STATUS_ACEITOS: StatusProgresso[] = [
+  'EM_ANDAMENTO',
+  'CONCLUIDA',
+  'ATRASADA',
+]
+
+function buscarNoMock(
+  config: InternalAxiosRequestConfig,
+  id: string,
+): RegistroTrilha {
+  const trilha = trilhas.find((t) => t.id === id)
+  if (!trilha) {
+    falhar(config, 404, `Trilha não encontrada: ${id}`)
+  }
+  return trilha
+}
+
+/** Como `TrilhaAtribuicaoService.iniciar`: cria em andamento ou devolve o existente. */
+function iniciar(config: InternalAxiosRequestConfig, id: string) {
+  const trilha = buscarNoMock(config, id)
+  if (!trilha.progresso) {
+    const prazo = trilha.prazoDias === null ? null : dataDaqui(trilha.prazoDias)
+    trilha.progresso = {
+      id: crypto.randomUUID(),
+      status: 'EM_ANDAMENTO',
+      prazo,
+      atribuidoEm: new Date().toISOString(),
+      concluidoEm: null,
+    }
+  }
+  return responder(config, 200, progressoDe(trilha))
+}
+
+/** Como `TrilhaAtribuicaoService.atualizar`: 404 sem progresso, 400/422 em status inválido. */
+function atualizar(config: InternalAxiosRequestConfig, id: string) {
+  const trilha = buscarNoMock(config, id)
+  const status = corpoDe(config).status
+  if (!trilha.progresso) {
+    falhar(config, 404, 'Progresso não encontrado para esta trilha')
+  }
+  if (status === 'NAO_INICIADA') {
+    falhar(
+      config,
+      422,
+      'Não é possível voltar um progresso já iniciado para NAO_INICIADA',
+    )
+  }
+  if (!STATUS_ACEITOS.includes(status as StatusProgresso)) {
+    falhar(config, 400, 'Dados inválidos.', [
+      { field: 'status', message: 'status é obrigatório' },
+    ])
+  }
+  trilha.progresso = {
+    ...trilha.progresso,
+    status: status as StatusProgresso,
+    concluidoEm: status === 'CONCLUIDA' ? new Date().toISOString() : null,
+  }
+  return responder(config, 200, progressoDe(trilha))
+}
+
 function rotear(config: InternalAxiosRequestConfig): AxiosResponse {
   const metodo = (config.method ?? 'get').toUpperCase()
   const caminho = (config.url ?? '').replace(/^https?:\/\/[^/]+/, '')
@@ -312,6 +386,20 @@ function rotear(config: InternalAxiosRequestConfig): AxiosResponse {
 
   if (metodo === 'POST' && caminho === '/api/trilhas') {
     return criar(config)
+  }
+
+  const detalhe = /^\/api\/trilhas\/([^/]+)$/.exec(caminho)
+  if (metodo === 'GET' && detalhe) {
+    const id = decodeURIComponent(detalhe[1])
+    return responder(config, 200, detalheDe(buscarNoMock(config, id)))
+  }
+
+  const progresso = /^\/api\/trilhas\/([^/]+)\/progresso$/.exec(caminho)
+  if (progresso && metodo === 'POST') {
+    return iniciar(config, decodeURIComponent(progresso[1]))
+  }
+  if (progresso && metodo === 'PATCH') {
+    return atualizar(config, decodeURIComponent(progresso[1]))
   }
 
   if (metodo === 'GET' && caminho === '/api/areas') {

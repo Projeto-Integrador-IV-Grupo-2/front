@@ -36,6 +36,31 @@ export interface TrilhaResumo {
   progresso?: ProgressoTrilha | null
 }
 
+/**
+ * Detalhe da trilha + progresso do usuário autenticado (record
+ * `TrilhaDetalheResponse` de `GET /api/trilhas/{id}`). O progresso sempre
+ * vem: quem nunca iniciou recebe `NAO_INICIADA` com `id` nulo, não 404.
+ */
+export interface TrilhaDetalhe {
+  id: string
+  nome: string
+  descricao: string | null
+  area: RecursoResumo | null
+  objetivos: string | null
+  prazoDias: number | null
+  ativo: boolean
+  criadoEm: string
+  progresso: ProgressoTrilha
+}
+
+/**
+ * Corpo da atualização de progresso (record `AtualizarProgressoRequest`): só o
+ * status muda. `NAO_INICIADA` não é aceito — progresso iniciado não volta.
+ */
+export interface AtualizarProgressoRequest {
+  status: Exclude<StatusProgresso, 'NAO_INICIADA'>
+}
+
 /** Paginação e ordenação de `GET /api/trilhas`. `page` é zero-based. */
 export interface TrilhaPaginacao {
   page?: number

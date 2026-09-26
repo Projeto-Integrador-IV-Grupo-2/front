@@ -118,12 +118,13 @@ tradução intermediária:
 
 ## Rotas e permissões
 
-| Rota         | Quem acessa                  |
-| ------------ | ---------------------------- |
-| `/login`     | qualquer visitante           |
-| `/dashboard` | qualquer usuário autenticado |
-| `/trilhas`   | qualquer usuário autenticado |
-| `/usuarios`  | apenas `ADMIN`               |
+| Rota           | Quem acessa                  |
+| -------------- | ---------------------------- |
+| `/login`       | qualquer visitante           |
+| `/dashboard`   | qualquer usuário autenticado |
+| `/trilhas`     | qualquer usuário autenticado |
+| `/trilhas/:id` | qualquer usuário autenticado |
+| `/usuarios`    | apenas `ADMIN`               |
 
 `/` leva ao dashboard, que por sua vez exige sessão.
 

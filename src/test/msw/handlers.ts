@@ -2,6 +2,8 @@ import { http, HttpResponse } from 'msw'
 import {
   criarPaginaTrilhas,
   criarPaginaUsuarios,
+  criarProgressoTrilha,
+  criarTrilhaDetalhe,
   criarTrilhaResumo,
   criarUsuario,
   criarUsuarioGestao,
@@ -37,6 +39,16 @@ export const handlers = [
   ),
 
   http.get('*/api/trilhas', () => HttpResponse.json(criarPaginaTrilhas())),
+
+  http.get('*/api/trilhas/:id', () => HttpResponse.json(criarTrilhaDetalhe())),
+
+  http.post('*/api/trilhas/:id/progresso', () =>
+    HttpResponse.json(criarProgressoTrilha()),
+  ),
+
+  http.patch('*/api/trilhas/:id/progresso', () =>
+    HttpResponse.json(criarProgressoTrilha({ status: 'CONCLUIDA' })),
+  ),
 
   http.post('*/api/trilhas', () =>
     HttpResponse.json(criarTrilhaResumo(), { status: 201 }),

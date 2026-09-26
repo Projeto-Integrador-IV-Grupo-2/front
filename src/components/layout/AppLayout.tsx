@@ -72,7 +72,12 @@ export function AppLayout() {
   // O menu vem da mesma regra que protege as rotas: nada aparece aqui que
   // o ProtectedRoute vá recusar depois.
   const itens = itensMenuPara(user?.papel)
-  const itemAtual = itens.find((item) => item.to === location.pathname)
+  // Subrotas (ex.: /trilhas/:id) herdam o título da seção.
+  const itemAtual = itens.find(
+    (item) =>
+      location.pathname === item.to ||
+      location.pathname.startsWith(`${item.to}/`),
+  )
 
   function fecharMenu() {
     if (!isMenuOpen) {
