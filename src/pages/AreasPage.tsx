@@ -2,6 +2,8 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { AreaFormulario } from '../components/areas/AreaFormulario.tsx'
 import { AreasTabela } from '../components/areas/AreasTabela.tsx'
 import { Paginacao } from '../components/areas/Paginacao.tsx'
+import { usePermissao } from '../hooks/usePermissao.ts'
+import { PERFIS_GESTAO_AREA } from '../routes/permissions.ts'
 import {
   ativarArea,
   atualizarArea,
@@ -41,6 +43,10 @@ function mensagemDe(causa: unknown, padrao: string): string {
 }
 
 export function AreasPage() {
+  // Único ponto de checagem de perfil da tela — tabela e botão de cadastro só
+  // recebem o resultado, não reimplementam a regra (ver Card 14 / issue #31).
+  const podeGerenciar = usePermissao(PERFIS_GESTAO_AREA)
+
   // `nomeDigitado` é o que está no campo; `nomeBuscado` é o que foi buscado.
   // Separar os dois evita uma requisição por tecla digitada.
   const [nomeDigitado, setNomeDigitado] = useState('')
@@ -203,13 +209,15 @@ export function AreasPage() {
             conteúdo.
           </p>
         </div>
-        <button
-          type="button"
-          className={styles.novo}
-          onClick={() => abrirFormulario(null)}
-        >
-          + Nova área
-        </button>
+        {podeGerenciar && (
+          <button
+            type="button"
+            className={styles.novo}
+            onClick={() => abrirFormulario(null)}
+          >
+            + Nova área
+          </button>
+        )}
       </header>
 
       {/* Live region só da página: avisos de sucesso chegam a quem usa leitor
@@ -281,6 +289,7 @@ export function AreasPage() {
           <AreasTabela
             areas={areas}
             situacaoEmAndamento={situacaoEmAndamento}
+            podeGerenciar={podeGerenciar}
             onEditar={abrirFormulario}
             onAlterarSituacao={(area) => void alternarSituacao(area)}
           />
