@@ -1,0 +1,224 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.cabecalho {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-1);
+}
+
+.titulo {
+  font-size: 1.4375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.hint {
+  margin-top: var(--space-1);
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+}
+
+.nova {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: var(--space-2) var(--space-4);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-primary-contrast);
+  background: var(--color-primary);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+}
+
+.nova:hover {
+  background: var(--color-primary-hover);
+}
+
+/* A região continua no DOM mesmo vazia: live region criada junto com a
+   mensagem não é anunciada por parte dos leitores de tela. */
+.avisoRegiao:empty {
+  display: none;
+}
+
+.aviso {
+  padding: var(--space-2) var(--space-4);
+  color: var(--color-success);
+  background: var(--color-success-bg);
+  border: 1px solid var(--color-success);
+  border-radius: var(--radius-sm);
+}
+
+.grade {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.esqueleto {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-height: 150px;
+  padding: var(--space-4) calc(var(--space-4) + 2px);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.esqSelo,
+.esqTitulo,
+.esqTexto,
+.esqBarra {
+  display: block;
+  background: var(--color-border);
+  border-radius: 999px;
+  animation: pulsar 1.2s ease-in-out infinite;
+}
+
+.esqSelo {
+  width: 88px;
+  height: 18px;
+}
+
+.esqTitulo {
+  width: 55%;
+  height: 16px;
+  margin-top: var(--space-2);
+}
+
+.esqTexto {
+  width: 90%;
+  height: 10px;
+}
+
+.esqBarra {
+  height: 6px;
+  margin-top: auto;
+}
+
+@keyframes pulsar {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.estado,
+.vazio {
+  padding: var(--space-6) var(--space-5);
+  color: var(--color-text-muted);
+  text-align: center;
+  background: var(--color-surface);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.vazio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.vazioTitulo {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.vazioTexto {
+  max-width: 360px;
+  font-size: 0.875rem;
+}
+
+.erro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  padding: var(--space-3) var(--space-4);
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-sm);
+}
+
+.erro button {
+  padding: var(--space-1) var(--space-4);
+  font-weight: 600;
+  color: var(--color-danger);
+  background: transparent;
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-sm);
+}
+
+.rodape {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.contagem {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+
+.erroMais {
+  font-size: 0.875rem;
+  color: var(--color-danger);
+}
+
+.mais {
+  padding: var(--space-2) var(--space-5);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.mais:hover:not(:disabled) {
+  border-color: var(--color-primary);
+}
+
+.mais:disabled {
+  opacity: 0.6;
+}
+
+@media (max-width: 760px) {
+  .grade {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .cabecalho {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .nova,
+  .mais {
+    width: 100%;
+    padding: var(--space-3) var(--space-4);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .esqSelo,
+  .esqTitulo,
+  .esqTexto,
+  .esqBarra {
+    animation: none;
+  }
+}

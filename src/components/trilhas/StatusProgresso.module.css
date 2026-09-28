@@ -1,0 +1,67 @@
+.selo {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--space-2);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+  border-radius: 999px;
+}
+
+.neutro {
+  color: var(--color-text-muted);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+}
+
+.atencao {
+  color: var(--color-warning);
+  background: var(--color-warning-bg);
+}
+
+.perigo {
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
+}
+
+.sucesso {
+  color: var(--color-success);
+  background: var(--color-success-bg);
+}
+
+.linha {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.trilho {
+  flex: 1;
+  height: 6px;
+  overflow: hidden;
+  background: var(--color-border);
+  border-radius: 999px;
+}
+
+.preenchido {
+  height: 100%;
+  background: var(--color-primary);
+  border-radius: inherit;
+  transition: width 0.3s ease;
+}
+
+.valor {
+  flex: 0 0 auto;
+  min-width: 3ch;
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  text-align: right;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .preenchido {
+    transition: none;
+  }
+}
