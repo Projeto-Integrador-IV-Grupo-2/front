@@ -20,6 +20,10 @@ export const ITENS_MENU: ItemMenu[] = [
   { to: ROTAS.dashboard, rotulo: 'Visão geral' },
   { to: ROTAS.trilhas, rotulo: 'Trilhas' },
   { to: ROTAS.usuarios, rotulo: 'Usuários', perfis: ['ADMIN'] },
+  // Sem `perfis`: a listagem fica visível a qualquer autenticado por ora.
+  // Esconder/desabilitar ações por perfil é a issue de controle de acesso
+  // (Card 14), ainda não feita.
+  { to: ROTAS.areas, rotulo: 'Áreas' },
 ]
 
 /**

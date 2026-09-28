@@ -21,17 +21,17 @@ const ICONE_POR_ROTA: Record<string, ReactNode> = {
   [ROTAS.dashboard]: <GridIcon />,
   [ROTAS.trilhas]: <TrilhasIcon />,
   [ROTAS.usuarios]: <PeopleIcon />,
+  [ROTAS.areas]: <LayersIcon />,
 }
 
 /**
  * Itens do menu do protótipo que ainda não têm tela própria — outros cards.
  * Aparecem no menu (pedido explícito), mas sem link: nada aqui simula uma
- * funcionalidade que ainda não existe.
+ * funcionalidade que ainda não existe. "Áreas" saiu daqui — já tem tela.
  */
 const ITENS_EM_BREVE: Array<{ rotulo: string; icone: ReactNode }> = [
   { rotulo: 'Conhecimento', icone: <BookIcon /> },
   { rotulo: 'Pessoas', icone: <PeopleIcon /> },
-  { rotulo: 'Áreas', icone: <LayersIcon /> },
   { rotulo: 'IA', icone: <SparkleIcon /> },
   { rotulo: 'Histórico', icone: <ClockIcon /> },
 ]
