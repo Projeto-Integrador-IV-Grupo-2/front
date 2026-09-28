@@ -3,7 +3,10 @@ import { api } from './api.ts'
 import { adaptadorTrilhasMock } from './mocks/trilhasMock.ts'
 import type { ApiErrorResponse, ApiFieldError } from '../types/api.ts'
 import type {
+  AtualizarProgressoRequest,
   CriarTrilhaRequest,
+  ProgressoTrilha,
+  TrilhaDetalhe,
   TrilhaPaginacao,
   TrilhaResumo,
 } from '../types/trilha.ts'
@@ -48,10 +51,17 @@ function toServiceError(
 }
 
 /**
+ * 404 também ganha texto próprio: o backend responde "Trilha não encontrada:
+ * <uuid>", e o id não ajuda quem está na tela. Trilha de outro tenant também
+ * volta 404 (nunca 403), então a mensagem cobre os dois casos.
+ *
  * 403 e 5xx ganham texto próprio: o 403 costuma vir sem corpo, e a mensagem
  * de um 500 é técnica demais para mostrar a quem está usando a tela.
  */
 function mensagemPorStatus(status: number | undefined): string | undefined {
+  if (status === 404) {
+    return 'Trilha não encontrada. Ela pode ter sido removida ou não estar disponível para você.'
+  }
   if (status === 403) {
     return 'Você não tem permissão para esta operação.'
   }
@@ -122,5 +132,55 @@ export async function listarAreasParaTrilha(): Promise<RecursoResumo[]> {
     return data.content.map(({ id, nome }) => ({ id, nome }))
   } catch (error) {
     throw toServiceError(error, 'Não foi possível carregar as áreas.')
+  }
+}
+
+/** Trilha completa com o progresso do usuário autenticado. */
+export async function buscarTrilha(
+  id: string,
+  config?: { signal?: AbortSignal },
+): Promise<TrilhaDetalhe> {
+  try {
+    const { data } = await api.get<TrilhaDetalhe>(
+      `/api/trilhas/${encodeURIComponent(id)}`,
+      { ...configBase(), signal: config?.signal },
+    )
+    return data
+  } catch (error) {
+    throw toServiceError(error, 'Não foi possível carregar a trilha.')
+  }
+}
+
+/**
+ * Inicia a trilha para o usuário autenticado (`TrilhaAtribuicaoService.iniciar`
+ * no backend). Idempotente: se já existe progresso, a API só o devolve.
+ */
+export async function iniciarTrilha(id: string): Promise<ProgressoTrilha> {
+  try {
+    const { data } = await api.post<ProgressoTrilha>(
+      `/api/trilhas/${encodeURIComponent(id)}/progresso`,
+      undefined,
+      configBase(),
+    )
+    return data
+  } catch (error) {
+    throw toServiceError(error, 'Não foi possível iniciar a trilha.')
+  }
+}
+
+/** Troca o status do progresso já iniciado (`TrilhaAtribuicaoService.atualizar`). */
+export async function atualizarProgresso(
+  id: string,
+  request: AtualizarProgressoRequest,
+): Promise<ProgressoTrilha> {
+  try {
+    const { data } = await api.patch<ProgressoTrilha>(
+      `/api/trilhas/${encodeURIComponent(id)}/progresso`,
+      request,
+      configBase(),
+    )
+    return data
+  } catch (error) {
+    throw toServiceError(error, 'Não foi possível atualizar o progresso.')
   }
 }

@@ -1,4 +1,8 @@
-import type { ProgressoTrilha, TrilhaResumo } from '../types/trilha.ts'
+import type {
+  ProgressoTrilha,
+  TrilhaDetalhe,
+  TrilhaResumo,
+} from '../types/trilha.ts'
 import type { User } from '../types/user.ts'
 import type { Pagina, Usuario as UsuarioGestao } from '../types/usuario.ts'
 
@@ -97,5 +101,29 @@ export function criarPaginaTrilhas(
       totalPages: 1,
       ...overrides,
     },
+  }
+}
+
+/** Detalhe da trilha (`TrilhaDetalheResponse`), por padrão ainda não iniciada. */
+export function criarTrilhaDetalhe(
+  overrides: Partial<TrilhaDetalhe> = {},
+): TrilhaDetalhe {
+  return {
+    id: '44444444-4444-4444-4444-444444444444',
+    nome: 'Onboarding',
+    descricao: 'Primeiros passos na empresa.',
+    area: { id: '33333333-3333-3333-3333-333333333333', nome: 'Tecnologia' },
+    objetivos: 'Conhecer processos e ferramentas.',
+    prazoDias: 30,
+    ativo: true,
+    criadoEm: '2026-08-01T12:00:00Z',
+    progresso: criarProgressoTrilha({
+      id: null,
+      status: 'NAO_INICIADA',
+      percentual: 0,
+      prazo: null,
+      atribuidoEm: null,
+    }),
+    ...overrides,
   }
 }

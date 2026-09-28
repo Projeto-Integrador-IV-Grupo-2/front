@@ -4,25 +4,30 @@ import {
 } from '../../types/trilha.ts'
 import styles from './StatusProgresso.module.css'
 
-const TOM_POR_STATUS: Record<StatusProgresso, string> = {
-  NAO_INICIADA: styles.neutro,
-  EM_ANDAMENTO: styles.atencao,
-  ATRASADA: styles.perigo,
-  CONCLUIDA: styles.sucesso,
+export type TomSelo = 'neutro' | 'atencao' | 'perigo' | 'sucesso'
+
+const TOM_POR_STATUS: Record<StatusProgresso, TomSelo> = {
+  NAO_INICIADA: 'neutro',
+  EM_ANDAMENTO: 'atencao',
+  ATRASADA: 'perigo',
+  CONCLUIDA: 'sucesso',
 }
 
-/** Selo com o status do progresso — mesmas cores do protótipo em toda a área de trilhas. */
+/** Selo (badge) com as cores do protótipo, usado em toda a área de trilhas. */
+export function Selo({ tom, children }: { tom: TomSelo; children: string }) {
+  return <span className={`${styles.selo} ${styles[tom]}`}>{children}</span>
+}
+
+/** Selo com o status do progresso. */
 export function SeloStatus({ status }: { status: StatusProgresso }) {
   return (
-    <span className={`${styles.selo} ${TOM_POR_STATUS[status]}`}>
-      {ROTULOS_STATUS_PROGRESSO[status]}
-    </span>
+    <Selo tom={TOM_POR_STATUS[status]}>{ROTULOS_STATUS_PROGRESSO[status]}</Selo>
   )
 }
 
 /** Selo neutro para informação que não é status (ex.: a área da trilha). */
 export function SeloNeutro({ children }: { children: string }) {
-  return <span className={`${styles.selo} ${styles.neutro}`}>{children}</span>
+  return <Selo tom="neutro">{children}</Selo>
 }
 
 interface BarraProgressoProps {

@@ -1,13 +1,20 @@
 import { http, HttpResponse } from 'msw'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  atualizarProgresso,
+  buscarTrilha,
   criarTrilha,
+  iniciarTrilha,
   listarAreasParaTrilha,
   listarTrilhas,
   TrilhaServiceError,
 } from './trilhaService.ts'
 import { reiniciarTrilhasMock } from './mocks/trilhasMock.ts'
-import { criarPaginaTrilhas, criarTrilhaResumo } from '../test/factories.ts'
+import {
+  criarPaginaTrilhas,
+  criarProgressoTrilha,
+  criarTrilhaResumo,
+} from '../test/factories.ts'
 import { server } from '../test/msw/server.ts'
 
 const NOVA_TRILHA = {
@@ -118,6 +125,49 @@ describe('trilhaService (API)', () => {
     })
   })
 
+  it('troca a mensagem técnica do 404 por uma que serve a quem está na tela', async () => {
+    server.use(
+      http.get('*/api/trilhas/:id', () =>
+        HttpResponse.json(
+          { message: 'Trilha não encontrada: 123' },
+          { status: 404 },
+        ),
+      ),
+    )
+
+    const erro = await buscarTrilha('123').catch((causa: unknown) => causa)
+
+    expect(erro).toBeInstanceOf(TrilhaServiceError)
+    expect(erro).toMatchObject({
+      status: 404,
+      message:
+        'Trilha não encontrada. Ela pode ter sido removida ou não estar disponível para você.',
+    })
+  })
+
+  it('inicia com POST e atualiza com PATCH no recurso de progresso', async () => {
+    const chamadas: string[] = []
+    let corpoPatch: unknown = null
+    server.use(
+      http.post('*/api/trilhas/:id/progresso', ({ params }) => {
+        chamadas.push(`POST ${String(params.id)}`)
+        return HttpResponse.json(criarProgressoTrilha())
+      }),
+      http.patch('*/api/trilhas/:id/progresso', async ({ params, request }) => {
+        chamadas.push(`PATCH ${String(params.id)}`)
+        corpoPatch = await request.json()
+        return HttpResponse.json(criarProgressoTrilha({ status: 'CONCLUIDA' }))
+      }),
+    )
+
+    await iniciarTrilha('t-1')
+    const progresso = await atualizarProgresso('t-1', { status: 'CONCLUIDA' })
+
+    expect(chamadas).toEqual(['POST t-1', 'PATCH t-1'])
+    expect(corpoPatch).toEqual({ status: 'CONCLUIDA' })
+    expect(progresso.status).toBe('CONCLUIDA')
+  })
+
   it('reduz as áreas a id e nome para o campo do formulário', async () => {
     server.use(
       http.get('*/api/areas', () =>
@@ -160,6 +210,36 @@ describe('trilhaService (mock em memória)', () => {
 
     expect(criada.nome).toBe('Excelência em Vendas')
     expect(pagina.content.map((t) => t.nome)).toContain('Excelência em Vendas')
+  })
+
+  it('iniciar e concluir refletem no detalhe e na listagem', async () => {
+    const id = 'b1000000-0000-4000-8000-000000000002'
+    expect((await buscarTrilha(id)).progresso.status).toBe('NAO_INICIADA')
+
+    await iniciarTrilha(id)
+    expect((await buscarTrilha(id)).progresso).toMatchObject({
+      status: 'EM_ANDAMENTO',
+      percentual: 50,
+    })
+
+    await atualizarProgresso(id, { status: 'CONCLUIDA' })
+    const pagina = await listarTrilhas({ size: 50 })
+    const naLista = pagina.content.find((t) => t.id === id)
+    expect(naLista?.progresso).toMatchObject({
+      status: 'CONCLUIDA',
+      percentual: 100,
+    })
+  })
+
+  it('responde 404 para trilha inexistente e para progresso não iniciado', async () => {
+    await expect(buscarTrilha('nao-existe')).rejects.toMatchObject({
+      status: 404,
+    })
+    await expect(
+      atualizarProgresso('b1000000-0000-4000-8000-000000000002', {
+        status: 'CONCLUIDA',
+      }),
+    ).rejects.toMatchObject({ status: 404 })
   })
 
   it('recusa nome repetido com 409, como a API faria', async () => {

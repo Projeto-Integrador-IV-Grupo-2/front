@@ -1,0 +1,86 @@
+.jornada {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.marco {
+  position: relative;
+  display: flex;
+  gap: 14px;
+  padding-bottom: 26px;
+}
+
+.marco:last-child {
+  padding-bottom: 0;
+}
+
+/* Fio que liga um marco ao próximo; verde quando o trecho já foi cumprido. */
+.marco:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 26px;
+  bottom: 0;
+  left: 11px;
+  width: 1px;
+  background: var(--color-border);
+}
+
+.feito:not(:last-child)::after {
+  background: var(--color-success);
+}
+
+.ponto {
+  z-index: 1;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 23px;
+  height: 23px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-border);
+  border-radius: 50%;
+}
+
+.feito .ponto {
+  color: #ffffff;
+  background: var(--color-success);
+  border-color: var(--color-success);
+}
+
+.atual .ponto {
+  color: var(--color-primary-contrast);
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.texto {
+  flex: 1;
+  min-width: 0;
+  padding-top: 1px;
+}
+
+.linhaTitulo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.titulo {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.meta {
+  margin-top: 2px;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
