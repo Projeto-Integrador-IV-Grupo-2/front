@@ -1,10 +1,24 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, it } from 'vitest'
 import { AreasPage } from './AreasPage.tsx'
-import { criarArea, criarPagina } from '../test/factories.ts'
+import { ROTAS } from '../routes/paths.ts'
+import { criarArea, criarPagina, criarUsuario } from '../test/factories.ts'
 import { server } from '../test/msw/server.ts'
+import { renderizarComProvedores } from '../test/renderWithProviders.tsx'
+import type { User } from '../types/user.ts'
+
+/** Por padrão renderiza como ADMIN: a maioria dos testes aqui cobre o fluxo
+ * de gestão, que exige perfil. Os testes de controle de acesso passam o
+ * usuário explicitamente. */
+function renderizar(usuario: User = criarUsuario({ papel: 'ADMIN' })) {
+  return renderizarComProvedores({
+    rota: ROTAS.areas,
+    usuario,
+    routes: [{ path: ROTAS.areas, element: <AreasPage /> }],
+  })
+}
 
 describe('AreasPage', () => {
   it('carrega e lista as áreas vindas da API', async () => {
@@ -19,7 +33,7 @@ describe('AreasPage', () => {
       ),
     )
 
-    render(<AreasPage />)
+    renderizar()
 
     expect(
       await screen.findByRole('cell', { name: 'Atendimento' }),
@@ -37,7 +51,7 @@ describe('AreasPage', () => {
       }),
     )
 
-    render(<AreasPage />)
+    renderizar()
     await screen.findByRole('cell', { name: 'Vendas' })
 
     await user.type(screen.getByLabelText('Buscar área por nome'), 'Vendas')
@@ -51,7 +65,7 @@ describe('AreasPage', () => {
       http.get('*/api/areas', () => HttpResponse.json(null, { status: 500 })),
     )
 
-    render(<AreasPage />)
+    renderizar()
 
     expect(
       await screen.findByText('Não foi possível carregar as áreas.'),
@@ -63,7 +77,7 @@ describe('AreasPage', () => {
       http.get('*/api/areas', () => HttpResponse.json(criarPagina([]))),
     )
 
-    render(<AreasPage />)
+    renderizar()
 
     expect(
       await screen.findByText('Nenhuma área encontrada.'),
@@ -84,7 +98,7 @@ describe('AreasPage', () => {
       ),
     )
 
-    render(<AreasPage />)
+    renderizar()
     await screen.findByText('Nenhuma área encontrada.')
 
     await user.click(screen.getByRole('button', { name: '+ Nova área' }))
@@ -108,7 +122,7 @@ describe('AreasPage', () => {
       }),
     )
 
-    render(<AreasPage />)
+    renderizar()
     await screen.findByText('Nenhuma área encontrada.')
 
     await user.click(screen.getByRole('button', { name: '+ Nova área' }))
@@ -137,7 +151,7 @@ describe('AreasPage', () => {
       ),
     )
 
-    render(<AreasPage />)
+    renderizar()
     await screen.findByText('Nenhuma área encontrada.')
 
     await user.click(screen.getByRole('button', { name: '+ Nova área' }))
@@ -166,7 +180,7 @@ describe('AreasPage', () => {
       }),
     )
 
-    render(<AreasPage />)
+    renderizar()
     await screen.findByRole('cell', { name: 'Atendimento' })
 
     await user.click(screen.getByRole('button', { name: 'Editar Atendimento' }))
@@ -198,7 +212,7 @@ describe('AreasPage', () => {
       ),
     )
 
-    render(<AreasPage />)
+    renderizar()
     const linha = (
       await screen.findByRole('cell', { name: 'Atendimento' })
     ).closest('tr')
@@ -211,5 +225,85 @@ describe('AreasPage', () => {
     )
 
     expect(await screen.findByText('Área inativada.')).toBeInTheDocument()
+  })
+
+  describe('controle de acesso (Card 14 / issue #31)', () => {
+    it('esconde as ações de gestão para o colaborador', async () => {
+      server.use(
+        http.get('*/api/areas', () =>
+          HttpResponse.json(criarPagina([criarArea({ nome: 'Atendimento' })])),
+        ),
+      )
+
+      renderizar(criarUsuario({ papel: 'COLABORADOR' }))
+      await screen.findByRole('cell', { name: 'Atendimento' })
+
+      expect(
+        screen.queryByRole('button', { name: '+ Nova área' }),
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole('button', { name: 'Editar Atendimento' }),
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole('button', { name: 'Inativar Atendimento' }),
+      ).not.toBeInTheDocument()
+    })
+
+    it.each(['ADMIN', 'GESTOR'] as const)(
+      'mostra as ações de gestão para %s',
+      async (papel) => {
+        server.use(
+          http.get('*/api/areas', () =>
+            HttpResponse.json(
+              criarPagina([criarArea({ nome: 'Atendimento' })]),
+            ),
+          ),
+        )
+
+        renderizar(criarUsuario({ papel }))
+        await screen.findByRole('cell', { name: 'Atendimento' })
+
+        expect(
+          screen.getByRole('button', { name: '+ Nova área' }),
+        ).toBeInTheDocument()
+        expect(
+          screen.getByRole('button', { name: 'Editar Atendimento' }),
+        ).toBeInTheDocument()
+        expect(
+          screen.getByRole('button', { name: 'Inativar Atendimento' }),
+        ).toBeInTheDocument()
+      },
+    )
+
+    it('trata um 403 do backend de forma amigável, mesmo que a UI já devesse ter escondido a ação', async () => {
+      // Defesa em profundidade (padrão obrigatório da issue): mesmo com a UI
+      // liberando a ação para este ADMIN, o backend pode recusar (ex.: sessão
+      // desatualizada). A tela precisa mostrar o erro, não quebrar.
+      const user = userEvent.setup()
+      server.use(
+        http.get('*/api/areas', () =>
+          HttpResponse.json(
+            criarPagina([criarArea({ id: '1', nome: 'Atendimento' })]),
+          ),
+        ),
+        http.patch('*/api/areas/1/inativar', () =>
+          HttpResponse.json({ message: 'Sem permissão' }, { status: 403 }),
+        ),
+      )
+
+      renderizar(criarUsuario({ papel: 'ADMIN' }))
+      const linha = (
+        await screen.findByRole('cell', { name: 'Atendimento' })
+      ).closest('tr')
+      if (!linha) {
+        throw new Error('Linha da área não encontrada.')
+      }
+
+      await user.click(
+        within(linha).getByRole('button', { name: 'Inativar Atendimento' }),
+      )
+
+      expect(await screen.findByText('Sem permissão')).toBeInTheDocument()
+    })
   })
 })

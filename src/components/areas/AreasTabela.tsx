@@ -5,6 +5,11 @@ interface AreasTabelaProps {
   areas: Area[]
   /** `id` da área com operação de situação em voo, ou `null`. */
   situacaoEmAndamento: string | null
+  /**
+   * Libera as ações de editar/inativar/reativar. A checagem de perfil é
+   * inteira da página (via `usePermissao`) — a tabela só obedece.
+   */
+  podeGerenciar: boolean
   onEditar: (area: Area) => void
   onAlterarSituacao: (area: Area) => void
 }
@@ -19,6 +24,7 @@ interface AreasTabelaProps {
 export function AreasTabela({
   areas,
   situacaoEmAndamento,
+  podeGerenciar,
   onEditar,
   onAlterarSituacao,
 }: AreasTabelaProps) {
@@ -53,26 +59,34 @@ export function AreasTabela({
                 </span>
               </td>
               <td data-rotulo="Ações" className={styles.acoes}>
-                {/* O nome entra no aria-label porque "Editar" se repete em
-                    cada linha: sem ele a lista de botões do leitor de tela
-                    não diz qual área cada ação afeta. */}
-                <button
-                  type="button"
-                  className={styles.secundario}
-                  onClick={() => onEditar(area)}
-                  aria-label={`Editar ${area.nome}`}
-                >
-                  Editar
-                </button>
-                <button
-                  type="button"
-                  className={area.ativo ? styles.perigo : styles.secundario}
-                  onClick={() => onAlterarSituacao(area)}
-                  disabled={emAndamento}
-                  aria-label={`${area.ativo ? 'Inativar' : 'Reativar'} ${area.nome}`}
-                >
-                  {area.ativo ? 'Inativar' : 'Reativar'}
-                </button>
+                {/* Colaborador não tem essas ações — nem o botão aparece
+                    (Card 14 / issue #31). A fonte de verdade continua o
+                    backend: um 403 vindo da API ainda seria tratado pela
+                    página, mesmo que a UI já devesse ter escondido isto. */}
+                {podeGerenciar && (
+                  <>
+                    {/* O nome entra no aria-label porque "Editar" se repete
+                        em cada linha: sem ele a lista de botões do leitor de
+                        tela não diz qual área cada ação afeta. */}
+                    <button
+                      type="button"
+                      className={styles.secundario}
+                      onClick={() => onEditar(area)}
+                      aria-label={`Editar ${area.nome}`}
+                    >
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      className={area.ativo ? styles.perigo : styles.secundario}
+                      onClick={() => onAlterarSituacao(area)}
+                      disabled={emAndamento}
+                      aria-label={`${area.ativo ? 'Inativar' : 'Reativar'} ${area.nome}`}
+                    >
+                      {area.ativo ? 'Inativar' : 'Reativar'}
+                    </button>
+                  </>
+                )}
               </td>
             </tr>
           )
