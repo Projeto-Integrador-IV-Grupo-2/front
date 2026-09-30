@@ -61,12 +61,14 @@ function mensagemPorStatus(
 }
 
 /** Campo vazio não vira parâmetro: `?nome=` faria a API filtrar por string vazia. */
-function apenasPreenchidos(filtro: AreaFiltro): Record<string, string> {
+function apenasPreenchidos(
+  filtro: AreaFiltro,
+): Record<string, string | boolean> {
   return Object.fromEntries(
     Object.entries(filtro).filter(
       ([, valor]) => valor !== undefined && valor !== '',
     ),
-  ) as Record<string, string>
+  ) as Record<string, string | boolean>
 }
 
 export async function listarAreas(

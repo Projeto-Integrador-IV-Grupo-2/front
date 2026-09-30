@@ -31,6 +31,23 @@ describe('usuarioService', () => {
     expect(params.get('sort')).toBe('nomeCompleto')
   })
 
+  it('envia o perfil com o nome que a API espera (papel)', async () => {
+    let url: URL | null = null
+    server.use(
+      http.get('*/api/usuarios', ({ request }) => {
+        url = new URL(request.url)
+        return HttpResponse.json(criarPaginaUsuarios())
+      }),
+    )
+
+    await listarUsuarios({ perfil: 'GESTOR', departamento: 'Vendas' })
+
+    const params = url!.searchParams
+    expect(params.get('papel')).toBe('GESTOR')
+    expect(params.has('perfil')).toBe(false)
+    expect(params.get('departamento')).toBe('Vendas')
+  })
+
   it('devolve o conteúdo e os contadores da página', async () => {
     server.use(
       http.get('*/api/usuarios', () =>

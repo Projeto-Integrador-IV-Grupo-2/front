@@ -62,12 +62,23 @@ function mensagemPorStatus(
   return fallbackMessage
 }
 
+/**
+ * Nome do parâmetro na API quando difere do nome do campo na tela: o record
+ * `UsuarioFiltro` do backend chama o perfil de `papel`.
+ */
+const PARAMETRO_DA_API: Partial<Record<keyof UsuarioFiltro, string>> = {
+  perfil: 'papel',
+}
+
 /** Campo vazio não vira parâmetro: `?nome=` faria a API filtrar por string vazia. */
 function apenasPreenchidos(filtro: UsuarioFiltro): Record<string, string> {
   return Object.fromEntries(
-    Object.entries(filtro).filter(
-      ([, valor]) => valor !== undefined && valor !== '',
-    ),
+    Object.entries(filtro)
+      .filter(([, valor]) => valor !== undefined && valor !== '')
+      .map(([campo, valor]) => [
+        PARAMETRO_DA_API[campo as keyof UsuarioFiltro] ?? campo,
+        valor,
+      ]),
   ) as Record<string, string>
 }
 

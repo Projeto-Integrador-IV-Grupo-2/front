@@ -1,9 +1,8 @@
 /**
  * Área no formato do record `AreaResponse` da API (Back Card 01/04). Segue o
- * DER: `area` só tem `nome`/`ativo` — sem responsável nem área superior, que
- * não existem no modelo. `totalPessoas`/`totalConteudos` são contagens de
- * `usuario.area_id`/`conteudo.area_id` (DER) que o back ainda vai precisar
- * expor — a Card 04 de hoje não lista esses campos na resposta.
+ * DER: sem responsável nem área superior, que não existem no modelo.
+ * `totalPessoas` conta `usuario.area_id`; `totalConteudos` vem sempre 0 até a
+ * tabela `conteudo` existir no backend.
  */
 export interface Area {
   id: string
@@ -33,6 +32,8 @@ export interface Pagina<T> {
 /** Filtro aceito por `GET /api/areas`. */
 export interface AreaFiltro {
   nome?: string
+  /** Sem ele a API devolve só as ativas — a tela de gestão precisa das inativas para reativá-las. */
+  incluirInativas?: boolean
 }
 
 /** Paginação e ordenação de `GET /api/areas`. `page` é zero-based. */

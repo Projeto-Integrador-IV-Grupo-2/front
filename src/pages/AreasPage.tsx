@@ -80,7 +80,7 @@ export function AreasPage() {
     const controlador = new AbortController()
 
     listarAreas(
-      { nome: nomeBuscado },
+      { nome: nomeBuscado, incluirInativas: true },
       { page: pagina, size: TAMANHO_PAGINA },
       { signal: controlador.signal },
     )

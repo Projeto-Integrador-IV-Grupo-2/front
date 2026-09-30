@@ -225,9 +225,13 @@ describe('TrilhasPage', () => {
       prazoDias: 30,
       objetivos: 'Vender com método.',
     })
-    expect(screen.getByRole('status', { name: '' })).toHaveTextContent(
-      'Trilha “Excelência em Vendas” criada.',
-    )
+    // A listagem recarrega logo após criar, e o "Carregando trilhas…" também
+    // é um role="status" — por isso o aviso é localizado pelo texto.
+    expect(
+      screen
+        .getByText('Trilha “Excelência em Vendas” criada.')
+        .closest('[role="status"]'),
+    ).not.toBeNull()
     expect(
       await screen.findByRole('link', { name: /Excelência em Vendas/ }),
     ).toBeInTheDocument()
