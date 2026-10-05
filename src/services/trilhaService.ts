@@ -7,6 +7,7 @@ import type {
   CriarTrilhaRequest,
   ProgressoTrilha,
   TrilhaDetalhe,
+  TrilhaFiltro,
   TrilhaPaginacao,
   TrilhaResumo,
 } from '../types/trilha.ts'
@@ -83,23 +84,78 @@ function configBase(): AxiosRequestConfig {
     : {}
 }
 
+/**
+ * Filtro vazio não vira parâmetro: `?nome=` faria a API filtrar por string
+ * vazia, e `minhas=false` é só o padrão dito em voz alta.
+ */
+function apenasPreenchidos(
+  filtro: TrilhaFiltro,
+): Record<string, string | boolean> {
+  return Object.fromEntries(
+    Object.entries(filtro).filter(
+      ([, valor]) => valor !== undefined && valor !== '' && valor !== false,
+    ),
+  ) as Record<string, string | boolean>
+}
+
+function paramsDaListagem(filtro: TrilhaFiltro, paginacao: TrilhaPaginacao) {
+  return {
+    ...apenasPreenchidos(filtro),
+    page: paginacao.page ?? 0,
+    size: paginacao.size ?? 20,
+    sort: paginacao.sort ?? 'nome',
+  }
+}
+
 export async function listarTrilhas(
+  filtro: TrilhaFiltro = {},
   paginacao: TrilhaPaginacao = {},
   config?: { signal?: AbortSignal },
 ): Promise<Pagina<TrilhaResumo>> {
   try {
     const { data } = await api.get<Pagina<TrilhaResumo>>('/api/trilhas', {
       ...configBase(),
-      params: {
-        page: paginacao.page ?? 0,
-        size: paginacao.size ?? 20,
-        sort: paginacao.sort ?? 'nome',
-      },
+      params: paramsDaListagem(filtro, paginacao),
       signal: config?.signal,
     })
     return data
   } catch (error) {
     throw toServiceError(error, 'Não foi possível carregar as trilhas.')
+  }
+}
+
+/**
+ * Trilhas ativas de uma área (`GET /api/areas/{id}/trilhas`), com os mesmos
+ * filtros da listagem. Aqui o 404 é da área, não de uma trilha.
+ */
+export async function listarTrilhasDaArea(
+  areaId: string,
+  filtro: TrilhaFiltro = {},
+  paginacao: TrilhaPaginacao = {},
+  config?: { signal?: AbortSignal },
+): Promise<Pagina<TrilhaResumo>> {
+  try {
+    const { data } = await api.get<Pagina<TrilhaResumo>>(
+      `/api/areas/${encodeURIComponent(areaId)}/trilhas`,
+      {
+        ...configBase(),
+        params: paramsDaListagem(filtro, paginacao),
+        signal: config?.signal,
+      },
+    )
+    return data
+  } catch (error) {
+    const normalizado = toServiceError(
+      error,
+      'Não foi possível carregar as trilhas da área.',
+    )
+    if (normalizado.status === 404) {
+      throw new TrilhaServiceError(
+        'Área não encontrada. Ela pode ter sido removida.',
+        404,
+      )
+    }
+    throw normalizado
   }
 }
 

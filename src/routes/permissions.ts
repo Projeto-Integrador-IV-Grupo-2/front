@@ -16,6 +16,12 @@ export interface ItemMenu {
   perfis?: UserRole[]
 }
 
+/**
+ * Quem acompanha as trilhas da equipe (tela e exportação). Espelha o
+ * `@PreAuthorize` do `AtribuicaoController`: colaborador recebe 403.
+ */
+export const PERFIS_ACOMPANHAMENTO: UserRole[] = ['ADMIN', 'GESTOR']
+
 export const ITENS_MENU: ItemMenu[] = [
   { to: ROTAS.dashboard, rotulo: 'Visão geral' },
   { to: ROTAS.trilhas, rotulo: 'Trilhas' },
@@ -23,6 +29,11 @@ export const ITENS_MENU: ItemMenu[] = [
   // Sem `perfis`: a listagem fica visível a qualquer autenticado — só as
   // ações de dentro da tela são restritas (ver PERFIS_GESTAO_AREA).
   { to: ROTAS.areas, rotulo: 'Áreas' },
+  {
+    to: ROTAS.acompanhamento,
+    rotulo: 'Acompanhamento',
+    perfis: PERFIS_ACOMPANHAMENTO,
+  },
 ]
 
 /**

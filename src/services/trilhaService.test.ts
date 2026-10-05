@@ -7,6 +7,7 @@ import {
   iniciarTrilha,
   listarAreasParaTrilha,
   listarTrilhas,
+  listarTrilhasDaArea,
   TrilhaServiceError,
 } from './trilhaService.ts'
 import { reiniciarTrilhasMock } from './mocks/trilhasMock.ts'
@@ -42,6 +43,85 @@ describe('trilhaService (API)', () => {
     expect(params.get('sort')).toBe('nome')
   })
 
+  it('envia os filtros preenchidos e omite os vazios', async () => {
+    let url: URL | null = null
+    server.use(
+      http.get('*/api/trilhas', ({ request }) => {
+        url = new URL(request.url)
+        return HttpResponse.json(criarPaginaTrilhas())
+      }),
+    )
+
+    await listarTrilhas(
+      {
+        nome: 'vendas',
+        areaId: '',
+        status: 'EM_ANDAMENTO',
+        minhas: true,
+        recomendar: undefined,
+      },
+      { sort: 'prazo' },
+    )
+
+    const params = url!.searchParams
+    expect(params.get('nome')).toBe('vendas')
+    expect(params.get('status')).toBe('EM_ANDAMENTO')
+    expect(params.get('minhas')).toBe('true')
+    expect(params.get('sort')).toBe('prazo')
+    expect(params.has('areaId')).toBe(false)
+    expect(params.has('recomendar')).toBe(false)
+  })
+
+  it('não envia minhas=false, que é o padrão da API', async () => {
+    let url: URL | null = null
+    server.use(
+      http.get('*/api/trilhas', ({ request }) => {
+        url = new URL(request.url)
+        return HttpResponse.json(criarPaginaTrilhas())
+      }),
+    )
+
+    await listarTrilhas({ minhas: false, recomendar: 'AREA' })
+
+    expect(url!.searchParams.has('minhas')).toBe(false)
+    expect(url!.searchParams.get('recomendar')).toBe('AREA')
+  })
+
+  it('lista as trilhas de uma área pelo endpoint da área', async () => {
+    let url: URL | null = null
+    server.use(
+      http.get('*/api/areas/:id/trilhas', ({ request }) => {
+        url = new URL(request.url)
+        return HttpResponse.json(criarPaginaTrilhas())
+      }),
+    )
+
+    const pagina = await listarTrilhasDaArea('area 1', { nome: 'on' })
+
+    expect(url!.pathname).toMatch(/\/api\/areas\/area%201\/trilhas$/)
+    expect(url!.searchParams.get('nome')).toBe('on')
+    expect(pagina.content).toHaveLength(1)
+  })
+
+  it('explica o 404 das trilhas da área como área não encontrada', async () => {
+    server.use(
+      http.get('*/api/areas/:id/trilhas', () =>
+        HttpResponse.json(
+          { message: 'Área não encontrada: x' },
+          { status: 404 },
+        ),
+      ),
+    )
+
+    const erro = await listarTrilhasDaArea('x').catch((causa: unknown) => causa)
+
+    expect(erro).toBeInstanceOf(TrilhaServiceError)
+    expect(erro).toMatchObject({
+      status: 404,
+      message: 'Área não encontrada. Ela pode ter sido removida.',
+    })
+  })
+
   it('devolve o conteúdo e os contadores da página', async () => {
     server.use(
       http.get('*/api/trilhas', () =>
@@ -55,7 +135,7 @@ describe('trilhaService (API)', () => {
       ),
     )
 
-    const pagina = await listarTrilhas({ page: 1, size: 12 })
+    const pagina = await listarTrilhas({}, { page: 1, size: 12 })
 
     expect(pagina.content).toHaveLength(1)
     expect(pagina.page.number).toBe(1)
@@ -194,7 +274,7 @@ describe('trilhaService (mock em memória)', () => {
   // O MSW está com `onUnhandledRequest: 'error'`: se o mock deixasse a
   // chamada escapar para a rede, estes testes falhariam.
   it('responde a listagem sem sair para a rede, ordenada por nome', async () => {
-    const pagina = await listarTrilhas({ page: 0, size: 3 })
+    const pagina = await listarTrilhas({}, { page: 0, size: 3 })
 
     expect(pagina.content).toHaveLength(3)
     expect(pagina.page.totalElements).toBe(5)
@@ -206,7 +286,7 @@ describe('trilhaService (mock em memória)', () => {
 
   it('cria a trilha e ela passa a aparecer na listagem', async () => {
     const criada = await criarTrilha(NOVA_TRILHA)
-    const pagina = await listarTrilhas({ size: 50 })
+    const pagina = await listarTrilhas({}, { size: 50 })
 
     expect(criada.nome).toBe('Excelência em Vendas')
     expect(pagina.content.map((t) => t.nome)).toContain('Excelência em Vendas')
@@ -223,7 +303,7 @@ describe('trilhaService (mock em memória)', () => {
     })
 
     await atualizarProgresso(id, { status: 'CONCLUIDA' })
-    const pagina = await listarTrilhas({ size: 50 })
+    const pagina = await listarTrilhas({}, { size: 50 })
     const naLista = pagina.content.find((t) => t.id === id)
     expect(naLista?.progresso).toMatchObject({
       status: 'CONCLUIDA',

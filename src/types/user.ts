@@ -1,3 +1,5 @@
+import type { RecursoResumo } from './usuario.ts'
+
 /**
  * Perfis de acesso — espelham o enum `papel_usuario` do banco e o enum
  * `Perfil` da API (ADMIN, GESTOR, COLABORADOR).
@@ -15,4 +17,9 @@ export interface User {
   nomeCompleto: string
   email: string
   papel: UserRole
+  /**
+   * Área do usuário, usada nas recomendações de trilhas. Opcional porque o
+   * `MeResponse` da API ainda não a devolve — sem ela, nada é recomendado.
+   */
+  area?: RecursoResumo | null
 }

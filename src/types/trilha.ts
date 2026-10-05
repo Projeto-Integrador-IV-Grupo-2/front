@@ -61,6 +61,25 @@ export interface AtualizarProgressoRequest {
   status: Exclude<StatusProgresso, 'NAO_INICIADA'>
 }
 
+/**
+ * Filtros de `GET /api/trilhas` (record `TrilhaFiltro` da API), todos
+ * opcionais e combinados com E. Valem também para `GET /api/areas/{id}/trilhas`.
+ */
+export interface TrilhaFiltro {
+  /** Trecho do nome, sem diferenciar maiúsculas. */
+  nome?: string
+  areaId?: string
+  /**
+   * Status do progresso do próprio usuário. `NAO_INICIADA` inclui as trilhas
+   * que ele nunca iniciou; prazo vencido conta como `ATRASADA`.
+   */
+  status?: StatusProgresso | ''
+  /** Só as trilhas que o usuário iniciou ou recebeu (aceita `sort=prazo`). */
+  minhas?: boolean
+  /** Coloca as trilhas da área do usuário primeiro. */
+  recomendar?: 'AREA'
+}
+
 /** Paginação e ordenação de `GET /api/trilhas`. `page` é zero-based. */
 export interface TrilhaPaginacao {
   page?: number
@@ -75,6 +94,14 @@ export interface CriarTrilhaRequest {
   prazoDias: number | null
   objetivos: string | null
 }
+
+/** Ordem dos status nos selects de filtro. */
+export const STATUS_PROGRESSO: StatusProgresso[] = [
+  'NAO_INICIADA',
+  'EM_ANDAMENTO',
+  'CONCLUIDA',
+  'ATRASADA',
+]
 
 /** Rótulos de status em um lugar só — listagem e detalhe leem daqui. */
 export const ROTULOS_STATUS_PROGRESSO: Record<StatusProgresso, string> = {

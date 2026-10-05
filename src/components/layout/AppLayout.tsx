@@ -22,6 +22,7 @@ const ICONE_POR_ROTA: Record<string, ReactNode> = {
   [ROTAS.trilhas]: <TrilhasIcon />,
   [ROTAS.usuarios]: <PeopleIcon />,
   [ROTAS.areas]: <LayersIcon />,
+  [ROTAS.acompanhamento]: <ChartIcon />,
 }
 
 /**
@@ -353,6 +354,33 @@ function LayersIcon() {
         d="M3 13.5l7 3.5 7-3.5"
         stroke="currentColor"
         strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+function ChartIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 20 20"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M3 3v14h14"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M6.5 13l3-4 3 2 4-5.5"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
         strokeLinejoin="round"
       />
     </svg>
