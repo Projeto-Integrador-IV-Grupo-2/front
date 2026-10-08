@@ -43,6 +43,12 @@ export const PERFIS_CRIAR_TRILHA: UserRole[] = ['ADMIN']
  */
 export const PERFIS_GESTAO_AREA: UserRole[] = ['ADMIN', 'GESTOR']
 
+/**
+ * Quem monta PDIs: vê a aba "PDIs da equipe", abre o editor e usa o botão
+ * "Adicionar ao PDI" no detalhe da trilha. Colaborador só vê "Meu PDI".
+ */
+export const PERFIS_GESTAO_PDI: UserRole[] = ['ADMIN', 'GESTOR']
+
 /** `perfis` indefinido ou vazio = liberado para qualquer perfil autenticado. */
 export function temPermissao(
   perfis: UserRole[] | undefined,

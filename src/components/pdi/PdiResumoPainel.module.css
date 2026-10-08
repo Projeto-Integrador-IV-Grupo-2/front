@@ -1,0 +1,50 @@
+.painel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.percentual {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.contagem {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+
+.dados {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin: var(--space-2) 0 0;
+}
+
+.dados dt {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.dados dd {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+@media (max-width: 640px) {
+  .dados {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -1,8 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { TrilhaCard } from '../components/trilhas/TrilhaCard.tsx'
 import { TrilhaFormulario } from '../components/trilhas/TrilhaFormulario.tsx'
 import { useAuth } from '../hooks/useAuth.ts'
-import { PERFIS_CRIAR_TRILHA, temPermissao } from '../routes/permissions.ts'
+import { ROTAS } from '../routes/paths.ts'
+import {
+  PERFIS_CRIAR_TRILHA,
+  PERFIS_GESTAO_PDI,
+  temPermissao,
+} from '../routes/permissions.ts'
 import {
   criarTrilha,
   listarAreasParaTrilha,
@@ -39,6 +45,7 @@ function mensagemDe(causa: unknown, padrao: string): string {
 export function TrilhasPage() {
   const { user } = useAuth()
   const podeCriar = temPermissao(PERFIS_CRIAR_TRILHA, user?.papel)
+  const gerePdi = temPermissao(PERFIS_GESTAO_PDI, user?.papel)
 
   // Contador de recarga: "Tentar novamente" e o cadastro incrementam para
   // refazer a busca do início.
@@ -197,24 +204,36 @@ export function TrilhasPage() {
               : 'As trilhas de desenvolvimento disponíveis para você.'}
           </p>
         </div>
-        {podeCriar && (
-          <button
-            ref={novaTrilhaRef}
-            type="button"
-            className={styles.nova}
-            onClick={abrirFormulario}
-          >
-            <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
-              <path
-                d="M7 2v10M2 7h10"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-              />
-            </svg>
-            Nova trilha
-          </button>
-        )}
+        <div className={styles.acoesCabecalho}>
+          {/* O PDI vive dentro de Trilhas: sem item no menu, entra por aqui.
+              Quando as abas da Task 6 chegarem em dev, vira mais uma aba. */}
+          <Link to={ROTAS.pdi} className={styles.linkPdi}>
+            {gerePdi ? 'PDI' : 'Meu PDI'}
+          </Link>
+          {podeCriar && (
+            <button
+              ref={novaTrilhaRef}
+              type="button"
+              className={styles.nova}
+              onClick={abrirFormulario}
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 14 14"
+                aria-hidden="true"
+              >
+                <path
+                  d="M7 2v10M2 7h10"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                />
+              </svg>
+              Nova trilha
+            </button>
+          )}
+        </div>
       </header>
 
       {/* Live region única da página: o aviso de sucesso chega ao leitor de
