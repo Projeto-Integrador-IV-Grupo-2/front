@@ -1,6 +1,12 @@
 import { http, HttpResponse } from 'msw'
 import {
   criarArea,
+  criarCompetencia,
+  criarPagina,
+  criarPdiAcao,
+  criarPdiDetalhe,
+  criarPdiItem,
+  criarPdiResumo,
   criarPaginaTrilhas,
   criarPaginaUsuarios,
   criarProgressoTrilha,
@@ -79,5 +85,46 @@ export const handlers = [
 
   http.patch('*/api/areas/:id/ativar', () =>
     HttpResponse.json(criarArea({ ativo: true })),
+  ),
+
+  // PDI (issue #42). As rotas fixas vêm antes de /api/pdis/:id.
+  http.get('*/api/pdis/meu', () => HttpResponse.json(criarPdiDetalhe())),
+
+  http.get('*/api/pdis/colaboradores', () =>
+    HttpResponse.json(
+      criarPagina([
+        {
+          id: '00000000-0000-0000-0000-000000000001',
+          nomeCompleto: 'Ana Souza',
+          email: 'ana@nexo.com',
+        },
+      ]),
+    ),
+  ),
+
+  http.get('*/api/pdis', () =>
+    HttpResponse.json(criarPagina([criarPdiResumo()])),
+  ),
+
+  http.get('*/api/pdis/:id', () => HttpResponse.json(criarPdiDetalhe())),
+
+  http.post('*/api/pdis', () =>
+    HttpResponse.json(criarPdiDetalhe({ itens: [] }), { status: 201 }),
+  ),
+
+  http.post('*/api/pdis/:id/itens', () =>
+    HttpResponse.json(criarPdiItem({ acoes: [] }), { status: 201 }),
+  ),
+
+  http.post('*/api/pdis/:id/itens/:itemId/acoes', () =>
+    HttpResponse.json(criarPdiAcao(), { status: 201 }),
+  ),
+
+  http.get('*/api/competencias', () =>
+    HttpResponse.json(criarPagina([criarCompetencia()])),
+  ),
+
+  http.post('*/api/competencias', () =>
+    HttpResponse.json(criarCompetencia(), { status: 201 }),
   ),
 ]
