@@ -26,6 +26,14 @@
   margin-bottom: var(--space-1);
 }
 
+.cabecalhoTopo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
 .titulo {
   font-size: 1.4375rem;
   font-weight: 600;

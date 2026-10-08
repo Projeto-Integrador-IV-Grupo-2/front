@@ -4,12 +4,15 @@ import {
   formatarData,
   formatarInstante,
 } from '../components/trilhas/formatacao.ts'
+import { AdicionarAoPdi } from '../components/pdi/AdicionarAoPdi.tsx'
 import { JornadaTrilha } from '../components/trilhas/JornadaTrilha.tsx'
 import {
   BarraProgresso,
   SeloStatus,
 } from '../components/trilhas/StatusProgresso.tsx'
+import { usePermissao } from '../hooks/usePermissao.ts'
 import { ROTAS } from '../routes/paths.ts'
+import { PERFIS_GESTAO_PDI } from '../routes/permissions.ts'
 import {
   atualizarProgresso,
   buscarTrilha,
@@ -87,6 +90,8 @@ export function TrilhaDetalhePage() {
   const [aviso, setAviso] = useState<string | null>(null)
   const [erroAcao, setErroAcao] = useState<string | null>(null)
   const tituloRef = useRef<HTMLHeadingElement>(null)
+  const podeAdicionarAoPdi = usePermissao(PERFIS_GESTAO_PDI)
+  const [adicionandoAoPdi, setAdicionandoAoPdi] = useState(false)
 
   const chaveBusca = `${id}:${recarga}`
   const carregando = resultado?.chave !== chaveBusca
@@ -199,9 +204,23 @@ export function TrilhaDetalhePage() {
       {trilha && (
         <>
           <header className={styles.cabecalho}>
-            <h1 ref={tituloRef} tabIndex={-1} className={styles.titulo}>
-              {trilha.nome}
-            </h1>
+            <div className={styles.cabecalhoTopo}>
+              <h1 ref={tituloRef} tabIndex={-1} className={styles.titulo}>
+                {trilha.nome}
+              </h1>
+              {podeAdicionarAoPdi && (
+                <button
+                  type="button"
+                  className={styles.botaoSecundario}
+                  onClick={() => {
+                    setAviso(null)
+                    setAdicionandoAoPdi(true)
+                  }}
+                >
+                  Adicionar ao PDI
+                </button>
+              )}
+            </div>
             {(trilha.descricao ?? trilha.objetivos) && (
               <p className={styles.hint}>
                 {trilha.descricao ?? trilha.objetivos}
@@ -288,6 +307,17 @@ export function TrilhaDetalhePage() {
               </section>
             </div>
           </div>
+
+          {adicionandoAoPdi && (
+            <AdicionarAoPdi
+              trilha={trilha}
+              onAdicionada={(mensagem) => {
+                setAdicionandoAoPdi(false)
+                setAviso(mensagem)
+              }}
+              onFechar={() => setAdicionandoAoPdi(false)}
+            />
+          )}
         </>
       )}
     </div>

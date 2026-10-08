@@ -3,7 +3,10 @@ import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, it } from 'vitest'
 import {
+  criarPagina,
   criarPaginaTrilhas,
+  criarPdiDetalhe,
+  criarPdiResumo,
   criarProgressoTrilha,
   criarTrilhaDetalhe,
   criarTrilhaResumo,
@@ -245,5 +248,129 @@ describe('TrilhaDetalhePage', () => {
     expect(
       screen.getByRole('link', { name: 'Voltar para trilhas' }),
     ).toHaveAttribute('href', '/trilhas')
+  })
+})
+
+describe('TrilhaDetalhePage — Adicionar ao PDI', () => {
+  it('colaborador não vê o botão', async () => {
+    renderizarDetalhe()
+
+    await screen.findByRole('heading', { level: 1, name: 'Onboarding' })
+    expect(
+      screen.queryByRole('button', { name: 'Adicionar ao PDI' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('gestor liga a trilha a uma competência do PDI de um colaborador', async () => {
+    let caminho = ''
+    let corpo: unknown = null
+    server.use(
+      http.get('*/api/pdis', () =>
+        HttpResponse.json(
+          criarPagina([
+            criarPdiResumo(),
+            // PDI cancelado não recebe trilha nova: nem aparece.
+            criarPdiResumo({
+              id: 'cancelado',
+              colaborador: { id: 'u-9', nomeCompleto: 'Diego Reis' },
+              status: 'CANCELADO',
+            }),
+          ]),
+        ),
+      ),
+      http.get('*/api/pdis/:id', () => HttpResponse.json(criarPdiDetalhe())),
+      http.post(
+        '*/api/pdis/:id/itens/:itemId/acoes',
+        async ({ request, params }) => {
+          caminho = `${String(params.id)}/${String(params.itemId)}`
+          corpo = await request.json()
+          return HttpResponse.json({}, { status: 201 })
+        },
+      ),
+    )
+    const user = userEvent.setup()
+
+    renderizarComProvedores({
+      rota: `/trilhas/${ID}`,
+      usuario: criarUsuario({ papel: 'GESTOR' }),
+    })
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Adicionar ao PDI' }),
+    )
+    const dialogo = screen.getByRole('dialog', { name: 'Adicionar ao PDI' })
+    const pdi = within(dialogo).getByLabelText('PDI')
+    await waitFor(() =>
+      expect(
+        within(pdi).getByRole('option', { name: 'Ana Souza — ciclo 2026' }),
+      ).toBeInTheDocument(),
+    )
+    expect(
+      within(pdi).queryByRole('option', { name: /Diego Reis/ }),
+    ).not.toBeInTheDocument()
+
+    await user.selectOptions(pdi, 'Ana Souza — ciclo 2026')
+    const competencia = within(dialogo).getByLabelText('Competência')
+    await waitFor(() =>
+      expect(
+        within(competencia).getByRole('option', { name: 'Comunicação' }),
+      ).toBeInTheDocument(),
+    )
+    await user.selectOptions(competencia, 'Comunicação')
+    await user.type(within(dialogo).getByLabelText('Prazo'), '2026-11-30')
+    await user.click(
+      within(dialogo).getByRole('button', { name: 'Adicionar ao PDI' }),
+    )
+
+    expect(
+      await screen.findByText('Trilha adicionada ao PDI de Ana Souza.'),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(caminho).toBe(
+      '99999999-9999-9999-9999-999999999999/88888888-8888-8888-8888-888888888888',
+    )
+    expect(corpo).toEqual({ tipo: 'TRILHA', trilhaId: ID, prazo: '2026-11-30' })
+  })
+
+  it('mostra o erro da API sem fechar o diálogo', async () => {
+    server.use(
+      http.post('*/api/pdis/:id/itens/:itemId/acoes', () =>
+        HttpResponse.json(
+          { message: 'Trilha inativa não pode ser ligada ao PDI: Onboarding' },
+          { status: 409 },
+        ),
+      ),
+    )
+    const user = userEvent.setup()
+
+    renderizarComProvedores({
+      rota: `/trilhas/${ID}`,
+      usuario: criarUsuario({ papel: 'ADMIN' }),
+    })
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Adicionar ao PDI' }),
+    )
+    const dialogo = screen.getByRole('dialog', { name: 'Adicionar ao PDI' })
+    const pdi = within(dialogo).getByLabelText('PDI')
+    await waitFor(() =>
+      expect(within(pdi).getAllByRole('option')).toHaveLength(2),
+    )
+    await user.selectOptions(pdi, 'Ana Souza — ciclo 2026')
+    const competencia = within(dialogo).getByLabelText('Competência')
+    await waitFor(() =>
+      expect(
+        within(competencia).getByRole('option', { name: 'Comunicação' }),
+      ).toBeInTheDocument(),
+    )
+    await user.selectOptions(competencia, 'Comunicação')
+    await user.type(within(dialogo).getByLabelText('Prazo'), '2026-11-30')
+    await user.click(
+      within(dialogo).getByRole('button', { name: 'Adicionar ao PDI' }),
+    )
+
+    expect(await within(dialogo).findByRole('alert')).toHaveTextContent(
+      'Trilha inativa não pode ser ligada ao PDI: Onboarding',
+    )
   })
 })
