@@ -3,20 +3,49 @@ import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, it } from 'vitest'
 import {
+  criarAtribuicao,
+  criarPagina,
   criarPaginaTrilhas,
+  criarPaginaUsuarios,
   criarProgressoTrilha,
+  criarResultadoAtribuicao,
   criarTrilhaDetalhe,
   criarTrilhaResumo,
   criarUsuario,
+  criarUsuarioGestao,
 } from '../test/factories.ts'
 import { server } from '../test/msw/server.ts'
 import { renderizarComProvedores } from '../test/renderWithProviders.tsx'
 
 const colaborador = criarUsuario({ papel: 'COLABORADOR' })
+const admin = criarUsuario({ papel: 'ADMIN' })
+const gestor = criarUsuario({ papel: 'GESTOR' })
 const ID = '44444444-4444-4444-4444-444444444444'
 
 function renderizarDetalhe(rota = `/trilhas/${ID}`) {
   return renderizarComProvedores({ rota, usuario: colaborador })
+}
+
+function renderizarComo(usuario: ReturnType<typeof criarUsuario>) {
+  return renderizarComProvedores({ rota: `/trilhas/${ID}`, usuario })
+}
+
+/** Colaboradores do diálogo de atribuição, com nomes distinguíveis. */
+function responderColaboradores() {
+  server.use(
+    http.get('*/api/usuarios', () =>
+      HttpResponse.json(
+        criarPaginaUsuarios([
+          criarUsuarioGestao({ id: 'u-1', nomeCompleto: 'Ana Souza' }),
+          criarUsuarioGestao({
+            id: 'u-2',
+            nomeCompleto: 'Bruno Castro',
+            email: 'bruno@nexo.com',
+          }),
+        ]),
+      ),
+    ),
+  )
 }
 
 const emAndamento = () =>
@@ -222,6 +251,503 @@ describe('TrilhaDetalhePage', () => {
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Onboarding' }),
     ).toBeInTheDocument()
+  })
+
+  it('mostra o selo e o prazo vencido em destaque quando a trilha atrasa', async () => {
+    server.use(
+      http.get('*/api/trilhas/:id', () =>
+        HttpResponse.json(
+          criarTrilhaDetalhe({
+            progresso: criarProgressoTrilha({
+              status: 'ATRASADA',
+              prazo: '2026-09-10',
+            }),
+          }),
+        ),
+      ),
+    )
+
+    renderizarDetalhe()
+
+    expect(await screen.findAllByText('Atrasada')).not.toHaveLength(0)
+    const progresso = screen.getByRole('region', { name: 'Progresso geral' })
+    expect(
+      within(progresso).getByText(/Prazo vencido em 10 de setembro de 2026/),
+    ).toBeInTheDocument()
+  })
+
+  it('não oferece editar, inativar nem atribuir ao colaborador', async () => {
+    renderizarDetalhe()
+
+    await screen.findByRole('heading', { level: 1, name: 'Onboarding' })
+    expect(
+      screen.queryByRole('button', { name: 'Editar trilha' }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Inativar' }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Atribuir colaboradores' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('gestor atribui, mas não edita nem inativa', async () => {
+    renderizarComo(gestor)
+
+    await screen.findByRole('heading', { level: 1, name: 'Onboarding' })
+    expect(
+      screen.getByRole('button', { name: 'Atribuir colaboradores' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Editar trilha' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('administrador edita a trilha e o detalhe se atualiza sem recarregar', async () => {
+    let corpo: unknown = null
+    server.use(
+      http.put('*/api/trilhas/:id', async ({ request }) => {
+        corpo = await request.json()
+        return HttpResponse.json(
+          criarTrilhaDetalhe({
+            nome: 'Onboarding 2026',
+            descricao: 'Primeira semana na empresa.',
+          }),
+        )
+      }),
+    )
+    const usuario = userEvent.setup()
+
+    renderizarComo(admin)
+    await usuario.click(
+      await screen.findByRole('button', { name: 'Editar trilha' }),
+    )
+
+    const dialogo = await screen.findByRole('dialog', { name: 'Editar trilha' })
+    // O formulário abre preenchido com a trilha em edição.
+    expect(within(dialogo).getByLabelText('Nome da trilha')).toHaveValue(
+      'Onboarding',
+    )
+    expect(within(dialogo).getByLabelText('Descrição')).toHaveValue(
+      'Primeiros passos na empresa.',
+    )
+
+    await usuario.clear(within(dialogo).getByLabelText('Nome da trilha'))
+    await usuario.type(
+      within(dialogo).getByLabelText('Nome da trilha'),
+      'Onboarding 2026',
+    )
+    await usuario.clear(within(dialogo).getByLabelText('Descrição'))
+    await usuario.type(
+      within(dialogo).getByLabelText('Descrição'),
+      'Primeira semana na empresa.',
+    )
+    await usuario.click(
+      within(dialogo).getByRole('button', { name: 'Salvar alterações' }),
+    )
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect(corpo).toMatchObject({
+      nome: 'Onboarding 2026',
+      descricao: 'Primeira semana na empresa.',
+    })
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Onboarding 2026' }),
+    ).toBeInTheDocument()
+    expect(screen.getByText('Primeira semana na empresa.')).toBeInTheDocument()
+    expect(screen.getByText('Trilha atualizada.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Editar trilha' })).toHaveFocus()
+  })
+
+  it('mostra o erro por campo quando a API recusa a edição', async () => {
+    server.use(
+      http.put('*/api/trilhas/:id', () =>
+        HttpResponse.json(
+          {
+            message: 'Dados inválidos.',
+            fieldErrors: [
+              { field: 'nome', message: 'Já existe uma trilha com esse nome.' },
+            ],
+          },
+          { status: 409 },
+        ),
+      ),
+    )
+    const usuario = userEvent.setup()
+
+    renderizarComo(admin)
+    await usuario.click(
+      await screen.findByRole('button', { name: 'Editar trilha' }),
+    )
+    const dialogo = await screen.findByRole('dialog', { name: 'Editar trilha' })
+    await usuario.click(
+      within(dialogo).getByRole('button', { name: 'Salvar alterações' }),
+    )
+
+    expect(
+      await within(dialogo).findByText('Já existe uma trilha com esse nome.'),
+    ).toBeInTheDocument()
+    // O diálogo continua aberto: dá para corrigir sem perder o que foi digitado.
+    expect(screen.getByRole('dialog', { name: 'Editar trilha' })).toBeVisible()
+  })
+
+  it('inativar pede confirmação antes de enviar', async () => {
+    let chamou = false
+    server.use(
+      http.patch('*/api/trilhas/:id/inativar', () => {
+        chamou = true
+        return HttpResponse.json(criarTrilhaDetalhe({ ativo: false }))
+      }),
+    )
+    const usuario = userEvent.setup()
+
+    renderizarComo(admin)
+    await usuario.click(await screen.findByRole('button', { name: 'Inativar' }))
+
+    const confirmacao = await screen.findByRole('alertdialog', {
+      name: 'Inativar trilha',
+    })
+    expect(chamou).toBe(false)
+
+    // Desistir não envia nada.
+    await usuario.click(
+      within(confirmacao).getByRole('button', { name: 'Cancelar' }),
+    )
+    expect(chamou).toBe(false)
+
+    await usuario.click(screen.getByRole('button', { name: 'Inativar' }))
+    await usuario.click(
+      within(
+        await screen.findByRole('alertdialog', { name: 'Inativar trilha' }),
+      ).getByRole('button', { name: 'Inativar' }),
+    )
+
+    await waitFor(() => expect(chamou).toBe(true))
+    expect(await screen.findByText('Trilha inativada.')).toBeInTheDocument()
+    // Inativa: sobra reativar, e a atribuição sai de cena.
+    expect(screen.getByRole('button', { name: 'Reativar' })).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Atribuir colaboradores' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('atribui a colaboradores e diz quantos receberam e quantos foram ignorados', async () => {
+    let corpo: unknown = null
+    responderColaboradores()
+    server.use(
+      http.post('*/api/trilhas/:id/atribuicoes', async ({ request }) => {
+        corpo = await request.json()
+        return HttpResponse.json(
+          criarResultadoAtribuicao({
+            atribuidos: 1,
+            ignorados: 1,
+          }),
+        )
+      }),
+    )
+    const usuario = userEvent.setup()
+
+    renderizarComo(admin)
+    await usuario.click(
+      await screen.findByRole('button', { name: 'Atribuir colaboradores' }),
+    )
+
+    const dialogo = await screen.findByRole('dialog', {
+      name: 'Atribuir trilha',
+    })
+
+    // Sem ninguém selecionado, a validação local segura o envio.
+    await usuario.click(
+      within(dialogo).getByRole('button', { name: 'Atribuir trilha' }),
+    )
+    expect(
+      within(dialogo).getByText('Selecione ao menos um colaborador.'),
+    ).toBeInTheDocument()
+    expect(corpo).toBeNull()
+
+    await usuario.click(
+      await within(dialogo).findByRole('checkbox', { name: /Ana Souza/ }),
+    )
+    await usuario.click(
+      within(dialogo).getByRole('button', { name: 'Atribuir trilha' }),
+    )
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect(corpo).toEqual({ usuarioIds: ['u-1'], prazo: null })
+    expect(
+      await screen.findByText(
+        '1 colaborador recebeu a trilha. 1 já tinha e foi ignorado.',
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it('atribui a uma área inteira com prazo', async () => {
+    let corpo: unknown = null
+    responderColaboradores()
+    server.use(
+      http.get('*/api/areas', () =>
+        HttpResponse.json(
+          criarPagina([{ id: 'area-1', nome: 'Comercial' }], { size: 100 }),
+        ),
+      ),
+      http.post('*/api/trilhas/:id/atribuicoes', async ({ request }) => {
+        corpo = await request.json()
+        return HttpResponse.json(criarResultadoAtribuicao({ atribuidos: 8 }))
+      }),
+    )
+    const usuario = userEvent.setup()
+
+    renderizarComo(admin)
+    await usuario.click(
+      await screen.findByRole('button', { name: 'Atribuir colaboradores' }),
+    )
+    const dialogo = await screen.findByRole('dialog', {
+      name: 'Atribuir trilha',
+    })
+
+    await usuario.click(
+      within(dialogo).getByRole('radio', { name: 'Uma área inteira' }),
+    )
+    await waitFor(() =>
+      expect(
+        within(dialogo).getByRole('option', { name: 'Comercial' }),
+      ).toBeInTheDocument(),
+    )
+    await usuario.selectOptions(
+      within(dialogo).getByLabelText('Área'),
+      'area-1',
+    )
+    await usuario.type(within(dialogo).getByLabelText('Prazo'), '2099-12-31')
+    await usuario.click(
+      within(dialogo).getByRole('button', { name: 'Atribuir trilha' }),
+    )
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect(corpo).toEqual({ areaId: 'area-1', prazo: '2099-12-31' })
+    expect(
+      await screen.findByText('8 colaboradores receberam a trilha.'),
+    ).toBeInTheDocument()
+  })
+
+  it('403 na atribuição vira mensagem no diálogo, que continua aberto', async () => {
+    responderColaboradores()
+    server.use(
+      http.post(
+        '*/api/trilhas/:id/atribuicoes',
+        () => new HttpResponse(null, { status: 403 }),
+      ),
+    )
+    const usuario = userEvent.setup()
+
+    renderizarComo(admin)
+    await usuario.click(
+      await screen.findByRole('button', { name: 'Atribuir colaboradores' }),
+    )
+    const dialogo = await screen.findByRole('dialog', {
+      name: 'Atribuir trilha',
+    })
+    await usuario.click(
+      await within(dialogo).findByRole('checkbox', { name: /Ana Souza/ }),
+    )
+    await usuario.click(
+      within(dialogo).getByRole('button', { name: 'Atribuir trilha' }),
+    )
+
+    expect(await within(dialogo).findByRole('alert')).toHaveTextContent(
+      'Você não tem permissão para esta operação.',
+    )
+    expect(
+      screen.getByRole('dialog', { name: 'Atribuir trilha' }),
+    ).toBeVisible()
+  })
+
+  it('sem a lista de colaboradores, sobra a atribuição por área', async () => {
+    server.use(
+      http.get('*/api/usuarios', () => new HttpResponse(null, { status: 403 })),
+    )
+    const usuario = userEvent.setup()
+
+    renderizarComo(gestor)
+    await usuario.click(
+      await screen.findByRole('button', { name: 'Atribuir colaboradores' }),
+    )
+    const dialogo = await screen.findByRole('dialog', {
+      name: 'Atribuir trilha',
+    })
+
+    expect(
+      await within(dialogo).findByText(
+        /Não foi possível carregar os colaboradores/,
+      ),
+    ).toBeInTheDocument()
+    expect(
+      within(dialogo).getByRole('radio', { name: 'Colaboradores' }),
+    ).toBeDisabled()
+    expect(
+      within(dialogo).getByRole('radio', { name: 'Uma área inteira' }),
+    ).toBeChecked()
+  })
+
+  it('lista quem recebeu a trilha, com o atraso em destaque', async () => {
+    server.use(
+      http.get('*/api/atribuicoes', () =>
+        HttpResponse.json(
+          criarPagina(
+            [
+              criarAtribuicao({
+                id: 'at-1',
+                colaborador: {
+                  id: 'u-1',
+                  nomeCompleto: 'Ana Souza',
+                  email: 'ana@nexo.com',
+                },
+                status: 'EM_ANDAMENTO',
+                percentual: 50,
+                prazo: '2026-12-01',
+              }),
+              criarAtribuicao({
+                id: 'at-2',
+                colaborador: {
+                  id: 'u-2',
+                  nomeCompleto: 'Bruno Castro',
+                  email: 'bruno@nexo.com',
+                },
+                status: 'ATRASADA',
+                percentual: 20,
+                prazo: '2026-09-10',
+              }),
+            ],
+            { totalElements: 2 },
+          ),
+        ),
+      ),
+    )
+
+    renderizarComo(admin)
+
+    const painel = await screen.findByRole('region', {
+      name: 'Colaboradores atribuídos',
+    })
+    expect(await within(painel).findByText('Ana Souza')).toBeInTheDocument()
+    expect(within(painel).getByText('prazo 01/12/2026')).toBeInTheDocument()
+    expect(within(painel).getByText('venceu em 10/09/2026')).toBeInTheDocument()
+    expect(within(painel).getByText('Atrasada')).toBeInTheDocument()
+    expect(
+      within(painel).getByRole('progressbar', {
+        name: 'Progresso de Bruno Castro',
+      }),
+    ).toHaveAttribute('aria-valuenow', '20')
+  })
+
+  it('pede ao acompanhamento só as atribuições desta trilha', async () => {
+    let url: URL | null = null
+    server.use(
+      http.get('*/api/atribuicoes', ({ request }) => {
+        url = new URL(request.url)
+        return HttpResponse.json(criarPagina([criarAtribuicao()]))
+      }),
+    )
+
+    renderizarComo(admin)
+    await screen.findByRole('region', { name: 'Colaboradores atribuídos' })
+
+    await waitFor(() => expect(url).not.toBeNull())
+    expect(url!.searchParams.get('trilhaId')).toBe(ID)
+  })
+
+  it('avisa quando ninguém recebeu a trilha ainda', async () => {
+    server.use(
+      http.get('*/api/atribuicoes', () => HttpResponse.json(criarPagina([]))),
+    )
+
+    renderizarComo(admin)
+
+    const painel = await screen.findByRole('region', {
+      name: 'Colaboradores atribuídos',
+    })
+    expect(
+      await within(painel).findByText(/Ninguém recebeu esta trilha ainda/),
+    ).toBeInTheDocument()
+  })
+
+  it('o painel se refaz depois de atribuir', async () => {
+    let buscas = 0
+    responderColaboradores()
+    server.use(
+      http.get('*/api/atribuicoes', () => {
+        buscas += 1
+        return HttpResponse.json(
+          criarPagina(buscas === 1 ? [] : [criarAtribuicao()]),
+        )
+      }),
+      http.post('*/api/trilhas/:id/atribuicoes', () =>
+        HttpResponse.json(criarResultadoAtribuicao()),
+      ),
+    )
+    const usuario = userEvent.setup()
+
+    renderizarComo(admin)
+    const painel = await screen.findByRole('region', {
+      name: 'Colaboradores atribuídos',
+    })
+    await within(painel).findByText(/Ninguém recebeu esta trilha ainda/)
+
+    await usuario.click(
+      screen.getByRole('button', { name: 'Atribuir colaboradores' }),
+    )
+    const dialogo = await screen.findByRole('dialog', {
+      name: 'Atribuir trilha',
+    })
+    await usuario.click(
+      await within(dialogo).findByRole('checkbox', { name: /Ana Souza/ }),
+    )
+    await usuario.click(
+      within(dialogo).getByRole('button', { name: 'Atribuir trilha' }),
+    )
+
+    expect(await within(painel).findByText('Ana Souza')).toBeInTheDocument()
+    expect(buscas).toBe(2)
+  })
+
+  it('colaborador não vê o painel de atribuídos', async () => {
+    renderizarDetalhe()
+
+    await screen.findByRole('heading', { level: 1, name: 'Onboarding' })
+    expect(
+      screen.queryByRole('region', { name: 'Colaboradores atribuídos' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('erro no painel não derruba a tela e oferece tentar de novo', async () => {
+    let tentativas = 0
+    server.use(
+      http.get('*/api/atribuicoes', () => {
+        tentativas += 1
+        if (tentativas === 1) {
+          return HttpResponse.json(
+            { message: 'Falha ao carregar o acompanhamento.' },
+            { status: 500 },
+          )
+        }
+        return HttpResponse.json(criarPagina([criarAtribuicao()]))
+      }),
+    )
+    const usuario = userEvent.setup()
+
+    renderizarComo(admin)
+    const painel = await screen.findByRole('region', {
+      name: 'Colaboradores atribuídos',
+    })
+    expect(await within(painel).findByRole('alert')).toBeInTheDocument()
+    // O resto do detalhe continua lá.
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Onboarding' }),
+    ).toBeInTheDocument()
+
+    await usuario.click(
+      within(painel).getByRole('button', { name: 'Tentar novamente' }),
+    )
+    expect(await within(painel).findByText('Ana Souza')).toBeInTheDocument()
   })
 
   it('abre a partir do cartão da listagem', async () => {

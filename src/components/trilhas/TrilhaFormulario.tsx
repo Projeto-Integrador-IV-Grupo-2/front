@@ -7,29 +7,45 @@ import {
   type KeyboardEvent,
 } from 'react'
 import type { ApiFieldError } from '../../types/api.ts'
-import type { CriarTrilhaRequest } from '../../types/trilha.ts'
+import type { CriarTrilhaRequest, TrilhaDetalhe } from '../../types/trilha.ts'
 import type { RecursoResumo } from '../../types/usuario.ts'
 import styles from './TrilhaFormulario.module.css'
 
 interface TrilhaFormularioProps {
+  /** Trilha em edição. `null` (ou ausente) abre o diálogo de cadastro. */
+  trilha?: TrilhaDetalhe | null
   areas: RecursoResumo[]
   /** As áreas não carregaram: o cadastro segue, só sem escolher área. */
   areasIndisponiveis: boolean
   salvando: boolean
   erro: string | null
   fieldErrors: ApiFieldError[]
-  onCriar: (request: CriarTrilhaRequest) => void
+  onSalvar: (request: CriarTrilhaRequest) => void
   onFechar: () => void
 }
 
 const NOME_MAX = 200
+const DESCRICAO_MAX = 500
 const PRAZO_MAX_DIAS = 365
 
 interface Campos {
   nome: string
+  descricao: string
   areaId: string
   prazoDias: string
   objetivos: string
+}
+
+/** Campos a partir da trilha em edição; vazios no cadastro. */
+function camposIniciais(trilha: TrilhaDetalhe | null): Campos {
+  return {
+    nome: trilha?.nome ?? '',
+    descricao: trilha?.descricao ?? '',
+    areaId: trilha?.area?.id ?? '',
+    prazoDias:
+      trilha?.prazoDias === null ? '' : String(trilha?.prazoDias ?? ''),
+    objetivos: trilha?.objetivos ?? '',
+  }
 }
 
 type ErrosLocais = Partial<Record<keyof Campos, string>>
@@ -41,6 +57,10 @@ function validar(campos: Campos): ErrosLocais {
     erros.nome = 'Informe o nome da trilha.'
   } else if (nome.length > NOME_MAX) {
     erros.nome = `O nome pode ter no máximo ${NOME_MAX} caracteres.`
+  }
+
+  if (campos.descricao.trim().length > DESCRICAO_MAX) {
+    erros.descricao = `A descrição pode ter no máximo ${DESCRICAO_MAX} caracteres.`
   }
 
   if (campos.prazoDias.trim() !== '') {
@@ -58,30 +78,29 @@ function ouNulo(valor: string): string | null {
 }
 
 /**
- * Diálogo "Nova trilha" do protótipo. Não chama a API: valida o básico, monta
- * o request e devolve para a página, que controla envio, erro e fechamento.
+ * Diálogo "Nova trilha" / "Editar trilha" do protótipo. Não chama a API:
+ * valida o básico, monta o request e devolve para a página, que controla
+ * envio, erro e fechamento. Os dois modos usam o mesmo formulário porque os
+ * campos são os mesmos — só mudam os textos e o estado inicial.
  *
  * Por ser modal, prende o foco (Tab circula dentro do diálogo) e fecha com
  * Esc — exceto enquanto salva, para o envio não ficar sem resposta na tela.
  */
 export function TrilhaFormulario({
+  trilha = null,
   areas,
   areasIndisponiveis,
   salvando,
   erro,
   fieldErrors,
-  onCriar,
+  onSalvar,
   onFechar,
 }: TrilhaFormularioProps) {
   const idBase = useId()
   const caixaRef = useRef<HTMLDivElement>(null)
   const nomeRef = useRef<HTMLInputElement>(null)
-  const [campos, setCampos] = useState<Campos>({
-    nome: '',
-    areaId: '',
-    prazoDias: '',
-    objetivos: '',
-  })
+  const editando = trilha !== null
+  const [campos, setCampos] = useState<Campos>(() => camposIniciais(trilha))
   const [errosLocais, setErrosLocais] = useState<ErrosLocais>({})
 
   useEffect(() => {
@@ -116,8 +135,9 @@ export function TrilhaFormulario({
       return
     }
 
-    onCriar({
+    onSalvar({
       nome: campos.nome.trim(),
+      descricao: ouNulo(campos.descricao),
       areaId: campos.areaId === '' ? null : campos.areaId,
       prazoDias:
         campos.prazoDias.trim() === '' ? null : Number(campos.prazoDias),
@@ -150,8 +170,10 @@ export function TrilhaFormulario({
 
   const ids = {
     titulo: `${idBase}-titulo`,
-    descricao: `${idBase}-descricao`,
+    /** Texto de apoio do diálogo, apontado por `aria-describedby`. */
+    apoio: `${idBase}-apoio`,
     nome: `${idBase}-nome`,
+    descricao: `${idBase}-descricao`,
     area: `${idBase}-area`,
     prazo: `${idBase}-prazo`,
     objetivos: `${idBase}-objetivos`,
@@ -180,12 +202,12 @@ export function TrilhaFormulario({
         role="dialog"
         aria-modal="true"
         aria-labelledby={ids.titulo}
-        aria-describedby={ids.descricao}
+        aria-describedby={ids.apoio}
         onKeyDown={aoTeclar}
       >
         <div className={styles.cabecalho}>
           <h2 id={ids.titulo} className={styles.titulo}>
-            Nova trilha
+            {editando ? 'Editar trilha' : 'Nova trilha'}
           </h2>
           <button
             type="button"
@@ -204,8 +226,10 @@ export function TrilhaFormulario({
             </svg>
           </button>
         </div>
-        <p id={ids.descricao} className={styles.subtitulo}>
-          Defina o nome, a área e o objetivo. As etapas são montadas depois.
+        <p id={ids.apoio} className={styles.subtitulo}>
+          {editando
+            ? 'As mudanças valem para todos — quem já faz a trilha mantém o progresso.'
+            : 'Defina o nome, a área e o objetivo. As etapas são montadas depois.'}
         </p>
 
         <form className={styles.form} onSubmit={enviar} noValidate>
@@ -238,6 +262,23 @@ export function TrilhaFormulario({
               disabled={salvando}
             />
             {mensagem('nome', ids.nome)}
+          </div>
+
+          <div className={`${styles.campo} ${styles.cheio}`}>
+            <label htmlFor={ids.descricao}>Descrição</label>
+            <textarea
+              id={ids.descricao}
+              name="descricao"
+              rows={2}
+              placeholder="Do que se trata essa trilha?"
+              maxLength={DESCRICAO_MAX}
+              value={campos.descricao}
+              onChange={(evento) => alterar('descricao', evento.target.value)}
+              aria-invalid={erroDoCampo('descricao') ? true : undefined}
+              aria-describedby={descritoPor('descricao', ids.descricao)}
+              disabled={salvando}
+            />
+            {mensagem('descricao', ids.descricao)}
           </div>
 
           <div className={styles.campo}>
@@ -312,7 +353,11 @@ export function TrilhaFormulario({
               Cancelar
             </button>
             <button type="submit" className={styles.criar} disabled={salvando}>
-              {salvando ? 'Criando…' : 'Criar trilha'}
+              {salvando
+                ? 'Salvando…'
+                : editando
+                  ? 'Salvar alterações'
+                  : 'Criar trilha'}
             </button>
           </div>
         </form>

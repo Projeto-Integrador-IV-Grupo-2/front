@@ -64,6 +64,47 @@ describe('TrilhasPage', () => {
     expect(within(semProgresso).queryByRole('progressbar')).toBeNull()
   })
 
+  it('destaca a trilha atrasada com o selo e o prazo vencido', async () => {
+    server.use(
+      http.get('*/api/trilhas', () =>
+        HttpResponse.json(
+          criarPaginaTrilhas([
+            criarTrilhaResumo({
+              id: 'trilha-1',
+              nome: 'Onboarding Comercial',
+              progresso: criarProgressoTrilha({
+                status: 'ATRASADA',
+                percentual: 50,
+                prazo: '2026-09-10',
+              }),
+            }),
+            criarTrilhaResumo({
+              id: 'trilha-2',
+              nome: 'LGPD',
+              progresso: criarProgressoTrilha({ prazo: '2026-12-01' }),
+            }),
+          ]),
+        ),
+      ),
+    )
+
+    renderizarTrilhas()
+
+    const atrasada = await screen.findByRole('link', {
+      name: /Onboarding Comercial/,
+    })
+    expect(within(atrasada).getByText('Atrasada')).toBeInTheDocument()
+    expect(
+      within(atrasada).getByText(/Venceu em 10 de setembro de 2026/),
+    ).toBeInTheDocument()
+
+    // No prazo, a data aparece sem o destaque de atraso.
+    const noPrazo = lista().getByRole('link', { name: /LGPD/ })
+    expect(
+      within(noPrazo).getByText(/Prazo: 1 de dezembro de 2026/),
+    ).toBeInTheDocument()
+  })
+
   it('não oferece o cadastro para quem não é administrador', async () => {
     renderizarTrilhas(colaborador)
 
@@ -451,6 +492,10 @@ describe('TrilhasPage', () => {
       within(dialogo).getByLabelText('Área'),
       'Tecnologia',
     )
+    await usuario.type(
+      within(dialogo).getByLabelText('Descrição'),
+      'Trilha do time comercial.',
+    )
     await usuario.type(within(dialogo).getByLabelText('Prazo (dias)'), '30')
     await usuario.type(
       within(dialogo).getByLabelText('Objetivo'),
@@ -463,6 +508,7 @@ describe('TrilhasPage', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     expect(corpo).toEqual({
       nome: 'Excelência em Vendas',
+      descricao: 'Trilha do time comercial.',
       areaId: '33333333-3333-3333-3333-333333333333',
       prazoDias: 30,
       objetivos: 'Vender com método.',

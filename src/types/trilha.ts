@@ -87,12 +87,42 @@ export interface TrilhaPaginacao {
   sort?: string
 }
 
-/** Corpo de `POST /api/trilhas`. `prazoDias` e `areaId` são opcionais no banco. */
+/**
+ * Corpo de `POST /api/trilhas`. Só o nome é obrigatório: `descricao`,
+ * `areaId`, `prazoDias` e `objetivos` são opcionais no banco.
+ */
 export interface CriarTrilhaRequest {
   nome: string
+  descricao: string | null
   areaId: string | null
   prazoDias: number | null
   objetivos: string | null
+}
+
+/**
+ * Corpo de `PUT /api/trilhas/{id}`. A edição manda a trilha inteira, com os
+ * mesmos campos do cadastro — por isso o tipo é o mesmo, e não uma cópia que
+ * pode divergir. Nome duplicado no tenant volta 409.
+ */
+export type AtualizarTrilhaRequest = CriarTrilhaRequest
+
+/**
+ * Corpo de `POST /api/trilhas/{id}/atribuicoes`: a trilha vai para uma lista
+ * de colaboradores **ou** para todos os de uma área — nunca os dois ao mesmo
+ * tempo. `prazo` é a data limite (`LocalDate`); nulo usa o prazo da trilha.
+ */
+export type AtribuirTrilhaRequest =
+  | { usuarioIds: string[]; areaId?: never; prazo: string | null }
+  | { areaId: string; usuarioIds?: never; prazo: string | null }
+
+/**
+ * Resposta da atribuição em lote (record `AtribuicaoEmLoteResponse`): quem já
+ * tinha a trilha é ignorado em vez de duplicado, e a API diz quantos foram
+ * cada coisa.
+ */
+export interface ResultadoAtribuicao {
+  atribuidos: number
+  ignorados: number
 }
 
 /** Ordem dos status nos selects de filtro. */

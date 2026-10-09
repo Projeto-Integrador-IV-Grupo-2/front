@@ -5,6 +5,7 @@ import type {
 import type { Area } from '../types/area.ts'
 import type {
   ProgressoTrilha,
+  ResultadoAtribuicao,
   TrilhaDetalhe,
   TrilhaResumo,
 } from '../types/trilha.ts'
@@ -167,6 +168,13 @@ export function criarTrilhaDetalhe(
     }),
     ...overrides,
   }
+}
+
+/** Resposta da atribuição em lote (`AtribuicaoEmLoteResponse`). */
+export function criarResultadoAtribuicao(
+  overrides: Partial<ResultadoAtribuicao> = {},
+): ResultadoAtribuicao {
+  return { atribuidos: 1, ignorados: 0, ...overrides }
 }
 
 /** Linha do acompanhamento (`AtribuicaoAcompanhamentoResponse`), em andamento. */

@@ -7,6 +7,7 @@ import {
   criarPaginaTrilhas,
   criarPaginaUsuarios,
   criarProgressoTrilha,
+  criarResultadoAtribuicao,
   criarTrilhaDetalhe,
   criarTrilhaResumo,
   criarUsuario,
@@ -56,6 +57,20 @@ export const handlers = [
 
   http.post('*/api/trilhas', () =>
     HttpResponse.json(criarTrilhaResumo(), { status: 201 }),
+  ),
+
+  http.put('*/api/trilhas/:id', () => HttpResponse.json(criarTrilhaDetalhe())),
+
+  http.patch('*/api/trilhas/:id/inativar', () =>
+    HttpResponse.json(criarTrilhaDetalhe({ ativo: false })),
+  ),
+
+  http.patch('*/api/trilhas/:id/ativar', () =>
+    HttpResponse.json(criarTrilhaDetalhe({ ativo: true })),
+  ),
+
+  http.post('*/api/trilhas/:id/atribuicoes', () =>
+    HttpResponse.json(criarResultadoAtribuicao(), { status: 201 }),
   ),
 
   // Resumo mínimo (id + nome), do jeito que o formulário de Trilha consome

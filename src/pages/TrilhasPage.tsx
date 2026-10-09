@@ -511,7 +511,7 @@ export function TrilhasPage() {
           salvando={salvando}
           erro={erroFormulario}
           fieldErrors={fieldErrors}
-          onCriar={(request) => void cadastrar(request)}
+          onSalvar={(request) => void cadastrar(request)}
           onFechar={fecharFormulario}
         />
       )}
