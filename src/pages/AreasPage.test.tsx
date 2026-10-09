@@ -4,7 +4,14 @@ import { http, HttpResponse } from 'msw'
 import { describe, expect, it } from 'vitest'
 import { AreasPage } from './AreasPage.tsx'
 import { ROTAS } from '../routes/paths.ts'
-import { criarArea, criarPagina, criarUsuario } from '../test/factories.ts'
+import {
+  criarArea,
+  criarPagina,
+  criarPaginaTrilhas,
+  criarProgressoTrilha,
+  criarTrilhaResumo,
+  criarUsuario,
+} from '../test/factories.ts'
 import { server } from '../test/msw/server.ts'
 import { renderizarComProvedores } from '../test/renderWithProviders.tsx'
 import type { User } from '../types/user.ts'
@@ -304,6 +311,112 @@ describe('AreasPage', () => {
       )
 
       expect(await screen.findByText('Sem permissão')).toBeInTheDocument()
+    })
+  })
+
+  describe('trilhas da área', () => {
+    function comUmaArea() {
+      server.use(
+        http.get('*/api/areas', () =>
+          HttpResponse.json(
+            criarPagina([criarArea({ id: 'area-1', nome: 'Atendimento' })]),
+          ),
+        ),
+      )
+    }
+
+    it('mostra as trilhas da área para qualquer perfil', async () => {
+      comUmaArea()
+      let areaPedida = ''
+      server.use(
+        http.get('*/api/areas/:id/trilhas', ({ params }) => {
+          areaPedida = String(params.id)
+          return HttpResponse.json(
+            criarPaginaTrilhas([
+              criarTrilhaResumo({
+                id: 't-1',
+                nome: 'Atendimento ao Cliente',
+                progresso: criarProgressoTrilha({ status: 'ATRASADA' }),
+              }),
+            ]),
+          )
+        }),
+      )
+      const user = userEvent.setup()
+
+      renderizar(criarUsuario({ papel: 'COLABORADOR' }))
+      const botao = await screen.findByRole('button', {
+        name: 'Ver trilhas de Atendimento',
+      })
+      await user.click(botao)
+
+      const painel = await screen.findByRole('dialog', {
+        name: 'Trilhas de Atendimento',
+      })
+      const link = await within(painel).findByRole('link', {
+        name: 'Atendimento ao Cliente',
+      })
+      expect(link).toHaveAttribute('href', '/trilhas/t-1')
+      expect(within(painel).getByText('Atrasada')).toBeInTheDocument()
+      expect(areaPedida).toBe('area-1')
+
+      await user.click(within(painel).getByRole('button', { name: 'Fechar' }))
+      expect(screen.queryByRole('dialog')).toBeNull()
+      expect(botao).toHaveFocus()
+    })
+
+    it('avisa quando a área não tem trilhas', async () => {
+      comUmaArea()
+      server.use(
+        http.get('*/api/areas/:id/trilhas', () =>
+          HttpResponse.json(criarPaginaTrilhas([])),
+        ),
+      )
+      const user = userEvent.setup()
+
+      renderizar()
+      await user.click(
+        await screen.findByRole('button', {
+          name: 'Ver trilhas de Atendimento',
+        }),
+      )
+
+      expect(
+        await screen.findByText('Nenhuma trilha ativa nesta área.'),
+      ).toBeInTheDocument()
+    })
+
+    it('mostra o erro e tenta de novo', async () => {
+      comUmaArea()
+      let chamadas = 0
+      server.use(
+        http.get('*/api/areas/:id/trilhas', () => {
+          chamadas += 1
+          return chamadas === 1
+            ? HttpResponse.json({ message: 'boom' }, { status: 500 })
+            : HttpResponse.json(criarPaginaTrilhas())
+        }),
+      )
+      const user = userEvent.setup()
+
+      renderizar()
+      await user.click(
+        await screen.findByRole('button', {
+          name: 'Ver trilhas de Atendimento',
+        }),
+      )
+
+      const painel = await screen.findByRole('dialog')
+      const alerta = await within(painel).findByRole('alert')
+      expect(alerta).toHaveTextContent(
+        'O servidor não conseguiu concluir a operação.',
+      )
+      await user.click(
+        within(alerta).getByRole('button', { name: 'Tentar novamente' }),
+      )
+      expect(
+        await within(painel).findByRole('link', { name: 'Onboarding' }),
+      ).toBeInTheDocument()
     })
   })
 })

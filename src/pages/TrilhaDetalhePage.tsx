@@ -10,6 +10,7 @@ import {
   SeloStatus,
 } from '../components/trilhas/StatusProgresso.tsx'
 import { ROTAS } from '../routes/paths.ts'
+import { HTTP_STATUS } from '../utils/errorHandler.ts'
 import {
   atualizarProgresso,
   buscarTrilha,
@@ -166,21 +167,23 @@ export function TrilhaDetalhePage() {
       {erroBusca && (
         <div
           className={
-            erroBusca.status === 404 ? styles.naoEncontrada : styles.erro
+            erroBusca.status === HTTP_STATUS.NOT_FOUND
+              ? styles.naoEncontrada
+              : styles.erro
           }
           role="alert"
         >
           <p className={styles.erroTitulo}>
-            {erroBusca.status === 404
+            {erroBusca.status === HTTP_STATUS.NOT_FOUND
               ? 'Trilha não encontrada'
               : 'Não foi possível abrir a trilha'}
           </p>
           <p>
-            {erroBusca.status === 404
+            {erroBusca.status === HTTP_STATUS.NOT_FOUND
               ? 'Ela pode ter sido removida ou não estar disponível para você.'
               : erroBusca.message}
           </p>
-          {erroBusca.status === 404 ? (
+          {erroBusca.status === HTTP_STATUS.NOT_FOUND ? (
             <Link to={ROTAS.trilhas} className={styles.erroAcao}>
               Ver todas as trilhas
             </Link>

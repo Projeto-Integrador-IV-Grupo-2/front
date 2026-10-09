@@ -9,6 +9,7 @@ export const ROTAS = {
   trilhas: '/trilhas',
   trilhaDetalhe: '/trilhas/:id',
   areas: '/areas',
+  acompanhamento: '/acompanhamento',
 } as const
 
 /** Caminho do detalhe de uma trilha específica. */

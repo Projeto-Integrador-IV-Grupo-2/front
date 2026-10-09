@@ -1,3 +1,7 @@
+import type {
+  AtribuicaoAcompanhamento,
+  ColaboradorAcompanhamento,
+} from '../types/atribuicao.ts'
 import type { Area } from '../types/area.ts'
 import type {
   ProgressoTrilha,
@@ -162,5 +166,47 @@ export function criarTrilhaDetalhe(
       atribuidoEm: null,
     }),
     ...overrides,
+  }
+}
+
+/** Linha do acompanhamento (`AtribuicaoAcompanhamentoResponse`), em andamento. */
+export function criarAtribuicao(
+  overrides: Partial<AtribuicaoAcompanhamento> = {},
+): AtribuicaoAcompanhamento {
+  return {
+    id: '66666666-6666-6666-6666-666666666666',
+    colaborador: {
+      id: '00000000-0000-0000-0000-000000000001',
+      nomeCompleto: 'Ana Souza',
+      email: 'ana@nexo.com',
+    },
+    area: { id: '33333333-3333-3333-3333-333333333333', nome: 'Tecnologia' },
+    trilha: { id: '44444444-4444-4444-4444-444444444444', nome: 'Onboarding' },
+    status: 'EM_ANDAMENTO',
+    percentual: 50,
+    prazo: '2026-10-30',
+    atribuidoEm: '2026-09-01T12:00:00Z',
+    concluidoEm: null,
+    ...overrides,
+  }
+}
+
+/** Visão de um colaborador no acompanhamento, com totais coerentes com as trilhas. */
+export function criarColaboradorAcompanhamento(
+  trilhas: AtribuicaoAcompanhamento[] = [criarAtribuicao()],
+): ColaboradorAcompanhamento {
+  const contar = (status: AtribuicaoAcompanhamento['status']) =>
+    trilhas.filter((trilha) => trilha.status === status).length
+  return {
+    colaborador: trilhas[0]?.colaborador ?? criarAtribuicao().colaborador,
+    area: { id: '33333333-3333-3333-3333-333333333333', nome: 'Tecnologia' },
+    totais: {
+      total: trilhas.length,
+      naoIniciadas: contar('NAO_INICIADA'),
+      emAndamento: contar('EM_ANDAMENTO'),
+      concluidas: contar('CONCLUIDA'),
+      atrasadas: contar('ATRASADA'),
+    },
+    trilhas,
   }
 }

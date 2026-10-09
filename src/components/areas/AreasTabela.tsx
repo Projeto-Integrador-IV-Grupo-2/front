@@ -12,6 +12,8 @@ interface AreasTabelaProps {
   podeGerenciar: boolean
   onEditar: (area: Area) => void
   onAlterarSituacao: (area: Area) => void
+  /** Abre as trilhas da área — disponível para qualquer perfil. */
+  onVerTrilhas: (area: Area) => void
 }
 
 /**
@@ -27,6 +29,7 @@ export function AreasTabela({
   podeGerenciar,
   onEditar,
   onAlterarSituacao,
+  onVerTrilhas,
 }: AreasTabelaProps) {
   return (
     <table className={styles.tabela}>
@@ -37,6 +40,7 @@ export function AreasTabela({
           <th scope="col">Pessoas</th>
           <th scope="col">Conteúdos</th>
           <th scope="col">Situação</th>
+          <th scope="col">Trilhas</th>
           <th scope="col">
             <span className="visually-hidden">Ações</span>
           </th>
@@ -57,6 +61,16 @@ export function AreasTabela({
                 >
                   {area.ativo ? 'Ativa' : 'Inativa'}
                 </span>
+              </td>
+              <td data-rotulo="Trilhas">
+                <button
+                  type="button"
+                  className={styles.link}
+                  onClick={() => onVerTrilhas(area)}
+                  aria-label={`Ver trilhas de ${area.nome}`}
+                >
+                  Ver trilhas
+                </button>
               </td>
               <td data-rotulo="Ações" className={styles.acoes}>
                 {/* Colaborador não tem essas ações — nem o botão aparece

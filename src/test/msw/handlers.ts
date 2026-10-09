@@ -1,6 +1,9 @@
 import { http, HttpResponse } from 'msw'
 import {
   criarArea,
+  criarAtribuicao,
+  criarColaboradorAcompanhamento,
+  criarPagina,
   criarPaginaTrilhas,
   criarPaginaUsuarios,
   criarProgressoTrilha,
@@ -79,5 +82,29 @@ export const handlers = [
 
   http.patch('*/api/areas/:id/ativar', () =>
     HttpResponse.json(criarArea({ ativo: true })),
+  ),
+
+  http.get('*/api/areas/:id/trilhas', () =>
+    HttpResponse.json(criarPaginaTrilhas()),
+  ),
+
+  http.get('*/api/atribuicoes', () =>
+    HttpResponse.json(criarPagina([criarAtribuicao()])),
+  ),
+
+  http.get('*/api/atribuicoes/colaboradores/:usuarioId', () =>
+    HttpResponse.json(criarColaboradorAcompanhamento()),
+  ),
+
+  http.get(
+    '*/api/atribuicoes/exportar',
+    () =>
+      new HttpResponse('Colaborador;Trilha\nAna Souza;Onboarding\n', {
+        headers: {
+          'Content-Type': 'text/csv;charset=UTF-8',
+          'Content-Disposition':
+            'attachment; filename="acompanhamento-trilhas.csv"',
+        },
+      }),
   ),
 ]

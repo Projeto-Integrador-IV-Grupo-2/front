@@ -1,4 +1,5 @@
 import axios, { type InternalAxiosRequestConfig } from 'axios'
+import { HTTP_STATUS } from '../utils/errorHandler.ts'
 
 const TOKEN_STORAGE_KEY = 'nexo:token'
 const TOKEN_EXPIRES_KEY = 'nexo:token-expira-em'
@@ -101,7 +102,10 @@ export function attachAuthHeader(
 export function handleResponseError(error: unknown): Promise<never> {
   // Só o 401 encerra a sessão. O 403 diz que o usuário está autenticado e não
   // tem permissão para aquilo — quem fez a chamada trata a mensagem na tela.
-  if (axios.isAxiosError(error) && error.response?.status === 401) {
+  if (
+    axios.isAxiosError(error) &&
+    error.response?.status === HTTP_STATUS.UNAUTHORIZED
+  ) {
     clearStoredToken()
     window.dispatchEvent(new Event(UNAUTHORIZED_EVENT))
   }

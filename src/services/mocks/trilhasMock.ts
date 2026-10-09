@@ -372,16 +372,55 @@ function atualizar(config: InternalAxiosRequestConfig, id: string) {
   return responder(config, 200, progressoDe(trilha))
 }
 
+/**
+ * Listagem com os filtros de `GET /api/trilhas` (`nome`, `areaId`, `status`,
+ * `minhas`). `recomendar` é ignorado: o mock não conhece a área do usuário.
+ */
+function listar(params: Record<string, unknown> | undefined) {
+  const nome = String(params?.nome ?? '').toLocaleLowerCase('pt-BR')
+  const areaId = params?.areaId as string | undefined
+  const status = params?.status as StatusProgresso | undefined
+  const minhas = params?.minhas === true || params?.minhas === 'true'
+  const porPrazo = minhas && params?.sort === 'prazo'
+
+  const filtradas = trilhas
+    .filter((t) => t.ativo)
+    .filter((t) => !nome || t.nome.toLocaleLowerCase('pt-BR').includes(nome))
+    .filter((t) => !areaId || t.area?.id === areaId)
+    .filter((t) => !minhas || t.progresso !== null)
+    .filter(
+      (t) => !status || (t.progresso?.status ?? 'NAO_INICIADA') === status,
+    )
+    .sort((a, b) => {
+      if (porPrazo) {
+        // Sem prazo vai para o fim, como na API.
+        const prazoA = a.progresso?.prazo ?? '9999-12-31'
+        const prazoB = b.progresso?.prazo ?? '9999-12-31'
+        if (prazoA !== prazoB) {
+          return prazoA.localeCompare(prazoB)
+        }
+      }
+      return a.nome.localeCompare(b.nome, 'pt-BR')
+    })
+    .map(resumoDe)
+  return paginar(filtradas, params)
+}
+
 function rotear(config: InternalAxiosRequestConfig): AxiosResponse {
   const metodo = (config.method ?? 'get').toUpperCase()
   const caminho = (config.url ?? '').replace(/^https?:\/\/[^/]+/, '')
 
   if (metodo === 'GET' && caminho === '/api/trilhas') {
-    const ativas = trilhas
-      .filter((t) => t.ativo)
-      .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
-      .map(resumoDe)
-    return responder(config, 200, paginar(ativas, config.params))
+    return responder(config, 200, listar(config.params))
+  }
+
+  const daArea = /^\/api\/areas\/([^/]+)\/trilhas$/.exec(caminho)
+  if (metodo === 'GET' && daArea) {
+    const areaId = decodeURIComponent(daArea[1])
+    if (!AREAS.some((a) => a.id === areaId)) {
+      falhar(config, 404, `Área não encontrada: ${areaId}`)
+    }
+    return responder(config, 200, listar({ ...config.params, areaId }))
   }
 
   if (metodo === 'POST' && caminho === '/api/trilhas') {
