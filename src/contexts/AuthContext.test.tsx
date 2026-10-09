@@ -1,3 +1,4 @@
+import { StrictMode } from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -52,6 +53,20 @@ function renderWithProvider() {
   )
 }
 
+/**
+ * Como a aplicação roda de verdade (ver `src/main.tsx`): em desenvolvimento o
+ * StrictMode monta cada efeito duas vezes, abortando a primeira busca.
+ */
+function renderWithStrictMode() {
+  return render(
+    <StrictMode>
+      <AuthProvider>
+        <AuthConsumer />
+      </AuthProvider>
+    </StrictMode>,
+  )
+}
+
 afterEach(() => {
   vi.restoreAllMocks()
 })
@@ -79,6 +94,36 @@ describe('AuthProvider', () => {
     )
     expect(screen.getByTestId('user-name')).toHaveTextContent('Ana Souza')
     expect(screen.getByTestId('loading')).toHaveTextContent('false')
+  })
+
+  it('mantém a sessão quando o StrictMode aborta a primeira restauração', async () => {
+    setStoredToken('abc123')
+    // Sem `Once`: o StrictMode busca duas vezes. Como o Axios, a busca só
+    // rejeita quando o `signal` é abortado — é esse cancelamento, e não um
+    // 401, que a primeira montagem produz.
+    const buscar = vi.spyOn(authService, 'fetchCurrentUser').mockImplementation(
+      ({ signal } = {}) =>
+        new Promise<User>((resolve, reject) => {
+          const cancelar = () =>
+            reject(new authService.AuthError('Requisição cancelada'))
+          if (signal?.aborted) {
+            cancelar()
+            return
+          }
+          signal?.addEventListener('abort', cancelar)
+          setTimeout(() => resolve(mockUser), 0)
+        }),
+    )
+
+    renderWithStrictMode()
+
+    await waitFor(() =>
+      expect(screen.getByTestId('authenticated')).toHaveTextContent('true'),
+    )
+    // O cancelamento da montagem descartada não pode levar o token junto.
+    expect(getStoredToken()).toBe('abc123')
+    expect(screen.getByTestId('loading')).toHaveTextContent('false')
+    expect(buscar).toHaveBeenCalled()
   })
 
   it('encerra a sessão quando o token salvo não é mais válido', async () => {
