@@ -1,7 +1,13 @@
-import axios, { type AxiosRequestConfig } from 'axios'
+import type { AxiosRequestConfig } from 'axios'
 import { api } from './api.ts'
+import {
+  HTTP_STATUS,
+  MENSAGENS_DE_ERRO,
+  normalizarErro,
+  type MensagensPorStatus,
+} from '../utils/errorHandler.ts'
 import { adaptadorTrilhasMock } from './mocks/trilhasMock.ts'
-import type { ApiErrorResponse, ApiFieldError } from '../types/api.ts'
+import type { ApiFieldError } from '../types/api.ts'
 import type {
   AtualizarProgressoRequest,
   CriarTrilhaRequest,
@@ -34,42 +40,34 @@ export class TrilhaServiceError extends Error {
   }
 }
 
+/**
+ * Textos das trilhas que vencem a mensagem da API.
+ *
+ * 404: o backend responde "Trilha não encontrada: <uuid>", e o id não ajuda
+ * quem está na tela. Trilha de outro tenant também volta 404 (nunca 403),
+ * então a mensagem cobre os dois casos.
+ *
+ * 403 e 5xx: o 403 costuma vir sem corpo, e a mensagem de um 500 é técnica
+ * demais para mostrar a quem está usando a tela.
+ */
+const MENSAGENS_DAS_TRILHAS: MensagensPorStatus = {
+  [HTTP_STATUS.NOT_FOUND]:
+    'Trilha não encontrada. Ela pode ter sido removida ou não estar disponível para você.',
+  [HTTP_STATUS.FORBIDDEN]: MENSAGENS_DE_ERRO.SEM_PERMISSAO,
+  [HTTP_STATUS.INTERNAL_SERVER_ERROR]: MENSAGENS_DE_ERRO.ERRO_DO_SERVIDOR,
+}
+
 function toServiceError(
   error: unknown,
   fallbackMessage: string,
+  mensagens: MensagensPorStatus = {},
 ): TrilhaServiceError {
-  if (axios.isAxiosError<ApiErrorResponse>(error)) {
-    const status = error.response?.status
-    return new TrilhaServiceError(
-      mensagemPorStatus(status) ??
-        error.response?.data?.message ??
-        fallbackMessage,
-      status,
-      error.response?.data?.fieldErrors ?? [],
-    )
-  }
-  return new TrilhaServiceError(fallbackMessage)
-}
-
-/**
- * 404 também ganha texto próprio: o backend responde "Trilha não encontrada:
- * <uuid>", e o id não ajuda quem está na tela. Trilha de outro tenant também
- * volta 404 (nunca 403), então a mensagem cobre os dois casos.
- *
- * 403 e 5xx ganham texto próprio: o 403 costuma vir sem corpo, e a mensagem
- * de um 500 é técnica demais para mostrar a quem está usando a tela.
- */
-function mensagemPorStatus(status: number | undefined): string | undefined {
-  if (status === 404) {
-    return 'Trilha não encontrada. Ela pode ter sido removida ou não estar disponível para você.'
-  }
-  if (status === 403) {
-    return 'Você não tem permissão para esta operação.'
-  }
-  if (status !== undefined && status >= 500) {
-    return 'O servidor não conseguiu concluir a operação. Tente novamente em instantes.'
-  }
-  return undefined
+  const { message, status, fieldErrors } = normalizarErro(
+    error,
+    fallbackMessage,
+    { mensagens: { ...MENSAGENS_DAS_TRILHAS, ...mensagens } },
+  )
+  return new TrilhaServiceError(message, status, fieldErrors)
 }
 
 /**
@@ -145,17 +143,15 @@ export async function listarTrilhasDaArea(
     )
     return data
   } catch (error) {
-    const normalizado = toServiceError(
+    // Aqui o 404 é da área, não de uma trilha.
+    throw toServiceError(
       error,
       'Não foi possível carregar as trilhas da área.',
+      {
+        [HTTP_STATUS.NOT_FOUND]:
+          'Área não encontrada. Ela pode ter sido removida.',
+      },
     )
-    if (normalizado.status === 404) {
-      throw new TrilhaServiceError(
-        'Área não encontrada. Ela pode ter sido removida.',
-        404,
-      )
-    }
-    throw normalizado
   }
 }
 

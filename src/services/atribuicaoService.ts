@@ -1,5 +1,12 @@
 import axios from 'axios'
 import { api } from './api.ts'
+import {
+  HTTP_STATUS,
+  MENSAGENS_DE_ERRO,
+  normalizarErro,
+  type MensagensPorStatus,
+  type OpcoesDeErro,
+} from '../utils/errorHandler.ts'
 import type { ApiErrorResponse, ApiFieldError } from '../types/api.ts'
 import type {
   ArquivoExportado,
@@ -31,34 +38,29 @@ export class AtribuicaoServiceError extends Error {
 }
 
 /**
- * 403 e 5xx ganham texto próprio: o 403 costuma vir sem corpo, e a mensagem
- * de um 500 é técnica demais para quem está na tela.
+ * Textos do acompanhamento que vencem a mensagem da API: o 403 diz do que é a
+ * permissão, e a mensagem de um 500 é técnica demais para quem está na tela.
  */
-function mensagemPorStatus(status: number | undefined): string | undefined {
-  if (status === 403) {
-    return 'Você não tem permissão para acompanhar as trilhas da equipe.'
-  }
-  if (status !== undefined && status >= 500) {
-    return 'O servidor não conseguiu concluir a operação. Tente novamente em instantes.'
-  }
-  return undefined
+const MENSAGENS_DO_ACOMPANHAMENTO: MensagensPorStatus = {
+  [HTTP_STATUS.FORBIDDEN]:
+    'Você não tem permissão para acompanhar as trilhas da equipe.',
+  [HTTP_STATUS.INTERNAL_SERVER_ERROR]: MENSAGENS_DE_ERRO.ERRO_DO_SERVIDOR,
 }
 
 function toServiceError(
   error: unknown,
   fallbackMessage: string,
-  corpo?: ApiErrorResponse,
+  opcoes: OpcoesDeErro = {},
 ): AtribuicaoServiceError {
-  if (axios.isAxiosError<ApiErrorResponse>(error)) {
-    const status = error.response?.status
-    const dados = corpo ?? error.response?.data
-    return new AtribuicaoServiceError(
-      mensagemPorStatus(status) ?? dados?.message ?? fallbackMessage,
-      status,
-      dados?.fieldErrors ?? [],
-    )
-  }
-  return new AtribuicaoServiceError(fallbackMessage)
+  const { message, status, fieldErrors } = normalizarErro(
+    error,
+    fallbackMessage,
+    {
+      corpo: opcoes.corpo,
+      mensagens: { ...MENSAGENS_DO_ACOMPANHAMENTO, ...opcoes.mensagens },
+    },
+  )
+  return new AtribuicaoServiceError(message, status, fieldErrors)
 }
 
 /** Campo vazio não vira parâmetro: `?status=` faria a API recusar o enum. */
@@ -106,14 +108,15 @@ export async function buscarAcompanhamentoDoColaborador(
     )
     return data
   } catch (error) {
-    const normalizado = toServiceError(
+    throw toServiceError(
       error,
       'Não foi possível carregar as trilhas do colaborador.',
+      {
+        mensagens: {
+          [HTTP_STATUS.NOT_FOUND]: 'Colaborador não encontrado.',
+        },
+      },
     )
-    if (normalizado.status === 404) {
-      throw new AtribuicaoServiceError('Colaborador não encontrado.', 404)
-    }
-    throw normalizado
   }
 }
 
@@ -177,10 +180,8 @@ export async function exportarAcompanhamento(
         nomePadraoDoCsv(),
     }
   } catch (error) {
-    throw toServiceError(
-      error,
-      'Não foi possível exportar o acompanhamento.',
-      await corpoDeErroEmBlob(error),
-    )
+    throw toServiceError(error, 'Não foi possível exportar o acompanhamento.', {
+      corpo: await corpoDeErroEmBlob(error),
+    })
   }
 }
