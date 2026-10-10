@@ -305,15 +305,18 @@ describe('TrilhaDetalhePage', () => {
 
   it('administrador edita a trilha e o detalhe se atualiza sem recarregar', async () => {
     let corpo: unknown = null
+    // Como a API: o PUT responde com o RESUMO (sem descrição, prazo, situação
+    // nem data de criação) e só o GET do detalhe mostra o que ficou salvo.
+    let salva = criarTrilhaDetalhe()
     server.use(
+      http.get('*/api/trilhas/:id', () => HttpResponse.json(salva)),
       http.put('*/api/trilhas/:id', async ({ request }) => {
         corpo = await request.json()
-        return HttpResponse.json(
-          criarTrilhaDetalhe({
-            nome: 'Onboarding 2026',
-            descricao: 'Primeira semana na empresa.',
-          }),
-        )
+        salva = criarTrilhaDetalhe({
+          nome: 'Onboarding 2026',
+          descricao: 'Primeira semana na empresa.',
+        })
+        return HttpResponse.json(criarTrilhaResumo({ nome: 'Onboarding 2026' }))
       }),
     )
     const usuario = userEvent.setup()
@@ -357,6 +360,16 @@ describe('TrilhaDetalhePage', () => {
     expect(screen.getByText('Primeira semana na empresa.')).toBeInTheDocument()
     expect(screen.getByText('Trilha atualizada.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Editar trilha' })).toHaveFocus()
+    // A trilha continua ativa e com os dados que só o detalhe traz — editar
+    // não pode fazer a tela achar que ela foi inativada.
+    expect(screen.getByRole('button', { name: 'Inativar' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Atribuir colaboradores' }),
+    ).toBeInTheDocument()
+    const sobre = screen.getByRole('region', { name: 'Sobre a trilha' })
+    expect(within(sobre).getByText('30 dias')).toBeInTheDocument()
+    expect(within(sobre).getByText('Ativa')).toBeInTheDocument()
+    expect(within(sobre).getByText('1 de agosto de 2026')).toBeInTheDocument()
   })
 
   it('mostra o erro por campo quando a API recusa a edição', async () => {
@@ -393,10 +406,14 @@ describe('TrilhaDetalhePage', () => {
 
   it('inativar pede confirmação antes de enviar', async () => {
     let chamou = false
+    let salva = criarTrilhaDetalhe()
     server.use(
+      http.get('*/api/trilhas/:id', () => HttpResponse.json(salva)),
+      // O PATCH responde com o resumo: a situação nova só vem na releitura.
       http.patch('*/api/trilhas/:id/inativar', () => {
         chamou = true
-        return HttpResponse.json(criarTrilhaDetalhe({ ativo: false }))
+        salva = criarTrilhaDetalhe({ ativo: false })
+        return HttpResponse.json(criarTrilhaResumo())
       }),
     )
     const usuario = userEvent.setup()
@@ -429,6 +446,72 @@ describe('TrilhaDetalhePage', () => {
     expect(
       screen.queryByRole('button', { name: 'Atribuir colaboradores' }),
     ).not.toBeInTheDocument()
+  })
+
+  it('mostra no diálogo a recusa da API ao inativar, sem fechá-lo', async () => {
+    server.use(
+      http.patch(
+        '*/api/trilhas/:id/inativar',
+        () => new HttpResponse(null, { status: 403 }),
+      ),
+    )
+    const usuario = userEvent.setup()
+
+    renderizarComo(admin)
+    await usuario.click(await screen.findByRole('button', { name: 'Inativar' }))
+    const confirmacao = await screen.findByRole('alertdialog', {
+      name: 'Inativar trilha',
+    })
+    await usuario.click(
+      within(confirmacao).getByRole('button', { name: 'Inativar' }),
+    )
+
+    expect(await within(confirmacao).findByRole('alert')).toHaveTextContent(
+      'Você não tem permissão para esta operação.',
+    )
+    // Continua aberto: dá para tentar de novo ou desistir sabendo o motivo.
+    expect(
+      screen.getByRole('alertdialog', { name: 'Inativar trilha' }),
+    ).toBeVisible()
+    // E a trilha segue ativa na tela: nada de selo "Inativa".
+    expect(screen.queryByText('Inativa')).not.toBeInTheDocument()
+    const sobre = screen.getByRole('region', { name: 'Sobre a trilha' })
+    expect(within(sobre).getByText('Ativa')).toBeInTheDocument()
+  })
+
+  it('Esc não fecha a confirmação enquanto a inativação está em andamento', async () => {
+    // A resposta só chega quando o teste quiser: enquanto isso, processando.
+    let responder: (() => void) | null = null
+    server.use(
+      http.patch(
+        '*/api/trilhas/:id/inativar',
+        () =>
+          new Promise((resolve) => {
+            responder = () => resolve(HttpResponse.json(criarTrilhaResumo()))
+          }),
+      ),
+    )
+    const usuario = userEvent.setup()
+
+    renderizarComo(admin)
+    await usuario.click(await screen.findByRole('button', { name: 'Inativar' }))
+    const confirmacao = await screen.findByRole('alertdialog', {
+      name: 'Inativar trilha',
+    })
+    await usuario.click(
+      within(confirmacao).getByRole('button', { name: 'Inativar' }),
+    )
+    await within(confirmacao).findByRole('button', { name: 'Aguarde…' })
+
+    await usuario.keyboard('{Escape}')
+    expect(
+      screen.getByRole('alertdialog', { name: 'Inativar trilha' }),
+    ).toBeVisible()
+
+    responder!()
+    await waitFor(() =>
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument(),
+    )
   })
 
   it('atribui a colaboradores e diz quantos receberam e quantos foram ignorados', async () => {

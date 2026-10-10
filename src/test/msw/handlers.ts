@@ -59,14 +59,17 @@ export const handlers = [
     HttpResponse.json(criarTrilhaResumo(), { status: 201 }),
   ),
 
-  http.put('*/api/trilhas/:id', () => HttpResponse.json(criarTrilhaDetalhe())),
+  // Editar, inativar e ativar respondem com o RESUMO da trilha
+  // (`TrilhaResumoResponse`), não com o detalhe — é o que a API faz, e a tela
+  // depende disso para reler o detalhe em vez de confiar na resposta.
+  http.put('*/api/trilhas/:id', () => HttpResponse.json(criarTrilhaResumo())),
 
   http.patch('*/api/trilhas/:id/inativar', () =>
-    HttpResponse.json(criarTrilhaDetalhe({ ativo: false })),
+    HttpResponse.json(criarTrilhaResumo()),
   ),
 
   http.patch('*/api/trilhas/:id/ativar', () =>
-    HttpResponse.json(criarTrilhaDetalhe({ ativo: true })),
+    HttpResponse.json(criarTrilhaResumo()),
   ),
 
   http.post('*/api/trilhas/:id/atribuicoes', () =>

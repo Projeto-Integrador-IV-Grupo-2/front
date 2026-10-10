@@ -174,7 +174,12 @@ export function criarTrilhaDetalhe(
 export function criarResultadoAtribuicao(
   overrides: Partial<ResultadoAtribuicao> = {},
 ): ResultadoAtribuicao {
-  return { atribuidos: 1, ignorados: 0, ...overrides }
+  return {
+    atribuidos: 1,
+    ignorados: 0,
+    usuarioIds: ['00000000-0000-0000-0000-000000000001'],
+    ...overrides,
+  }
 }
 
 /** Linha do acompanhamento (`AtribuicaoAcompanhamentoResponse`), em andamento. */

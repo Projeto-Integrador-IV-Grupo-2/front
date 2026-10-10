@@ -20,7 +20,6 @@ import {
   criarPaginaTrilhas,
   criarPaginaUsuarios,
   criarProgressoTrilha,
-  criarTrilhaDetalhe,
   criarTrilhaResumo,
 } from '../test/factories.ts'
 import { server } from '../test/msw/server.ts'
@@ -258,24 +257,22 @@ describe('trilhaService (API)', () => {
     expect(progresso.status).toBe('CONCLUIDA')
   })
 
-  it('edita a trilha com PUT e devolve o detalhe salvo', async () => {
+  it('edita a trilha com PUT e devolve o resumo salvo', async () => {
     let corpo: unknown = null
     server.use(
       http.put('*/api/trilhas/:id', async ({ request }) => {
         corpo = await request.json()
-        return HttpResponse.json(
-          criarTrilhaDetalhe({ nome: 'Onboarding 2026' }),
-        )
+        return HttpResponse.json(criarTrilhaResumo({ nome: 'Onboarding 2026' }))
       }),
     )
 
-    const detalhe = await atualizarTrilha(ID, {
+    const resumo = await atualizarTrilha(ID, {
       ...NOVA_TRILHA,
       nome: 'Onboarding 2026',
     })
 
     expect(corpo).toEqual({ ...NOVA_TRILHA, nome: 'Onboarding 2026' })
-    expect(detalhe.nome).toBe('Onboarding 2026')
+    expect(resumo.nome).toBe('Onboarding 2026')
   })
 
   it('devolve a mensagem da API no 409 de nome repetido', async () => {
@@ -294,21 +291,23 @@ describe('trilhaService (API)', () => {
     })
   })
 
-  it('inativa e reativa pelos PATCH correspondentes', async () => {
+  it('inativa e reativa pelos PATCH correspondentes, devolvendo o resumo', async () => {
     const chamadas: string[] = []
     server.use(
       http.patch('*/api/trilhas/:id/inativar', () => {
         chamadas.push('inativar')
-        return HttpResponse.json(criarTrilhaDetalhe({ ativo: false }))
+        return HttpResponse.json(criarTrilhaResumo())
       }),
       http.patch('*/api/trilhas/:id/ativar', () => {
         chamadas.push('ativar')
-        return HttpResponse.json(criarTrilhaDetalhe({ ativo: true }))
+        return HttpResponse.json(criarTrilhaResumo())
       }),
     )
 
-    expect((await inativarTrilha(ID)).ativo).toBe(false)
-    expect((await ativarTrilha(ID)).ativo).toBe(true)
+    // A resposta é o resumo: não traz `ativo`, e é por isso que a tela relê o
+    // detalhe em vez de confiar nela.
+    expect(await inativarTrilha(ID)).not.toHaveProperty('ativo')
+    expect(await ativarTrilha(ID)).not.toHaveProperty('ativo')
     expect(chamadas).toEqual(['inativar', 'ativar'])
   })
 
@@ -332,7 +331,7 @@ describe('trilhaService (API)', () => {
       http.post('*/api/trilhas/:id/atribuicoes', async ({ request }) => {
         corpo = await request.json()
         return HttpResponse.json(
-          { atribuidos: 2, ignorados: 1 },
+          { atribuidos: 2, ignorados: 1, usuarioIds: ['u-1', 'u-2'] },
           { status: 201 },
         )
       }),
@@ -347,7 +346,11 @@ describe('trilhaService (API)', () => {
       usuarioIds: ['u-1', 'u-2', 'u-3'],
       prazo: '2026-12-01',
     })
-    expect(resultado).toEqual({ atribuidos: 2, ignorados: 1 })
+    expect(resultado).toEqual({
+      atribuidos: 2,
+      ignorados: 1,
+      usuarioIds: ['u-1', 'u-2'],
+    })
   })
 
   it('atribui a uma área inteira', async () => {
@@ -356,7 +359,7 @@ describe('trilhaService (API)', () => {
       http.post('*/api/trilhas/:id/atribuicoes', async ({ request }) => {
         corpo = await request.json()
         return HttpResponse.json(
-          { atribuidos: 8, ignorados: 0 },
+          { atribuidos: 8, ignorados: 0, usuarioIds: [] },
           { status: 201 },
         )
       }),
@@ -491,7 +494,7 @@ describe('trilhaService (mock em memória)', () => {
     const id = 'b1000000-0000-4000-8000-000000000001'
     const antes = await buscarTrilha(id)
 
-    const depois = await atualizarTrilha(id, {
+    const resposta = await atualizarTrilha(id, {
       nome: 'Atendimento ao Cliente 2026',
       descricao: 'Nova descrição.',
       areaId: null,
@@ -499,13 +502,35 @@ describe('trilhaService (mock em memória)', () => {
       objetivos: 'Atender melhor.',
     })
 
+    // A escrita responde com o resumo: nome e área vêm, o resto não.
+    expect(resposta).toMatchObject({
+      nome: 'Atendimento ao Cliente 2026',
+      area: null,
+    })
+    expect(resposta).not.toHaveProperty('descricao')
+    expect(resposta).not.toHaveProperty('prazoDias')
+
+    // O que mudou de verdade só aparece relendo o detalhe.
+    const depois = await buscarTrilha(id)
     expect(depois).toMatchObject({
       nome: 'Atendimento ao Cliente 2026',
       descricao: 'Nova descrição.',
       prazoDias: 45,
+      ativo: true,
       area: null,
     })
     expect(depois.progresso.status).toBe(antes.progresso.status)
+  })
+
+  it('inativar não devolve a situação nova: ela vem na releitura', async () => {
+    const id = 'b1000000-0000-4000-8000-000000000002'
+
+    const resposta = await inativarTrilha(id)
+
+    expect(resposta).not.toHaveProperty('ativo')
+    expect((await buscarTrilha(id)).ativo).toBe(false)
+    expect((await ativarTrilha(id)) as unknown).not.toHaveProperty('ativo')
+    expect((await buscarTrilha(id)).ativo).toBe(true)
   })
 
   it('recusa com 409 a edição que repete o nome de outra trilha', async () => {
@@ -538,10 +563,10 @@ describe('trilhaService (mock em memória)', () => {
 
     await expect(
       atribuirTrilha(id, { usuarioIds, prazo: null }),
-    ).resolves.toEqual({ atribuidos: 1, ignorados: 0 })
+    ).resolves.toEqual({ atribuidos: 1, ignorados: 0, usuarioIds })
     await expect(
       atribuirTrilha(id, { usuarioIds, prazo: null }),
-    ).resolves.toEqual({ atribuidos: 0, ignorados: 1 })
+    ).resolves.toEqual({ atribuidos: 0, ignorados: 1, usuarioIds: [] })
   })
 
   it('marca como atrasada quem passou do prazo sem concluir', async () => {

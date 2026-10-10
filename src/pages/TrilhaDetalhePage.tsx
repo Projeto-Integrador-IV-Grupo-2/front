@@ -327,10 +327,30 @@ export function TrilhaDetalhePage() {
     origem.current?.focus()
   }
 
-  /** Troca o detalhe em mãos pelo que a API acabou de salvar. */
-  function aplicarDetalhe(detalhe: TrilhaDetalhe, mensagem: string) {
-    setResultado({ chave: chaveBusca, trilha: detalhe, erro: null })
+  /**
+   * Relê o detalhe depois de uma escrita e avisa o que aconteceu.
+   *
+   * Editar, inativar e ativar respondem com o **resumo** da trilha, que não
+   * traz `descricao`, `prazoDias`, `ativo` nem `criadoEm`. Montar o detalhe a
+   * partir dele mostraria a trilha errada — inativa, sem data de criação e
+   * sem progresso. Então a tela faz o mesmo que já fazia no progresso: busca
+   * de novo e mostra o que a API guardou.
+   *
+   * A escrita já valeu neste ponto; se a releitura falhar, o aviso de sucesso
+   * fica e a tela cai no mesmo bloco de erro da busca, com "Tentar novamente".
+   */
+  async function releDetalhe(id: string, mensagem: string) {
     setAviso(mensagem)
+    try {
+      const atualizado = await buscarTrilha(id)
+      setResultado({ chave: chaveBusca, trilha: atualizado, erro: null })
+    } catch (causa) {
+      setResultado({
+        chave: chaveBusca,
+        trilha: null,
+        erro: erroDe(causa, 'Não foi possível recarregar a trilha.'),
+      })
+    }
   }
 
   function registrarErroDoDialogo(causa: unknown, padrao: string) {
@@ -368,36 +388,41 @@ export function TrilhaDetalhePage() {
     setErroDialogo(null)
     setFieldErrors([])
     try {
-      const atualizado = await atualizarTrilha(detalhe.id, request)
-      fecharDialogo()
-      aplicarDetalhe(atualizado, 'Trilha atualizada.')
+      await atualizarTrilha(detalhe.id, request)
     } catch (causa) {
       registrarErroDoDialogo(causa, 'Não foi possível salvar as alterações.')
+      return
     } finally {
       setSalvando(false)
     }
+    // Daqui em diante a trilha já está salva: o que pode falhar é a leitura.
+    fecharDialogo()
+    await releDetalhe(detalhe.id, 'Trilha atualizada.')
   }
 
   async function alternarSituacao(detalhe: TrilhaDetalhe) {
     setSalvando(true)
     setErroDialogo(null)
     try {
-      const atualizado = detalhe.ativo
-        ? await inativarTrilha(detalhe.id)
-        : await ativarTrilha(detalhe.id)
-      fecharDialogo()
-      aplicarDetalhe(
-        atualizado,
-        detalhe.ativo ? 'Trilha inativada.' : 'Trilha reativada.',
-      )
+      if (detalhe.ativo) {
+        await inativarTrilha(detalhe.id)
+      } else {
+        await ativarTrilha(detalhe.id)
+      }
     } catch (causa) {
       registrarErroDoDialogo(
         causa,
         'Não foi possível alterar a situação da trilha.',
       )
+      return
     } finally {
       setSalvando(false)
     }
+    fecharDialogo()
+    await releDetalhe(
+      detalhe.id,
+      detalhe.ativo ? 'Trilha inativada.' : 'Trilha reativada.',
+    )
   }
 
   async function atribuir(
@@ -435,6 +460,12 @@ export function TrilhaDetalhePage() {
         </svg>
         Voltar para trilhas
       </Link>
+
+      {/* Live region única da página, fora do bloco da trilha: o aviso de uma
+          escrita bem-sucedida continua na tela mesmo que a releitura falhe. */}
+      <div role="status" aria-live="polite" className={styles.avisoRegiao}>
+        {aviso && <p className={styles.aviso}>{aviso}</p>}
+      </div>
 
       {carregando && <EsqueletoDetalhe />}
 
@@ -528,10 +559,6 @@ export function TrilhaDetalhePage() {
               </div>
             )}
           </header>
-
-          <div role="status" aria-live="polite" className={styles.avisoRegiao}>
-            {aviso && <p className={styles.aviso}>{aviso}</p>}
-          </div>
 
           <div className={styles.colunas}>
             <section aria-labelledby="titulo-jornada">
@@ -674,6 +701,7 @@ export function TrilhaDetalhePage() {
             <ConfirmacaoSituacaoTrilha
               trilha={trilha}
               processando={salvando}
+              erro={erroDialogo}
               onConfirmar={() => void alternarSituacao(trilha)}
               onCancelar={fecharDialogo}
             />

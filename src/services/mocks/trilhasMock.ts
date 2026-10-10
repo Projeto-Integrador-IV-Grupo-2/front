@@ -386,7 +386,8 @@ function editar(config: InternalAxiosRequestConfig, id: string) {
     typeof corpo.prazoDias === 'number' && corpo.prazoDias > 0
       ? corpo.prazoDias
       : null
-  return responder(config, 200, detalheDe(trilha))
+  // Como a API: a edição responde com o resumo, não com o detalhe.
+  return responder(config, 200, resumoDe(trilha))
 }
 
 function alternarAtivo(
@@ -396,7 +397,8 @@ function alternarAtivo(
 ) {
   const trilha = buscarNoMock(config, id)
   trilha.ativo = ativo
-  return responder(config, 200, detalheDe(trilha))
+  // Resumo também, como a API — o `ativo` novo não volta na resposta.
+  return responder(config, 200, resumoDe(trilha))
 }
 
 /**
@@ -432,6 +434,7 @@ function atribuir(config: InternalAxiosRequestConfig, id: string) {
   return responder(config, 201, {
     atribuidos: novos.length,
     ignorados: alvos.length - novos.length,
+    usuarioIds: novos.map((u) => u.id),
   })
 }
 

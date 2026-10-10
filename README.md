@@ -144,12 +144,19 @@ e os erros chegam à tela como `TrilhaServiceError` (`message`, `status`,
 
 - **Editar e inativar/reativar** ficam no detalhe e só aparecem para `ADMIN`
   (`PERFIS_GESTAO_TRILHA`). A edição reaproveita o `TrilhaFormulario`, que é o
-  mesmo diálogo do cadastro — muda só o estado inicial e os textos. A resposta
-  do `PUT` já é o detalhe salvo e entra no lugar do antigo: a tela se atualiza
-  sem recarregar a página.
+  mesmo diálogo do cadastro — muda só o estado inicial e os textos.
+- **Depois de escrever, a tela relê o detalhe.** `PUT /api/trilhas/{id}` e os
+  dois `PATCH` de situação respondem com o **resumo** da trilha
+  (`TrilhaResumoResponse`), que não traz `descricao`, `prazoDias`, `ativo` nem
+  `criadoEm`. Montar o detalhe a partir dele mostraria a trilha errada — como
+  inativa, sem data de criação e sem progresso —, então a tela busca o detalhe
+  de novo e exibe o que a API guardou, a mesma postura já usada no progresso.
+  Continua sem recarregar a página.
 - **Inativar pede confirmação** (`ConfirmacaoSituacaoTrilha`) antes de enviar.
   A trilha inativa sai da listagem dos colaboradores e não pode ser atribuída,
-  mas o progresso de quem já a recebeu é mantido.
+  mas o progresso de quem já a recebeu é mantido. Se a API recusar, a mensagem
+  aparece no próprio diálogo, que continua aberto; enquanto a requisição está
+  em andamento, Esc não fecha.
 - **Atribuir** é de `ADMIN` e `GESTOR` (`PERFIS_ATRIBUIR_TRILHA`). O diálogo
   escolhe uma lista de colaboradores **ou** uma área inteira, mais o prazo, e
   a tela mostra quantos receberam e quantos foram ignorados por já terem a

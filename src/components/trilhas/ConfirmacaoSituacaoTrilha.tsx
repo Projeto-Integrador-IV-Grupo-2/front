@@ -5,6 +5,8 @@ import styles from './ConfirmacaoSituacaoTrilha.module.css'
 interface ConfirmacaoSituacaoTrilhaProps {
   trilha: TrilhaDetalhe
   processando: boolean
+  /** Recusa da API (403, 409, 5xx). Fica no diálogo, que continua aberto. */
+  erro: string | null
   onConfirmar: () => void
   onCancelar: () => void
 }
@@ -18,6 +20,7 @@ interface ConfirmacaoSituacaoTrilhaProps {
 export function ConfirmacaoSituacaoTrilha({
   trilha,
   processando,
+  erro,
   onConfirmar,
   onCancelar,
 }: ConfirmacaoSituacaoTrilhaProps) {
@@ -29,16 +32,18 @@ export function ConfirmacaoSituacaoTrilha({
     confirmar.current?.focus()
   }, [])
 
-  // Esc fecha: é o que se espera de um diálogo, e evita prender quem abriu por engano.
+  // Esc fecha: é o que se espera de um diálogo, e evita prender quem abriu por
+  // engano. Enquanto a requisição está em andamento, não: fechar aqui deixaria
+  // o envio sem resposta na tela.
   useEffect(() => {
     function aoTeclar(evento: KeyboardEvent) {
-      if (evento.key === 'Escape') {
+      if (evento.key === 'Escape' && !processando) {
         onCancelar()
       }
     }
     document.addEventListener('keydown', aoTeclar)
     return () => document.removeEventListener('keydown', aoTeclar)
-  }, [onCancelar])
+  }, [onCancelar, processando])
 
   return (
     <div className={styles.fundo}>
@@ -57,6 +62,11 @@ export function ConfirmacaoSituacaoTrilha({
             ? `“${trilha.nome}” sai da listagem dos colaboradores e não pode mais ser atribuída. Quem já a recebeu mantém o progresso.`
             : `“${trilha.nome}” volta a aparecer na listagem e pode ser atribuída de novo.`}
         </p>
+        {erro && (
+          <p className={styles.erro} role="alert">
+            {erro}
+          </p>
+        )}
         <div className={styles.acoes}>
           <button
             type="button"

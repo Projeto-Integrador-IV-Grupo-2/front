@@ -103,6 +103,9 @@ export interface CriarTrilhaRequest {
  * Corpo de `PUT /api/trilhas/{id}`. A edição manda a trilha inteira, com os
  * mesmos campos do cadastro — por isso o tipo é o mesmo, e não uma cópia que
  * pode divergir. Nome duplicado no tenant volta 409.
+ *
+ * `ativo` fica de fora de propósito, como no record da API: a situação só
+ * muda pelos endpoints de inativar e ativar.
  */
 export type AtualizarTrilhaRequest = CriarTrilhaRequest
 
@@ -118,11 +121,13 @@ export type AtribuirTrilhaRequest =
 /**
  * Resposta da atribuição em lote (record `AtribuicaoEmLoteResponse`): quem já
  * tinha a trilha é ignorado em vez de duplicado, e a API diz quantos foram
- * cada coisa.
+ * cada coisa. `usuarioIds` traz quem passou a ter a trilha agora — a tela
+ * ainda não precisa deles, mas eles fazem parte do contrato.
  */
 export interface ResultadoAtribuicao {
   atribuidos: number
   ignorados: number
+  usuarioIds: string[]
 }
 
 /** Ordem dos status nos selects de filtro. */

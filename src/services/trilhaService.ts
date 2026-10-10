@@ -174,15 +174,19 @@ export async function criarTrilha(
 }
 
 /**
- * Edição da trilha (`PUT /api/trilhas/{id}`, só ADMIN). Devolve o detalhe já
- * salvo, que é o que a tela passa a mostrar — nada de atualização otimista.
+ * Edição da trilha (`PUT /api/trilhas/{id}`, só ADMIN).
+ *
+ * Responde com o **resumo** (`TrilhaResumoResponse`), não com o detalhe: sem
+ * `descricao`, `prazoDias`, `ativo` nem `criadoEm`. Quem precisa do detalhe
+ * inteiro depois de salvar relê com `buscarTrilha` — montar um detalhe a
+ * partir deste resumo mostraria a trilha errada na tela.
  */
 export async function atualizarTrilha(
   id: string,
   request: AtualizarTrilhaRequest,
-): Promise<TrilhaDetalhe> {
+): Promise<TrilhaResumo> {
   try {
-    const { data } = await api.put<TrilhaDetalhe>(
+    const { data } = await api.put<TrilhaResumo>(
       `/api/trilhas/${encodeURIComponent(id)}`,
       request,
       configBase(),
@@ -197,10 +201,12 @@ export async function atualizarTrilha(
  * Inativa a trilha (`PATCH /api/trilhas/{id}/inativar`, só ADMIN). A trilha
  * some da listagem dos colaboradores, e o progresso de quem já a recebeu é
  * mantido — por isso é inativar, não excluir.
+ *
+ * Responde com o resumo, como a edição: o `ativo` novo não vem na resposta.
  */
-export async function inativarTrilha(id: string): Promise<TrilhaDetalhe> {
+export async function inativarTrilha(id: string): Promise<TrilhaResumo> {
   try {
-    const { data } = await api.patch<TrilhaDetalhe>(
+    const { data } = await api.patch<TrilhaResumo>(
       `/api/trilhas/${encodeURIComponent(id)}/inativar`,
       undefined,
       configBase(),
@@ -211,10 +217,10 @@ export async function inativarTrilha(id: string): Promise<TrilhaDetalhe> {
   }
 }
 
-/** Reativa a trilha (`PATCH /api/trilhas/{id}/ativar`, só ADMIN). */
-export async function ativarTrilha(id: string): Promise<TrilhaDetalhe> {
+/** Reativa a trilha (`PATCH /api/trilhas/{id}/ativar`, só ADMIN). Resumo também. */
+export async function ativarTrilha(id: string): Promise<TrilhaResumo> {
   try {
-    const { data } = await api.patch<TrilhaDetalhe>(
+    const { data } = await api.patch<TrilhaResumo>(
       `/api/trilhas/${encodeURIComponent(id)}/ativar`,
       undefined,
       configBase(),
