@@ -25,7 +25,8 @@ interface TrilhaFormularioProps {
 }
 
 const NOME_MAX = 200
-const DESCRICAO_MAX = 500
+// Mesmos limites do `AtualizarTrilhaRequest` da API: passar disso volta 400.
+const DESCRICAO_MAX = 2000
 const PRAZO_MAX_DIAS = 365
 
 interface Campos {
