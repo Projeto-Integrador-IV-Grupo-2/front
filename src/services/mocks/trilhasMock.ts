@@ -50,6 +50,34 @@ const AREAS: RecursoResumo[] = [
   { id: 'a1000000-0000-4000-8000-000000000004', nome: 'Tecnologia' },
 ]
 
+/** Colaboradores do diálogo "Atribuir trilha" (`GET /api/usuarios`). */
+const USUARIOS = [
+  {
+    id: 'd1000000-0000-4000-8000-000000000001',
+    nomeCompleto: 'Rafael Souza',
+    email: 'rafael.souza@empresa.com',
+    area: AREAS[0],
+  },
+  {
+    id: 'd1000000-0000-4000-8000-000000000002',
+    nomeCompleto: 'Ana Lima',
+    email: 'ana.lima@empresa.com',
+    area: AREAS[1],
+  },
+  {
+    id: 'd1000000-0000-4000-8000-000000000003',
+    nomeCompleto: 'Bruno Castro',
+    email: 'bruno.castro@empresa.com',
+    area: AREAS[1],
+  },
+  {
+    id: 'd1000000-0000-4000-8000-000000000004',
+    nomeCompleto: 'Carla Ferreira',
+    email: 'carla.ferreira@empresa.com',
+    area: AREAS[3],
+  },
+]
+
 function diasAtras(dias: number): string {
   return new Date(Date.now() - dias * 24 * 60 * 60 * 1000).toISOString()
 }
@@ -150,9 +178,13 @@ function estadoInicial(): RegistroTrilha[] {
 
 let trilhas = estadoInicial()
 
+/** Quem já recebeu cada trilha, por id de trilha — só para não duplicar. */
+let atribuidos: Record<string, string[]> = {}
+
 /** Volta os dados ao estado inicial. Usado pelos testes. */
 export function reiniciarTrilhasMock(): void {
   trilhas = estadoInicial()
+  atribuidos = {}
 }
 
 /** Mesma aproximação do backend (`ProgressoTrilhaResponse.percentualDe`). */
@@ -168,6 +200,17 @@ function percentualDe(status: StatusProgresso): number {
   }
 }
 
+/**
+ * Mesma regra do `RegraDePrazo` do backend: prazo vencido e trilha não
+ * concluída já é lido como atrasado, sem esperar a rotina diária.
+ */
+function statusEfetivo(progresso: RegistroProgresso): StatusProgresso {
+  if (progresso.status === 'CONCLUIDA' || progresso.prazo === null) {
+    return progresso.status
+  }
+  return progresso.prazo < dataDaqui(0) ? 'ATRASADA' : progresso.status
+}
+
 function progressoDe(trilha: RegistroTrilha) {
   const recurso = { id: trilha.id, nome: trilha.nome }
   if (!trilha.progresso) {
@@ -181,10 +224,12 @@ function progressoDe(trilha: RegistroTrilha) {
       concluidoEm: null,
     }
   }
+  const status = statusEfetivo(trilha.progresso)
   return {
     ...trilha.progresso,
     trilha: recurso,
-    percentual: percentualDe(trilha.progresso.status),
+    status,
+    percentual: percentualDe(status),
   }
 }
 
@@ -300,7 +345,7 @@ function criar(config: InternalAxiosRequestConfig): AxiosResponse {
   const nova: RegistroTrilha = {
     id: crypto.randomUUID(),
     nome,
-    descricao: null,
+    descricao: textoOuNulo(corpo.descricao),
     area,
     objetivos: textoOuNulo(corpo.objetivos),
     prazoDias,
@@ -310,6 +355,87 @@ function criar(config: InternalAxiosRequestConfig): AxiosResponse {
   }
   trilhas = [...trilhas, nova]
   return responder(config, 201, resumoDe(nova))
+}
+
+/**
+ * Como `TrilhaService.atualizar`: 404 fora do tenant, 400 sem nome e 409 com
+ * nome já usado por outra trilha. O progresso de quem já tem a trilha fica.
+ */
+function editar(config: InternalAxiosRequestConfig, id: string) {
+  const trilha = buscarNoMock(config, id)
+  const corpo = corpoDe(config)
+  const nome = textoOuNulo(corpo.nome)
+  if (!nome) {
+    falhar(config, 400, 'Dados inválidos.', [
+      { field: 'nome', message: 'nome é obrigatório' },
+    ])
+  }
+  if (
+    trilhas.some(
+      (t) => t.id !== id && t.nome.toLowerCase() === nome.toLowerCase(),
+    )
+  ) {
+    falhar(config, 409, 'Já existe uma trilha com esse nome.')
+  }
+
+  trilha.nome = nome
+  trilha.descricao = textoOuNulo(corpo.descricao)
+  trilha.objetivos = textoOuNulo(corpo.objetivos)
+  trilha.area = AREAS.find((a) => a.id === corpo.areaId) ?? null
+  trilha.prazoDias =
+    typeof corpo.prazoDias === 'number' && corpo.prazoDias > 0
+      ? corpo.prazoDias
+      : null
+  // Como a API: a edição responde com o resumo, não com o detalhe.
+  return responder(config, 200, resumoDe(trilha))
+}
+
+function alternarAtivo(
+  config: InternalAxiosRequestConfig,
+  id: string,
+  ativo: boolean,
+) {
+  const trilha = buscarNoMock(config, id)
+  trilha.ativo = ativo
+  // Resumo também, como a API — o `ativo` novo não volta na resposta.
+  return responder(config, 200, resumoDe(trilha))
+}
+
+/**
+ * Como `TrilhaAtribuicaoService.atribuir`: aceita uma lista de usuários ou
+ * uma área, conta quantos receberam e quantos foram ignorados por já terem a
+ * trilha. O mock não guarda atribuição de outras pessoas, então considera
+ * ignorado só quem é dono do progresso que já existe.
+ */
+function atribuir(config: InternalAxiosRequestConfig, id: string) {
+  const trilha = buscarNoMock(config, id)
+  const corpo = corpoDe(config)
+  const usuarioIds = Array.isArray(corpo.usuarioIds)
+    ? (corpo.usuarioIds as string[])
+    : null
+  const areaId = textoOuNulo(corpo.areaId)
+
+  const alvos = usuarioIds
+    ? USUARIOS.filter((u) => usuarioIds.includes(u.id))
+    : USUARIOS.filter((u) => u.area.id === areaId)
+  if (alvos.length === 0) {
+    falhar(config, 400, 'Dados inválidos.', [
+      {
+        field: usuarioIds ? 'usuarioIds' : 'areaId',
+        message: 'informe ao menos um colaborador',
+      },
+    ])
+  }
+
+  // Quem já tem a trilha é ignorado, nunca duplicado.
+  const jaTinham = atribuidos[trilha.id] ?? []
+  const novos = alvos.filter((u) => !jaTinham.includes(u.id))
+  atribuidos[trilha.id] = [...jaTinham, ...novos.map((u) => u.id)]
+  return responder(config, 201, {
+    atribuidos: novos.length,
+    ignorados: alvos.length - novos.length,
+    usuarioIds: novos.map((u) => u.id),
+  })
 }
 
 const STATUS_ACEITOS: StatusProgresso[] = [
@@ -432,6 +558,23 @@ function rotear(config: InternalAxiosRequestConfig): AxiosResponse {
     const id = decodeURIComponent(detalhe[1])
     return responder(config, 200, detalheDe(buscarNoMock(config, id)))
   }
+  if (metodo === 'PUT' && detalhe) {
+    return editar(config, decodeURIComponent(detalhe[1]))
+  }
+
+  const situacao = /^\/api\/trilhas\/([^/]+)\/(inativar|ativar)$/.exec(caminho)
+  if (metodo === 'PATCH' && situacao) {
+    return alternarAtivo(
+      config,
+      decodeURIComponent(situacao[1]),
+      situacao[2] === 'ativar',
+    )
+  }
+
+  const atribuicoes = /^\/api\/trilhas\/([^/]+)\/atribuicoes$/.exec(caminho)
+  if (metodo === 'POST' && atribuicoes) {
+    return atribuir(config, decodeURIComponent(atribuicoes[1]))
+  }
 
   const progresso = /^\/api\/trilhas\/([^/]+)\/progresso$/.exec(caminho)
   if (progresso && metodo === 'POST') {
@@ -439,6 +582,25 @@ function rotear(config: InternalAxiosRequestConfig): AxiosResponse {
   }
   if (progresso && metodo === 'PATCH') {
     return atualizar(config, decodeURIComponent(progresso[1]))
+  }
+
+  if (metodo === 'GET' && caminho === '/api/usuarios') {
+    return responder(
+      config,
+      200,
+      paginar(
+        USUARIOS.map((u) => ({
+          ...u,
+          cargo: null,
+          papel: 'COLABORADOR',
+          situacao: 'ATIVO',
+          dataEntrada: dataDaqui(-400),
+          criadoEm: diasAtras(400),
+          atualizadoEm: diasAtras(400),
+        })),
+        config.params,
+      ),
+    )
   }
 
   if (metodo === 'GET' && caminho === '/api/areas') {

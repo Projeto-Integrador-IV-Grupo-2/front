@@ -64,11 +64,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
       })
       .catch(() => {
+        // Busca cancelada não é sessão inválida. Em desenvolvimento o
+        // StrictMode monta o efeito duas vezes, e o cleanup da primeira
+        // montagem aborta esta chamada: tratar isso como falha apagaria um
+        // token perfeitamente válido e jogaria quem recarrega a página de
+        // volta no login. Quem valeu é a segunda montagem, que busca de novo.
+        if (controller.signal.aborted) {
+          return
+        }
         if (restauracaoValida.current) {
           clearStoredToken()
         }
       })
       .finally(() => {
+        // Pelo mesmo motivo: a montagem abortada não decide o carregamento.
+        if (controller.signal.aborted) {
+          return
+        }
         if (restauracaoValida.current) {
           setIsLoading(false)
         }

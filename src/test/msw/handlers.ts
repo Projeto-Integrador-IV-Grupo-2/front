@@ -7,6 +7,7 @@ import {
   criarPaginaTrilhas,
   criarPaginaUsuarios,
   criarProgressoTrilha,
+  criarResultadoAtribuicao,
   criarTrilhaDetalhe,
   criarTrilhaResumo,
   criarUsuario,
@@ -56,6 +57,23 @@ export const handlers = [
 
   http.post('*/api/trilhas', () =>
     HttpResponse.json(criarTrilhaResumo(), { status: 201 }),
+  ),
+
+  // Editar, inativar e ativar respondem com o RESUMO da trilha
+  // (`TrilhaResumoResponse`), não com o detalhe — é o que a API faz, e a tela
+  // depende disso para reler o detalhe em vez de confiar na resposta.
+  http.put('*/api/trilhas/:id', () => HttpResponse.json(criarTrilhaResumo())),
+
+  http.patch('*/api/trilhas/:id/inativar', () =>
+    HttpResponse.json(criarTrilhaResumo()),
+  ),
+
+  http.patch('*/api/trilhas/:id/ativar', () =>
+    HttpResponse.json(criarTrilhaResumo()),
+  ),
+
+  http.post('*/api/trilhas/:id/atribuicoes', () =>
+    HttpResponse.json(criarResultadoAtribuicao(), { status: 201 }),
   ),
 
   // Resumo mínimo (id + nome), do jeito que o formulário de Trilha consome

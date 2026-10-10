@@ -9,15 +9,18 @@ import {
 import { adaptadorTrilhasMock } from './mocks/trilhasMock.ts'
 import type { ApiFieldError } from '../types/api.ts'
 import type {
+  AtribuirTrilhaRequest,
   AtualizarProgressoRequest,
+  AtualizarTrilhaRequest,
   CriarTrilhaRequest,
   ProgressoTrilha,
+  ResultadoAtribuicao,
   TrilhaDetalhe,
   TrilhaFiltro,
   TrilhaPaginacao,
   TrilhaResumo,
 } from '../types/trilha.ts'
-import type { Pagina, RecursoResumo } from '../types/usuario.ts'
+import type { Pagina, RecursoResumo, Usuario } from '../types/usuario.ts'
 
 /**
  * Erro das trilhas já normalizado: a UI lê `message`, `status` e
@@ -167,6 +170,106 @@ export async function criarTrilha(
     return data
   } catch (error) {
     throw toServiceError(error, 'Não foi possível criar a trilha.')
+  }
+}
+
+/**
+ * Edição da trilha (`PUT /api/trilhas/{id}`, só ADMIN).
+ *
+ * Responde com o **resumo** (`TrilhaResumoResponse`), não com o detalhe: sem
+ * `descricao`, `prazoDias`, `ativo` nem `criadoEm`. Quem precisa do detalhe
+ * inteiro depois de salvar relê com `buscarTrilha` — montar um detalhe a
+ * partir deste resumo mostraria a trilha errada na tela.
+ */
+export async function atualizarTrilha(
+  id: string,
+  request: AtualizarTrilhaRequest,
+): Promise<TrilhaResumo> {
+  try {
+    const { data } = await api.put<TrilhaResumo>(
+      `/api/trilhas/${encodeURIComponent(id)}`,
+      request,
+      configBase(),
+    )
+    return data
+  } catch (error) {
+    throw toServiceError(error, 'Não foi possível salvar as alterações.')
+  }
+}
+
+/**
+ * Inativa a trilha (`PATCH /api/trilhas/{id}/inativar`, só ADMIN). A trilha
+ * some da listagem dos colaboradores, e o progresso de quem já a recebeu é
+ * mantido — por isso é inativar, não excluir.
+ *
+ * Responde com o resumo, como a edição: o `ativo` novo não vem na resposta.
+ */
+export async function inativarTrilha(id: string): Promise<TrilhaResumo> {
+  try {
+    const { data } = await api.patch<TrilhaResumo>(
+      `/api/trilhas/${encodeURIComponent(id)}/inativar`,
+      undefined,
+      configBase(),
+    )
+    return data
+  } catch (error) {
+    throw toServiceError(error, 'Não foi possível inativar a trilha.')
+  }
+}
+
+/** Reativa a trilha (`PATCH /api/trilhas/{id}/ativar`, só ADMIN). Resumo também. */
+export async function ativarTrilha(id: string): Promise<TrilhaResumo> {
+  try {
+    const { data } = await api.patch<TrilhaResumo>(
+      `/api/trilhas/${encodeURIComponent(id)}/ativar`,
+      undefined,
+      configBase(),
+    )
+    return data
+  } catch (error) {
+    throw toServiceError(error, 'Não foi possível reativar a trilha.')
+  }
+}
+
+/**
+ * Atribui a trilha a colaboradores ou a uma área inteira, com prazo
+ * (`POST /api/trilhas/{id}/atribuicoes`, ADMIN e GESTOR). Quem já tem a
+ * trilha é ignorado em vez de duplicado; a resposta diz quantos foram cada
+ * coisa, e é isso que a tela mostra.
+ */
+export async function atribuirTrilha(
+  id: string,
+  request: AtribuirTrilhaRequest,
+): Promise<ResultadoAtribuicao> {
+  try {
+    const { data } = await api.post<ResultadoAtribuicao>(
+      `/api/trilhas/${encodeURIComponent(id)}/atribuicoes`,
+      request,
+      configBase(),
+    )
+    return data
+  } catch (error) {
+    throw toServiceError(error, 'Não foi possível atribuir a trilha.')
+  }
+}
+
+/**
+ * Colaboradores ativos para o diálogo de atribuição. Fica aqui, e não na
+ * tela, pelo mesmo motivo de `listarAreasParaTrilha`: a tela de trilhas fala
+ * só com o `trilhaService`, que já normaliza o erro.
+ *
+ * Um gestor pode receber 403 (`GET /api/usuarios` é do ADMIN). Quem chama
+ * trata isso oferecendo só a atribuição por área, que não precisa da lista.
+ */
+export async function listarUsuariosParaAtribuicao(): Promise<Usuario[]> {
+  try {
+    const { data } = await api.get<Pagina<Usuario>>('/api/usuarios', {
+      ...configBase(),
+      params: { situacao: 'ATIVO', page: 0, size: 100, sort: 'nomeCompleto' },
+    })
+    return data.content
+  } catch (error) {
+    throw toServiceError(error, 'Não foi possível carregar os colaboradores.')
   }
 }
 
