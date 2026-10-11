@@ -7,6 +7,7 @@ import {
   formatarData,
   formatarInstante,
 } from '../components/trilhas/formatacao.ts'
+import { EtapasGestao } from '../components/trilhas/EtapasGestao.tsx'
 import { JornadaTrilha } from '../components/trilhas/JornadaTrilha.tsx'
 import {
   BarraProgresso,
@@ -15,10 +16,11 @@ import {
 } from '../components/trilhas/StatusProgresso.tsx'
 import { TrilhaFormulario } from '../components/trilhas/TrilhaFormulario.tsx'
 import { usePermissao } from '../hooks/usePermissao.ts'
-import { ROTAS } from '../routes/paths.ts'
+import { caminhoEstudo, ROTAS } from '../routes/paths.ts'
 import {
   PERFIS_ACOMPANHAMENTO,
   PERFIS_ATRIBUIR_TRILHA,
+  PERFIS_GESTAO_CONTEUDO,
   PERFIS_GESTAO_TRILHA,
 } from '../routes/permissions.ts'
 import { HTTP_STATUS } from '../utils/errorHandler.ts'
@@ -152,6 +154,7 @@ export function TrilhaDetalhePage() {
   const podeAtribuir = usePermissao(PERFIS_ATRIBUIR_TRILHA)
   // Mesma permissão da tela de Acompanhamento, de onde vem o dado do painel.
   const podeVerAtribuidos = usePermissao(PERFIS_ACOMPANHAMENTO)
+  const podeMontarEtapas = usePermissao(PERFIS_GESTAO_CONTEUDO)
 
   const [recarga, setRecarga] = useState(0)
   const [resultado, setResultado] = useState<ResultadoBusca | null>(null)
@@ -350,6 +353,19 @@ export function TrilhaDetalhePage() {
         trilha: null,
         erro: erroDe(causa, 'Não foi possível recarregar a trilha.'),
       })
+    }
+  }
+
+  /**
+   * Mudar as etapas muda o percentual de quem estuda (inclusive o de quem está
+   * montando). Relê o detalhe sem passar pelo esqueleto, para a tela não piscar.
+   */
+  async function atualizarAposEtapas(id: string) {
+    try {
+      const atualizado = await buscarTrilha(id)
+      setResultado({ chave: chaveBusca, trilha: atualizado, erro: null })
+    } catch {
+      // O detalhe atual continua valendo; a próxima visita traz o percentual novo.
     }
   }
 
@@ -570,6 +586,16 @@ export function TrilhaDetalhePage() {
                   progresso={trilha.progresso}
                   prazoDias={trilha.prazoDias}
                 />
+                {trilha.ativo && (
+                  <Link
+                    to={caminhoEstudo(trilha.id)}
+                    className={`${styles.botao} ${styles.estudar}`}
+                  >
+                    {trilha.progresso.status === 'CONCLUIDA'
+                      ? 'Rever conteúdos'
+                      : 'Estudar trilha'}
+                  </Link>
+                )}
                 {trilha.ativo ? (
                   <AcaoProgresso
                     trilha={trilha}
@@ -584,6 +610,21 @@ export function TrilhaDetalhePage() {
                   </p>
                 )}
               </div>
+
+              {podeMontarEtapas && (
+                <section
+                  aria-labelledby="titulo-etapas"
+                  className={styles.secaoEtapas}
+                >
+                  <h2 id="titulo-etapas" className={styles.secao}>
+                    Etapas da trilha
+                  </h2>
+                  <EtapasGestao
+                    trilhaId={trilha.id}
+                    onAlterou={() => void atualizarAposEtapas(trilha.id)}
+                  />
+                </section>
+              )}
             </section>
 
             <div className={styles.lateral}>

@@ -173,15 +173,42 @@ e os erros chegam à tela como `TrilhaServiceError` (`message`, `status`,
 
 ---
 
+## Conteúdos, etapas e estudo (issue #39)
+
+Os vídeos ficam hospedados no **Vimeo**. O front nunca valida o link por
+conta própria: a API consulta o oEmbed do Vimeo ao salvar e, se o link for
+inválido, responde 400 com o erro no campo `videoUrl`, que o formulário mostra
+embaixo do campo. Duração e miniatura também vêm da API.
+
+| Tela                   | O que faz                                                                                                                                   |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/categorias`          | Lista; `ADMIN`/`GESTOR` criam e editam                                                                                                      |
+| `/conteudos`           | Lista com filtros (título, categoria, área, tipo, situação); `ADMIN`/`GESTOR` criam, editam e publicam, com pré-visualização do vídeo       |
+| `/trilhas/:id`         | Seção "Etapas da trilha" para `ADMIN`/`GESTOR`: adicionar, editar, remover e reordenar (botões subir/descer)                                |
+| `/trilhas/:id/estudar` | Lista de etapas + player `@vimeo/player`. Vídeo conclui a etapa sozinho ao terminar ou passar de 90%; etapas sem vídeo têm "Concluir etapa" |
+
+A barra de progresso do estudo usa o progresso que a própria resposta de
+`POST /etapas/{etapaId}/concluir` traz — atualiza sem recarregar a página.
+Colaborador não vê nenhum botão de criar ou editar (`PERFIS_GESTAO_CONTEUDO`)
+e só recebe conteúdos publicados da API.
+
+Services: `categoriaService`, `conteudoService` e `etapaService`, todos com
+erro normalizado (`message`, `status`, `fieldErrors`).
+
+---
+
 ## Rotas e permissões
 
-| Rota           | Quem acessa                  |
-| -------------- | ---------------------------- |
-| `/login`       | qualquer visitante           |
-| `/dashboard`   | qualquer usuário autenticado |
-| `/trilhas`     | qualquer usuário autenticado |
-| `/trilhas/:id` | qualquer usuário autenticado |
-| `/usuarios`    | apenas `ADMIN`               |
+| Rota                   | Quem acessa                                              |
+| ---------------------- | -------------------------------------------------------- |
+| `/login`               | qualquer visitante                                       |
+| `/dashboard`           | qualquer usuário autenticado                             |
+| `/trilhas`             | qualquer usuário autenticado                             |
+| `/trilhas/:id`         | qualquer usuário autenticado                             |
+| `/trilhas/:id/estudar` | qualquer usuário autenticado                             |
+| `/conteudos`           | qualquer usuário autenticado (ações só `ADMIN`/`GESTOR`) |
+| `/categorias`          | qualquer usuário autenticado (ações só `ADMIN`/`GESTOR`) |
+| `/usuarios`            | apenas `ADMIN`                                           |
 
 `/` leva ao dashboard, que por sua vez exige sessão.
 

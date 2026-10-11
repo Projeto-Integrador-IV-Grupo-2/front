@@ -1,0 +1,13 @@
+.player {
+  width: 100%;
+  overflow: hidden;
+  background: #000;
+  border-radius: var(--radius-md);
+}
+
+/* O `responsive: true` do Vimeo cria um wrapper com padding proporcional; sem
+   isto o iframe herdaria a altura padrão e ficaria cortado no celular. */
+.player iframe {
+  width: 100%;
+  border: 0;
+}

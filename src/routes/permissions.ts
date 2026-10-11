@@ -29,6 +29,10 @@ export const ITENS_MENU: ItemMenu[] = [
   // Sem `perfis`: a listagem fica visível a qualquer autenticado — só as
   // ações de dentro da tela são restritas (ver PERFIS_GESTAO_AREA).
   { to: ROTAS.areas, rotulo: 'Áreas' },
+  // Conteúdos ficam visíveis a todos (colaborador vê só os publicados); criar,
+  // editar e publicar são ações internas restritas (ver PERFIS_GESTAO_CONTEUDO).
+  { to: ROTAS.conteudos, rotulo: 'Conteúdos' },
+  { to: ROTAS.categorias, rotulo: 'Categorias' },
   {
     to: ROTAS.acompanhamento,
     rotulo: 'Acompanhamento',
@@ -66,6 +70,13 @@ export const PERFIS_ATRIBUIR_TRILHA: UserRole[] = ['ADMIN', 'GESTOR']
  * uma regra só.
  */
 export const PERFIS_GESTAO_AREA: UserRole[] = ['ADMIN', 'GESTOR']
+
+/**
+ * Quem cria, edita e publica conteúdos e categorias e monta as etapas das
+ * trilhas (issue #39). Espelha o `@PreAuthorize` de `/api/conteudos`,
+ * `/api/categorias` e `/api/trilhas/{id}/etapas`: colaborador recebe 403.
+ */
+export const PERFIS_GESTAO_CONTEUDO: UserRole[] = ['ADMIN', 'GESTOR']
 
 /** `perfis` indefinido ou vazio = liberado para qualquer perfil autenticado. */
 export function temPermissao(

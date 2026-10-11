@@ -55,6 +55,12 @@ export const handlers = [
     HttpResponse.json(criarProgressoTrilha({ status: 'CONCLUIDA' })),
   ),
 
+  http.get('*/api/trilhas/:id/etapas', () => HttpResponse.json([])),
+
+  http.get('*/api/conteudos', () => HttpResponse.json(criarPagina([]))),
+
+  http.get('*/api/categorias', () => HttpResponse.json(criarPagina([]))),
+
   http.post('*/api/trilhas', () =>
     HttpResponse.json(criarTrilhaResumo(), { status: 201 }),
   ),
