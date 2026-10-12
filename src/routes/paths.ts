@@ -8,6 +8,9 @@ export const ROTAS = {
   usuarios: '/usuarios',
   trilhas: '/trilhas',
   trilhaDetalhe: '/trilhas/:id',
+  // O PDI vive dentro de Trilhas: sem item próprio no menu.
+  pdi: '/trilhas/pdi',
+  pdiDetalhe: '/trilhas/pdi/:id',
   areas: '/areas',
   acompanhamento: '/acompanhamento',
 } as const
@@ -15,4 +18,9 @@ export const ROTAS = {
 /** Caminho do detalhe de uma trilha específica. */
 export function caminhoTrilha(id: string): string {
   return ROTAS.trilhaDetalhe.replace(':id', encodeURIComponent(id))
+}
+
+/** Caminho do editor de um PDI específico. */
+export function caminhoPdi(id: string): string {
+  return ROTAS.pdiDetalhe.replace(':id', encodeURIComponent(id))
 }

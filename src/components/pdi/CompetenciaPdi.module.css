@@ -1,0 +1,86 @@
+.item {
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.nome {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.niveis {
+  margin-top: var(--space-1);
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+}
+
+.niveis strong {
+  color: var(--color-text);
+}
+
+.observacao {
+  margin-top: var(--space-2);
+  font-size: 0.875rem;
+}
+
+.semAcoes {
+  margin-top: var(--space-3);
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+}
+
+.acoes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.acao {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.acaoTopo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.trilha {
+  font-weight: 500;
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.trilha:hover {
+  text-decoration: underline;
+}
+
+.descricao {
+  font-size: 0.875rem;
+}
+
+.prazo {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}

@@ -3,6 +3,8 @@ import type {
   ColaboradorAcompanhamento,
 } from '../types/atribuicao.ts'
 import type { Area } from '../types/area.ts'
+import type { Competencia } from '../types/competencia.ts'
+import type { PdiAcao, PdiDetalhe, PdiItem, PdiResumo } from '../types/pdi.ts'
 import type {
   ProgressoTrilha,
   ResultadoAtribuicao,
@@ -221,5 +223,90 @@ export function criarColaboradorAcompanhamento(
       atrasadas: contar('ATRASADA'),
     },
     trilhas,
+  }
+}
+
+/** Competência do catálogo (`CompetenciaResponse`). */
+export function criarCompetencia(
+  overrides: Partial<Competencia> = {},
+): Competencia {
+  return {
+    id: '66666666-6666-6666-6666-666666666666',
+    nome: 'Comunicação',
+    descricao: null,
+    tipo: 'COMPORTAMENTAL',
+    ativo: true,
+    ...overrides,
+  }
+}
+
+/** Ação TRILHA do PDI, ligada à trilha "Onboarding" e ainda pendente. */
+export function criarPdiAcao(overrides: Partial<PdiAcao> = {}): PdiAcao {
+  return {
+    id: '77777777-7777-7777-7777-777777777777',
+    tipo: 'TRILHA',
+    descricao: null,
+    trilha: { id: '44444444-4444-4444-4444-444444444444', nome: 'Onboarding' },
+    prazo: '2026-11-30',
+    status: 'PENDENTE',
+    concluidoEm: null,
+    progressoTrilha: criarProgressoTrilha({
+      status: 'NAO_INICIADA',
+      percentual: 0,
+      prazo: '2026-11-30',
+    }),
+    ...overrides,
+  }
+}
+
+/** Competência dentro do PDI (`PdiItemResponse`), com uma trilha ligada. */
+export function criarPdiItem(overrides: Partial<PdiItem> = {}): PdiItem {
+  return {
+    id: '88888888-8888-8888-8888-888888888888',
+    competencia: {
+      id: '66666666-6666-6666-6666-666666666666',
+      nome: 'Comunicação',
+      tipo: 'COMPORTAMENTAL',
+    },
+    nivelAtual: 2,
+    nivelAlvo: 4,
+    observacao: 'Apresentar com mais segurança.',
+    acoes: [criarPdiAcao()],
+    ...overrides,
+  }
+}
+
+/** Linha da listagem de PDIs (`PdiResumoResponse`). */
+export function criarPdiResumo(overrides: Partial<PdiResumo> = {}): PdiResumo {
+  return {
+    id: '99999999-9999-9999-9999-999999999999',
+    colaborador: {
+      id: '00000000-0000-0000-0000-000000000001',
+      nomeCompleto: 'Ana Souza',
+    },
+    gestor: {
+      id: '00000000-0000-0000-0000-000000000002',
+      nomeCompleto: 'Bruno Lima',
+    },
+    ciclo: '2026',
+    inicio: '2026-01-01',
+    fim: '2026-12-31',
+    status: 'ATIVO',
+    percentual: 0,
+    totalAcoes: 1,
+    acoesConcluidas: 0,
+    criadoEm: '2026-01-05T12:00:00Z',
+    ...overrides,
+  }
+}
+
+/** PDI completo (`PdiDetalheResponse`), por padrão com uma competência. */
+export function criarPdiDetalhe(
+  overrides: Partial<PdiDetalhe> = {},
+): PdiDetalhe {
+  return {
+    ...criarPdiResumo(),
+    itens: [criarPdiItem()],
+    ...overrides,
   }
 }

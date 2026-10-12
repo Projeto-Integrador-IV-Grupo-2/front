@@ -1,0 +1,32 @@
+/* Formulários que ficam na própria página (não em diálogo). Os campos usam
+   as classes de Dialogo.module.css via o componente Campo. */
+
+.form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+/* "Ligar trilha", dentro do cartão da competência. */
+.compacto {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px dashed var(--color-border);
+}
+
+.acoes {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+}
+
+@media (max-width: 640px) {
+  .form {
+    grid-template-columns: 1fr;
+  }
+
+  .acoes button {
+    width: 100%;
+    padding: var(--space-3) var(--space-4);
+  }
+}

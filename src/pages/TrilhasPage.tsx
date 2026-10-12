@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { TrilhaCard } from '../components/trilhas/TrilhaCard.tsx'
 import { TrilhaFormulario } from '../components/trilhas/TrilhaFormulario.tsx'
 import {
@@ -9,7 +9,11 @@ import {
 import { useAuth } from '../hooks/useAuth.ts'
 import { usePermissao } from '../hooks/usePermissao.ts'
 import { useValorAdiado } from '../hooks/useValorAdiado.ts'
-import { PERFIS_CRIAR_TRILHA } from '../routes/permissions.ts'
+import { ROTAS } from '../routes/paths.ts'
+import {
+  PERFIS_CRIAR_TRILHA,
+  PERFIS_GESTAO_PDI,
+} from '../routes/permissions.ts'
 import {
   criarTrilha,
   listarAreasParaTrilha,
@@ -100,6 +104,7 @@ function mensagemDe(causa: unknown, padrao: string): string {
 export function TrilhasPage() {
   const { user } = useAuth()
   const podeCriar = usePermissao(PERFIS_CRIAR_TRILHA)
+  const gerePdi = usePermissao(PERFIS_GESTAO_PDI)
   const areaDoUsuario = user?.area ?? null
 
   const [searchParams, setSearchParams] = useSearchParams()
@@ -357,24 +362,37 @@ export function TrilhasPage() {
               : 'As trilhas de desenvolvimento disponíveis para você.'}
           </p>
         </div>
-        {podeCriar && (
-          <button
-            ref={novaTrilhaRef}
-            type="button"
-            className={styles.nova}
-            onClick={abrirFormulario}
-          >
-            <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
-              <path
-                d="M7 2v10M2 7h10"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-              />
-            </svg>
-            Nova trilha
-          </button>
-        )}
+        <div className={styles.acoesCabecalho}>
+          {/* O PDI vive dentro de Trilhas: sem item no menu, entra por aqui.
+              Fica fora das abas porque "Minhas trilhas" e "Catálogo" listam
+              trilhas, e o PDI tem rotas próprias (/trilhas/pdi). */}
+          <Link to={ROTAS.pdi} className={styles.linkPdi}>
+            {gerePdi ? 'PDI' : 'Meu PDI'}
+          </Link>
+          {podeCriar && (
+            <button
+              ref={novaTrilhaRef}
+              type="button"
+              className={styles.nova}
+              onClick={abrirFormulario}
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 14 14"
+                aria-hidden="true"
+              >
+                <path
+                  d="M7 2v10M2 7h10"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                />
+              </svg>
+              Nova trilha
+            </button>
+          )}
+        </div>
       </header>
 
       {/* Live region única da página: o aviso de sucesso chega ao leitor de
