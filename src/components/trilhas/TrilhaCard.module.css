@@ -45,12 +45,24 @@
   color: var(--color-text-muted);
 }
 
-/* Empurra a barra para o rodapé: cartões da mesma linha ficam alinhados
-   mesmo com objetivos de tamanhos diferentes. */
+/* Empurra o prazo e a barra para o rodapé: cartões da mesma linha ficam
+   alinhados mesmo com objetivos de tamanhos diferentes. */
 .progresso {
   display: block;
   margin-top: auto;
   padding-top: var(--space-4);
+}
+
+.prazo {
+  display: block;
+  margin-bottom: var(--space-2);
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.prazoAtrasado {
+  font-weight: 600;
+  color: var(--color-danger);
 }
 
 @media (prefers-reduced-motion: reduce) {

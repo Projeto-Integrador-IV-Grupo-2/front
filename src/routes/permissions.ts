@@ -16,6 +16,12 @@ export interface ItemMenu {
   perfis?: UserRole[]
 }
 
+/**
+ * Quem acompanha as trilhas da equipe (tela e exportação). Espelha o
+ * `@PreAuthorize` do `AtribuicaoController`: colaborador recebe 403.
+ */
+export const PERFIS_ACOMPANHAMENTO: UserRole[] = ['ADMIN', 'GESTOR']
+
 export const ITENS_MENU: ItemMenu[] = [
   { to: ROTAS.dashboard, rotulo: 'Visão geral' },
   { to: ROTAS.trilhas, rotulo: 'Trilhas' },
@@ -23,6 +29,11 @@ export const ITENS_MENU: ItemMenu[] = [
   // Sem `perfis`: a listagem fica visível a qualquer autenticado — só as
   // ações de dentro da tela são restritas (ver PERFIS_GESTAO_AREA).
   { to: ROTAS.areas, rotulo: 'Áreas' },
+  {
+    to: ROTAS.acompanhamento,
+    rotulo: 'Acompanhamento',
+    perfis: PERFIS_ACOMPANHAMENTO,
+  },
 ]
 
 /**
@@ -32,14 +43,27 @@ export const ITENS_MENU: ItemMenu[] = [
 export const PERFIS_CRIAR_TRILHA: UserRole[] = ['ADMIN']
 
 /**
+ * Quem edita e inativa/reativa uma trilha, no detalhe. Mesmo `@PreAuthorize`
+ * de `PUT /api/trilhas/{id}` e dos `PATCH .../inativar` e `.../ativar`:
+ * gestor e colaborador recebem 403.
+ */
+export const PERFIS_GESTAO_TRILHA: UserRole[] = ['ADMIN']
+
+/**
+ * Quem atribui uma trilha a colaboradores ou a uma área
+ * (`POST /api/trilhas/{id}/atribuicoes`). O gestor atribui, mas não edita.
+ */
+export const PERFIS_ATRIBUIR_TRILHA: UserRole[] = ['ADMIN', 'GESTOR']
+
+/**
  * Perfis autorizados a criar, editar e inativar/reativar Áreas (Card 14 —
  * controle de acesso, issue #31). Colaborador só visualiza a listagem.
  *
- * A tela de Trilha, que também estava nessa issue, já resolve isso por
- * conta própria — ver `PERFIS_CRIAR_TRILHA` acima, usado direto em
- * `TrilhasPage`. Mesma regra central (`temPermissao`), caminhos diferentes
- * até ela: aqui via o hook `usePermissao`, lá inline — os dois batem na
- * mesma fonte de verdade, então não há lógica duplicada.
+ * As telas de Trilha têm as próprias listas (`PERFIS_CRIAR_TRILHA`,
+ * `PERFIS_GESTAO_TRILHA` e `PERFIS_ATRIBUIR_TRILHA` acima), porque lá criar,
+ * editar e atribuir não são a mesma permissão. Todas passam pelo hook
+ * `usePermissao` e, no fim, pela mesma `temPermissao`: listas diferentes,
+ * uma regra só.
  */
 export const PERFIS_GESTAO_AREA: UserRole[] = ['ADMIN', 'GESTOR']
 

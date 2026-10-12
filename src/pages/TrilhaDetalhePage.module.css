@@ -23,15 +23,29 @@
 }
 
 .cabecalho {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  align-items: flex-start;
+  justify-content: space-between;
   margin-bottom: var(--space-1);
 }
 
-.cabecalhoTopo {
+.identificacao {
+  min-width: 0;
+}
+
+.selosTitulo {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-3);
   flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.acoesGestao {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
 .titulo {
@@ -164,6 +178,19 @@
   color: var(--color-text-muted);
 }
 
+.prazoAtrasado {
+  font-weight: 600;
+  color: var(--color-danger);
+}
+
+.inativaAviso {
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+  border-top: 1px solid var(--color-border);
+}
+
 .dados {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -269,6 +296,13 @@
 }
 
 @media (max-width: 640px) {
+  /* No celular as ações de gestão viram uma coluna de botões largos. */
+  .acoesGestao {
+    flex-direction: column;
+    align-self: stretch;
+    width: 100%;
+  }
+
   .botao,
   .botaoSecundario {
     align-self: stretch;

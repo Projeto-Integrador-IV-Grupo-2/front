@@ -1,6 +1,6 @@
-import axios from 'axios'
 import { api } from './api.ts'
-import type { ApiErrorResponse, ApiFieldError } from '../types/api.ts'
+import { normalizarErro } from '../utils/errorHandler.ts'
+import type { ApiFieldError } from '../types/api.ts'
 import type {
   Area,
   AreaFiltro,
@@ -34,30 +34,13 @@ function toServiceError(
   error: unknown,
   fallbackMessage: string,
 ): AreaServiceError {
-  if (axios.isAxiosError<ApiErrorResponse>(error)) {
-    const status = error.response?.status
-    return new AreaServiceError(
-      error.response?.data?.message ??
-        mensagemPorStatus(status, fallbackMessage),
-      status,
-      error.response?.data?.fieldErrors ?? [],
-    )
-  }
-  return new AreaServiceError(fallbackMessage)
-}
-
-/**
- * O 403 é o único status com mensagem própria: o backend costuma respondê-lo
- * sem corpo, e "sem permissão" é mais útil do que o texto genérico da operação.
- */
-function mensagemPorStatus(
-  status: number | undefined,
-  fallbackMessage: string,
-): string {
-  if (status === 403) {
-    return 'Você não tem permissão para esta operação.'
-  }
-  return fallbackMessage
+  // Sem textos próprios: a mensagem da API vale, e o `errorHandler` cobre o
+  // 403 que chega sem corpo.
+  const { message, status, fieldErrors } = normalizarErro(
+    error,
+    fallbackMessage,
+  )
+  return new AreaServiceError(message, status, fieldErrors)
 }
 
 /** Campo vazio não vira parâmetro: `?nome=` faria a API filtrar por string vazia. */

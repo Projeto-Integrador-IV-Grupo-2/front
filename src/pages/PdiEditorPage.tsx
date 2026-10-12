@@ -119,7 +119,7 @@ export function PdiEditorPage() {
     const controlador = new AbortController()
     Promise.all([
       listarCompetencias({ signal: controlador.signal }),
-      listarTrilhas({ page: 0, size: 100 }, { signal: controlador.signal }),
+      listarTrilhas({}, { page: 0, size: 100 }, { signal: controlador.signal }),
     ])
       .then(([listaCompetencias, paginaTrilhas]) => {
         if (!controlador.signal.aborted) {

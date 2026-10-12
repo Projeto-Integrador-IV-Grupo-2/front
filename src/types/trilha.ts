@@ -61,6 +61,25 @@ export interface AtualizarProgressoRequest {
   status: Exclude<StatusProgresso, 'NAO_INICIADA'>
 }
 
+/**
+ * Filtros de `GET /api/trilhas` (record `TrilhaFiltro` da API), todos
+ * opcionais e combinados com E. Valem também para `GET /api/areas/{id}/trilhas`.
+ */
+export interface TrilhaFiltro {
+  /** Trecho do nome, sem diferenciar maiúsculas. */
+  nome?: string
+  areaId?: string
+  /**
+   * Status do progresso do próprio usuário. `NAO_INICIADA` inclui as trilhas
+   * que ele nunca iniciou; prazo vencido conta como `ATRASADA`.
+   */
+  status?: StatusProgresso | ''
+  /** Só as trilhas que o usuário iniciou ou recebeu (aceita `sort=prazo`). */
+  minhas?: boolean
+  /** Coloca as trilhas da área do usuário primeiro. */
+  recomendar?: 'AREA'
+}
+
 /** Paginação e ordenação de `GET /api/trilhas`. `page` é zero-based. */
 export interface TrilhaPaginacao {
   page?: number
@@ -68,13 +87,56 @@ export interface TrilhaPaginacao {
   sort?: string
 }
 
-/** Corpo de `POST /api/trilhas`. `prazoDias` e `areaId` são opcionais no banco. */
+/**
+ * Corpo de `POST /api/trilhas`. Só o nome é obrigatório: `descricao`,
+ * `areaId`, `prazoDias` e `objetivos` são opcionais no banco.
+ */
 export interface CriarTrilhaRequest {
   nome: string
+  descricao: string | null
   areaId: string | null
   prazoDias: number | null
   objetivos: string | null
 }
+
+/**
+ * Corpo de `PUT /api/trilhas/{id}`. A edição manda a trilha inteira, com os
+ * mesmos campos do cadastro — por isso o tipo é o mesmo, e não uma cópia que
+ * pode divergir. Nome duplicado no tenant volta 409.
+ *
+ * `ativo` fica de fora de propósito, como no record da API: a situação só
+ * muda pelos endpoints de inativar e ativar.
+ */
+export type AtualizarTrilhaRequest = CriarTrilhaRequest
+
+/**
+ * Corpo de `POST /api/trilhas/{id}/atribuicoes`: a trilha vai para uma lista
+ * de colaboradores **ou** para todos os de uma área — nunca os dois ao mesmo
+ * tempo. `prazo` é a data limite (`LocalDate`); nulo usa o prazo da trilha.
+ */
+export type AtribuirTrilhaRequest =
+  | { usuarioIds: string[]; areaId?: never; prazo: string | null }
+  | { areaId: string; usuarioIds?: never; prazo: string | null }
+
+/**
+ * Resposta da atribuição em lote (record `AtribuicaoEmLoteResponse`): quem já
+ * tinha a trilha é ignorado em vez de duplicado, e a API diz quantos foram
+ * cada coisa. `usuarioIds` traz quem passou a ter a trilha agora — a tela
+ * ainda não precisa deles, mas eles fazem parte do contrato.
+ */
+export interface ResultadoAtribuicao {
+  atribuidos: number
+  ignorados: number
+  usuarioIds: string[]
+}
+
+/** Ordem dos status nos selects de filtro. */
+export const STATUS_PROGRESSO: StatusProgresso[] = [
+  'NAO_INICIADA',
+  'EM_ANDAMENTO',
+  'CONCLUIDA',
+  'ATRASADA',
+]
 
 /** Rótulos de status em um lugar só — listagem e detalhe leem daqui. */
 export const ROTULOS_STATUS_PROGRESSO: Record<StatusProgresso, string> = {

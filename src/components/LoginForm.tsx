@@ -1,6 +1,7 @@
 import { useId, useState, type FormEvent, type ReactNode } from 'react'
 import { useAuth } from '../hooks/useAuth.ts'
 import { AuthError } from '../services/authService.ts'
+import { HTTP_STATUS } from '../utils/errorHandler.ts'
 import type { User } from '../types/user.ts'
 import styles from './LoginForm.module.css'
 
@@ -33,10 +34,10 @@ function validate(email: string, password: string): FieldErrors {
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof AuthError) {
-    if (error.status === 403) {
+    if (error.status === HTTP_STATUS.FORBIDDEN) {
       return 'Sua conta está desativada. Fale com um administrador.'
     }
-    if (error.status === 401) {
+    if (error.status === HTTP_STATUS.UNAUTHORIZED) {
       return 'E-mail ou senha inválidos.'
     }
     return error.message

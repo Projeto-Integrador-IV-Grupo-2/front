@@ -1,17 +1,24 @@
 import { http, HttpResponse } from 'msw'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  ativarTrilha,
+  atribuirTrilha,
   atualizarProgresso,
+  atualizarTrilha,
   buscarTrilha,
   criarTrilha,
   iniciarTrilha,
+  inativarTrilha,
   listarAreasParaTrilha,
   listarTrilhas,
+  listarTrilhasDaArea,
+  listarUsuariosParaAtribuicao,
   TrilhaServiceError,
 } from './trilhaService.ts'
 import { reiniciarTrilhasMock } from './mocks/trilhasMock.ts'
 import {
   criarPaginaTrilhas,
+  criarPaginaUsuarios,
   criarProgressoTrilha,
   criarTrilhaResumo,
 } from '../test/factories.ts'
@@ -19,10 +26,13 @@ import { server } from '../test/msw/server.ts'
 
 const NOVA_TRILHA = {
   nome: 'Excelência em Vendas',
+  descricao: 'Trilha do time comercial.',
   areaId: null,
   prazoDias: 30,
   objetivos: 'Vender melhor.',
 }
+
+const ID = '44444444-4444-4444-4444-444444444444'
 
 describe('trilhaService (API)', () => {
   it('envia paginação e ordenação padrão da listagem', async () => {
@@ -42,6 +52,85 @@ describe('trilhaService (API)', () => {
     expect(params.get('sort')).toBe('nome')
   })
 
+  it('envia os filtros preenchidos e omite os vazios', async () => {
+    let url: URL | null = null
+    server.use(
+      http.get('*/api/trilhas', ({ request }) => {
+        url = new URL(request.url)
+        return HttpResponse.json(criarPaginaTrilhas())
+      }),
+    )
+
+    await listarTrilhas(
+      {
+        nome: 'vendas',
+        areaId: '',
+        status: 'EM_ANDAMENTO',
+        minhas: true,
+        recomendar: undefined,
+      },
+      { sort: 'prazo' },
+    )
+
+    const params = url!.searchParams
+    expect(params.get('nome')).toBe('vendas')
+    expect(params.get('status')).toBe('EM_ANDAMENTO')
+    expect(params.get('minhas')).toBe('true')
+    expect(params.get('sort')).toBe('prazo')
+    expect(params.has('areaId')).toBe(false)
+    expect(params.has('recomendar')).toBe(false)
+  })
+
+  it('não envia minhas=false, que é o padrão da API', async () => {
+    let url: URL | null = null
+    server.use(
+      http.get('*/api/trilhas', ({ request }) => {
+        url = new URL(request.url)
+        return HttpResponse.json(criarPaginaTrilhas())
+      }),
+    )
+
+    await listarTrilhas({ minhas: false, recomendar: 'AREA' })
+
+    expect(url!.searchParams.has('minhas')).toBe(false)
+    expect(url!.searchParams.get('recomendar')).toBe('AREA')
+  })
+
+  it('lista as trilhas de uma área pelo endpoint da área', async () => {
+    let url: URL | null = null
+    server.use(
+      http.get('*/api/areas/:id/trilhas', ({ request }) => {
+        url = new URL(request.url)
+        return HttpResponse.json(criarPaginaTrilhas())
+      }),
+    )
+
+    const pagina = await listarTrilhasDaArea('area 1', { nome: 'on' })
+
+    expect(url!.pathname).toMatch(/\/api\/areas\/area%201\/trilhas$/)
+    expect(url!.searchParams.get('nome')).toBe('on')
+    expect(pagina.content).toHaveLength(1)
+  })
+
+  it('explica o 404 das trilhas da área como área não encontrada', async () => {
+    server.use(
+      http.get('*/api/areas/:id/trilhas', () =>
+        HttpResponse.json(
+          { message: 'Área não encontrada: x' },
+          { status: 404 },
+        ),
+      ),
+    )
+
+    const erro = await listarTrilhasDaArea('x').catch((causa: unknown) => causa)
+
+    expect(erro).toBeInstanceOf(TrilhaServiceError)
+    expect(erro).toMatchObject({
+      status: 404,
+      message: 'Área não encontrada. Ela pode ter sido removida.',
+    })
+  })
+
   it('devolve o conteúdo e os contadores da página', async () => {
     server.use(
       http.get('*/api/trilhas', () =>
@@ -55,7 +144,7 @@ describe('trilhaService (API)', () => {
       ),
     )
 
-    const pagina = await listarTrilhas({ page: 1, size: 12 })
+    const pagina = await listarTrilhas({}, { page: 1, size: 12 })
 
     expect(pagina.content).toHaveLength(1)
     expect(pagina.page.number).toBe(1)
@@ -168,6 +257,156 @@ describe('trilhaService (API)', () => {
     expect(progresso.status).toBe('CONCLUIDA')
   })
 
+  it('edita a trilha com PUT e devolve o resumo salvo', async () => {
+    let corpo: unknown = null
+    server.use(
+      http.put('*/api/trilhas/:id', async ({ request }) => {
+        corpo = await request.json()
+        return HttpResponse.json(criarTrilhaResumo({ nome: 'Onboarding 2026' }))
+      }),
+    )
+
+    const resumo = await atualizarTrilha(ID, {
+      ...NOVA_TRILHA,
+      nome: 'Onboarding 2026',
+    })
+
+    expect(corpo).toEqual({ ...NOVA_TRILHA, nome: 'Onboarding 2026' })
+    expect(resumo.nome).toBe('Onboarding 2026')
+  })
+
+  it('devolve a mensagem da API no 409 de nome repetido', async () => {
+    server.use(
+      http.put('*/api/trilhas/:id', () =>
+        HttpResponse.json(
+          { message: 'Já existe uma trilha com esse nome.' },
+          { status: 409 },
+        ),
+      ),
+    )
+
+    await expect(atualizarTrilha(ID, NOVA_TRILHA)).rejects.toMatchObject({
+      status: 409,
+      message: 'Já existe uma trilha com esse nome.',
+    })
+  })
+
+  it('inativa e reativa pelos PATCH correspondentes, devolvendo o resumo', async () => {
+    const chamadas: string[] = []
+    server.use(
+      http.patch('*/api/trilhas/:id/inativar', () => {
+        chamadas.push('inativar')
+        return HttpResponse.json(criarTrilhaResumo())
+      }),
+      http.patch('*/api/trilhas/:id/ativar', () => {
+        chamadas.push('ativar')
+        return HttpResponse.json(criarTrilhaResumo())
+      }),
+    )
+
+    // A resposta é o resumo: não traz `ativo`, e é por isso que a tela relê o
+    // detalhe em vez de confiar nela.
+    expect(await inativarTrilha(ID)).not.toHaveProperty('ativo')
+    expect(await ativarTrilha(ID)).not.toHaveProperty('ativo')
+    expect(chamadas).toEqual(['inativar', 'ativar'])
+  })
+
+  it('usa o texto de sem permissão no 403 sem corpo da inativação', async () => {
+    server.use(
+      http.patch(
+        '*/api/trilhas/:id/inativar',
+        () => new HttpResponse(null, { status: 403 }),
+      ),
+    )
+
+    await expect(inativarTrilha(ID)).rejects.toMatchObject({
+      status: 403,
+      message: 'Você não tem permissão para esta operação.',
+    })
+  })
+
+  it('atribui a colaboradores e devolve quantos foram ignorados', async () => {
+    let corpo: unknown = null
+    server.use(
+      http.post('*/api/trilhas/:id/atribuicoes', async ({ request }) => {
+        corpo = await request.json()
+        return HttpResponse.json(
+          { atribuidos: 2, ignorados: 1, usuarioIds: ['u-1', 'u-2'] },
+          { status: 201 },
+        )
+      }),
+    )
+
+    const resultado = await atribuirTrilha(ID, {
+      usuarioIds: ['u-1', 'u-2', 'u-3'],
+      prazo: '2026-12-01',
+    })
+
+    expect(corpo).toEqual({
+      usuarioIds: ['u-1', 'u-2', 'u-3'],
+      prazo: '2026-12-01',
+    })
+    expect(resultado).toEqual({
+      atribuidos: 2,
+      ignorados: 1,
+      usuarioIds: ['u-1', 'u-2'],
+    })
+  })
+
+  it('atribui a uma área inteira', async () => {
+    let corpo: unknown = null
+    server.use(
+      http.post('*/api/trilhas/:id/atribuicoes', async ({ request }) => {
+        corpo = await request.json()
+        return HttpResponse.json(
+          { atribuidos: 8, ignorados: 0, usuarioIds: [] },
+          { status: 201 },
+        )
+      }),
+    )
+
+    await atribuirTrilha(ID, { areaId: 'a-1', prazo: null })
+
+    expect(corpo).toEqual({ areaId: 'a-1', prazo: null })
+  })
+
+  it('normaliza o 403 do gestor ao atribuir', async () => {
+    server.use(
+      http.post('*/api/trilhas/:id/atribuicoes', () =>
+        HttpResponse.json(
+          { message: 'Acesso negado ao recurso.' },
+          { status: 403 },
+        ),
+      ),
+    )
+
+    const erro = await atribuirTrilha(ID, {
+      usuarioIds: ['u-1'],
+      prazo: null,
+    }).catch((causa: unknown) => causa)
+
+    expect(erro).toBeInstanceOf(TrilhaServiceError)
+    expect(erro).toMatchObject({
+      status: 403,
+      message: 'Você não tem permissão para esta operação.',
+    })
+  })
+
+  it('pede só os colaboradores ativos para o diálogo de atribuição', async () => {
+    let url: URL | null = null
+    server.use(
+      http.get('*/api/usuarios', ({ request }) => {
+        url = new URL(request.url)
+        return HttpResponse.json(criarPaginaUsuarios())
+      }),
+    )
+
+    const lista = await listarUsuariosParaAtribuicao()
+
+    expect(url!.searchParams.get('situacao')).toBe('ATIVO')
+    expect(lista).toHaveLength(1)
+  })
+
   it('reduz as áreas a id e nome para o campo do formulário', async () => {
     server.use(
       http.get('*/api/areas', () =>
@@ -194,7 +433,7 @@ describe('trilhaService (mock em memória)', () => {
   // O MSW está com `onUnhandledRequest: 'error'`: se o mock deixasse a
   // chamada escapar para a rede, estes testes falhariam.
   it('responde a listagem sem sair para a rede, ordenada por nome', async () => {
-    const pagina = await listarTrilhas({ page: 0, size: 3 })
+    const pagina = await listarTrilhas({}, { page: 0, size: 3 })
 
     expect(pagina.content).toHaveLength(3)
     expect(pagina.page.totalElements).toBe(5)
@@ -206,7 +445,7 @@ describe('trilhaService (mock em memória)', () => {
 
   it('cria a trilha e ela passa a aparecer na listagem', async () => {
     const criada = await criarTrilha(NOVA_TRILHA)
-    const pagina = await listarTrilhas({ size: 50 })
+    const pagina = await listarTrilhas({}, { size: 50 })
 
     expect(criada.nome).toBe('Excelência em Vendas')
     expect(pagina.content.map((t) => t.nome)).toContain('Excelência em Vendas')
@@ -223,7 +462,7 @@ describe('trilhaService (mock em memória)', () => {
     })
 
     await atualizarProgresso(id, { status: 'CONCLUIDA' })
-    const pagina = await listarTrilhas({ size: 50 })
+    const pagina = await listarTrilhas({}, { size: 50 })
     const naLista = pagina.content.find((t) => t.id === id)
     expect(naLista?.progresso).toMatchObject({
       status: 'CONCLUIDA',
@@ -249,5 +488,94 @@ describe('trilhaService (mock em memória)', () => {
       status: 409,
       message: 'Já existe uma trilha com esse nome.',
     })
+  })
+
+  it('edita a trilha e mantém o progresso de quem já a tinha', async () => {
+    const id = 'b1000000-0000-4000-8000-000000000001'
+    const antes = await buscarTrilha(id)
+
+    const resposta = await atualizarTrilha(id, {
+      nome: 'Atendimento ao Cliente 2026',
+      descricao: 'Nova descrição.',
+      areaId: null,
+      prazoDias: 45,
+      objetivos: 'Atender melhor.',
+    })
+
+    // A escrita responde com o resumo: nome e área vêm, o resto não.
+    expect(resposta).toMatchObject({
+      nome: 'Atendimento ao Cliente 2026',
+      area: null,
+    })
+    expect(resposta).not.toHaveProperty('descricao')
+    expect(resposta).not.toHaveProperty('prazoDias')
+
+    // O que mudou de verdade só aparece relendo o detalhe.
+    const depois = await buscarTrilha(id)
+    expect(depois).toMatchObject({
+      nome: 'Atendimento ao Cliente 2026',
+      descricao: 'Nova descrição.',
+      prazoDias: 45,
+      ativo: true,
+      area: null,
+    })
+    expect(depois.progresso.status).toBe(antes.progresso.status)
+  })
+
+  it('inativar não devolve a situação nova: ela vem na releitura', async () => {
+    const id = 'b1000000-0000-4000-8000-000000000002'
+
+    const resposta = await inativarTrilha(id)
+
+    expect(resposta).not.toHaveProperty('ativo')
+    expect((await buscarTrilha(id)).ativo).toBe(false)
+    expect((await ativarTrilha(id)) as unknown).not.toHaveProperty('ativo')
+    expect((await buscarTrilha(id)).ativo).toBe(true)
+  })
+
+  it('recusa com 409 a edição que repete o nome de outra trilha', async () => {
+    await expect(
+      atualizarTrilha('b1000000-0000-4000-8000-000000000001', {
+        nome: 'Onboarding Comercial',
+        descricao: null,
+        areaId: null,
+        prazoDias: null,
+        objetivos: null,
+      }),
+    ).rejects.toMatchObject({ status: 409 })
+  })
+
+  it('inativar tira a trilha da listagem e reativar devolve', async () => {
+    const id = 'b1000000-0000-4000-8000-000000000002'
+
+    await inativarTrilha(id)
+    const semEla = await listarTrilhas({}, { size: 50 })
+    expect(semEla.content.map((t) => t.id)).not.toContain(id)
+
+    await ativarTrilha(id)
+    const comEla = await listarTrilhas({}, { size: 50 })
+    expect(comEla.content.map((t) => t.id)).toContain(id)
+  })
+
+  it('atribuir de novo não duplica: a segunda vez vem como ignorada', async () => {
+    const id = 'b1000000-0000-4000-8000-000000000002'
+    const usuarioIds = ['d1000000-0000-4000-8000-000000000001']
+
+    await expect(
+      atribuirTrilha(id, { usuarioIds, prazo: null }),
+    ).resolves.toEqual({ atribuidos: 1, ignorados: 0, usuarioIds })
+    await expect(
+      atribuirTrilha(id, { usuarioIds, prazo: null }),
+    ).resolves.toEqual({ atribuidos: 0, ignorados: 1, usuarioIds: [] })
+  })
+
+  it('marca como atrasada quem passou do prazo sem concluir', async () => {
+    // A trilha 4 do mock tem prazo vencido e não foi concluída.
+    const atrasada = await buscarTrilha('b1000000-0000-4000-8000-000000000004')
+    expect(atrasada.progresso.status).toBe('ATRASADA')
+
+    // A 3 também venceu, mas está concluída: continua concluída.
+    const concluida = await buscarTrilha('b1000000-0000-4000-8000-000000000003')
+    expect(concluida.progresso.status).toBe('CONCLUIDA')
   })
 })

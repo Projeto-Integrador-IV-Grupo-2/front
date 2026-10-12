@@ -12,6 +12,7 @@ export const ROTAS = {
   pdi: '/trilhas/pdi',
   pdiDetalhe: '/trilhas/pdi/:id',
   areas: '/areas',
+  acompanhamento: '/acompanhamento',
 } as const
 
 /** Caminho do detalhe de uma trilha específica. */

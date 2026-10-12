@@ -1,6 +1,5 @@
-import axios from 'axios'
 import { api } from './api.ts'
-import type { ApiErrorResponse } from '../types/api.ts'
+import { normalizarErro } from '../utils/errorHandler.ts'
 import type { LoginRequest, LoginResponse } from '../types/auth.ts'
 import type { User } from '../types/user.ts'
 
@@ -16,13 +15,8 @@ export class AuthError extends Error {
 }
 
 function toAuthError(error: unknown, fallbackMessage: string): AuthError {
-  if (axios.isAxiosError<ApiErrorResponse>(error)) {
-    return new AuthError(
-      error.response?.data?.message ?? fallbackMessage,
-      error.response?.status,
-    )
-  }
-  return new AuthError(fallbackMessage)
+  const { message, status } = normalizarErro(error, fallbackMessage)
+  return new AuthError(message, status)
 }
 
 export async function login(credentials: LoginRequest): Promise<LoginResponse> {

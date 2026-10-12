@@ -1,0 +1,178 @@
+.painel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+.tabela th,
+.tabela td {
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tabela th {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  background: var(--color-bg);
+}
+
+.tabela tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Atrasada: faixa à esquerda e fundo de alerta, além do selo "Atrasada". */
+.atrasada td {
+  background: var(--color-danger-bg);
+}
+
+.atrasada td:first-child {
+  box-shadow: inset 3px 0 0 var(--color-danger);
+}
+
+.pessoa {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  min-width: 0;
+}
+
+.avatar {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  border-radius: 50%;
+}
+
+.nome {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.prazo,
+.prazoVencido {
+  font-size: 0.6875rem;
+}
+
+.prazo {
+  color: var(--color-text-muted);
+}
+
+.prazoVencido {
+  font-weight: 600;
+  color: var(--color-danger);
+}
+
+.vazio {
+  padding: var(--space-4);
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+
+.erro {
+  padding: var(--space-4) var(--space-4) var(--space-2);
+  font-size: 0.8125rem;
+  color: var(--color-danger);
+}
+
+.tentar {
+  margin: 0 var(--space-4) var(--space-4);
+  padding: var(--space-1) var(--space-3);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.rodape {
+  padding: var(--space-2) var(--space-3);
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  border-top: 1px solid var(--color-border);
+}
+
+/* Coluna lateral estreita e celular: a tabela vira cartões, com o rótulo de
+   cada coluna vindo de `data-rotulo` — mesma marcação nos dois casos. */
+@media (max-width: 1100px) {
+  .tabela,
+  .tabela tbody,
+  .tabela tr,
+  .tabela td {
+    display: block;
+  }
+
+  .tabela thead {
+    display: none;
+  }
+
+  .tabela tr {
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .tabela tbody tr:last-child {
+    border-bottom: none;
+  }
+
+  .atrasada {
+    background: var(--color-danger-bg);
+    box-shadow: inset 3px 0 0 var(--color-danger);
+  }
+
+  .atrasada td {
+    background: transparent;
+  }
+
+  .atrasada td:first-child {
+    box-shadow: none;
+  }
+
+  .tabela td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: var(--space-1) var(--space-3);
+    border-bottom: none;
+  }
+
+  .tabela td::before {
+    content: attr(data-rotulo);
+    flex: 0 0 auto;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+  }
+
+  /* O nome já se identifica sozinho; repetir o rótulo só ocuparia espaço. */
+  .tabela td:first-child::before {
+    display: none;
+  }
+
+  .tabela td:nth-child(2) > * {
+    flex: 0 1 160px;
+  }
+}

@@ -44,8 +44,8 @@ describe('TrilhasPage', () => {
     renderizarTrilhas()
 
     expect(
-      await screen.findByRole('heading', { name: 'Minhas trilhas' }),
-    ).toBeInTheDocument()
+      await screen.findByRole('tab', { name: 'Minhas trilhas' }),
+    ).toHaveAttribute('aria-selected', 'true')
     const link = await screen.findByRole('link', {
       name: /Atendimento ao Cliente/,
     })
@@ -64,6 +64,47 @@ describe('TrilhasPage', () => {
     expect(within(semProgresso).queryByRole('progressbar')).toBeNull()
   })
 
+  it('destaca a trilha atrasada com o selo e o prazo vencido', async () => {
+    server.use(
+      http.get('*/api/trilhas', () =>
+        HttpResponse.json(
+          criarPaginaTrilhas([
+            criarTrilhaResumo({
+              id: 'trilha-1',
+              nome: 'Onboarding Comercial',
+              progresso: criarProgressoTrilha({
+                status: 'ATRASADA',
+                percentual: 50,
+                prazo: '2026-09-10',
+              }),
+            }),
+            criarTrilhaResumo({
+              id: 'trilha-2',
+              nome: 'LGPD',
+              progresso: criarProgressoTrilha({ prazo: '2026-12-01' }),
+            }),
+          ]),
+        ),
+      ),
+    )
+
+    renderizarTrilhas()
+
+    const atrasada = await screen.findByRole('link', {
+      name: /Onboarding Comercial/,
+    })
+    expect(within(atrasada).getByText('Atrasada')).toBeInTheDocument()
+    expect(
+      within(atrasada).getByText(/Venceu em 10 de setembro de 2026/),
+    ).toBeInTheDocument()
+
+    // No prazo, a data aparece sem o destaque de atraso.
+    const noPrazo = lista().getByRole('link', { name: /LGPD/ })
+    expect(
+      within(noPrazo).getByText(/Prazo: 1 de dezembro de 2026/),
+    ).toBeInTheDocument()
+  })
+
   it('não oferece o cadastro para quem não é administrador', async () => {
     renderizarTrilhas(colaborador)
 
@@ -71,18 +112,260 @@ describe('TrilhasPage', () => {
     expect(screen.queryByRole('button', { name: 'Nova trilha' })).toBeNull()
   })
 
-  it('mostra o estado vazio quando não há trilhas', async () => {
+  it('mostra o estado vazio de cada aba e leva ao catálogo', async () => {
     server.use(
       http.get('*/api/trilhas', () =>
         HttpResponse.json(criarPaginaTrilhas([])),
       ),
     )
+    const usuario = userEvent.setup()
 
     renderizarTrilhas()
 
     expect(
+      await screen.findByText('Você ainda não tem trilhas'),
+    ).toBeInTheDocument()
+
+    await usuario.click(screen.getByRole('button', { name: 'Ver catálogo' }))
+
+    expect(screen.getByRole('tab', { name: 'Catálogo' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
+    expect(
       await screen.findByText('Nenhuma trilha disponível no momento'),
     ).toBeInTheDocument()
+  })
+
+  it('"Minhas trilhas" pede só as do usuário, pelo prazo', async () => {
+    let url: URL | null = null
+    server.use(
+      http.get('*/api/trilhas', ({ request }) => {
+        url = new URL(request.url)
+        return HttpResponse.json(criarPaginaTrilhas())
+      }),
+    )
+
+    renderizarTrilhas()
+
+    await screen.findByRole('link', { name: /Onboarding/ })
+    expect(url!.searchParams.get('minhas')).toBe('true')
+    expect(url!.searchParams.get('sort')).toBe('prazo')
+  })
+
+  it('guarda a aba na URL e a mantém ao recarregar', async () => {
+    const urls: URL[] = []
+    server.use(
+      http.get('*/api/trilhas', ({ request }) => {
+        urls.push(new URL(request.url))
+        return HttpResponse.json(criarPaginaTrilhas())
+      }),
+    )
+
+    // Recarregar = abrir a aplicação já com ?aba=catalogo na URL.
+    renderizarComProvedores({
+      rota: '/trilhas?aba=catalogo',
+      usuario: colaborador,
+    })
+
+    expect(
+      await screen.findByRole('tab', { name: 'Catálogo' }),
+    ).toHaveAttribute('aria-selected', 'true')
+    await screen.findByRole('link', { name: /Onboarding/ })
+    const ultima = urls[urls.length - 1].searchParams
+    expect(ultima.has('minhas')).toBe(false)
+    expect(ultima.get('sort')).toBe('nome')
+  })
+
+  it('troca de aba pelo teclado', async () => {
+    const usuario = userEvent.setup()
+
+    renderizarTrilhas()
+
+    const minhas = await screen.findByRole('tab', { name: 'Minhas trilhas' })
+    minhas.focus()
+    await usuario.keyboard('{ArrowRight}')
+
+    const catalogo = screen.getByRole('tab', { name: 'Catálogo' })
+    expect(catalogo).toHaveAttribute('aria-selected', 'true')
+    expect(catalogo).toHaveFocus()
+  })
+
+  it('combina busca, área e status e volta para a primeira página', async () => {
+    const urls: URL[] = []
+    server.use(
+      http.get('*/api/trilhas', ({ request }) => {
+        const url = new URL(request.url)
+        urls.push(url)
+        const pagina = Number(url.searchParams.get('page'))
+        return HttpResponse.json(
+          criarPaginaTrilhas(
+            [
+              criarTrilhaResumo({
+                id: `t-${pagina}`,
+                nome: `Trilha ${pagina}`,
+              }),
+            ],
+            { number: pagina, totalElements: 2, totalPages: 2 },
+          ),
+        )
+      }),
+    )
+    const usuario = userEvent.setup()
+
+    renderizarTrilhas()
+
+    await screen.findByRole('link', { name: /Trilha 0/ })
+    await usuario.click(
+      screen.getByRole('button', { name: 'Carregar mais trilhas' }),
+    )
+    await screen.findByRole('link', { name: /Trilha 1/ })
+
+    const filtros = within(
+      screen.getByRole('search', { name: 'Filtros de trilhas' }),
+    )
+    await waitFor(() =>
+      expect(
+        filtros.getByRole('option', { name: 'Tecnologia' }),
+      ).toBeInTheDocument(),
+    )
+    await usuario.selectOptions(filtros.getByLabelText('Área'), 'Tecnologia')
+    await usuario.selectOptions(filtros.getByLabelText('Status'), 'Atrasada')
+
+    await waitFor(() => {
+      const ultima = urls[urls.length - 1].searchParams
+      expect(ultima.get('areaId')).toBe('33333333-3333-3333-3333-333333333333')
+      expect(ultima.get('status')).toBe('ATRASADA')
+      expect(ultima.get('minhas')).toBe('true')
+      expect(ultima.get('page')).toBe('0')
+    })
+    // Só a primeira página do novo filtro fica na tela.
+    expect(await screen.findByText('1 de 2 trilhas')).toBeInTheDocument()
+  })
+
+  it('busca por nome só quando a pessoa para de digitar', async () => {
+    const nomesBuscados: Array<string | null> = []
+    server.use(
+      http.get('*/api/trilhas', ({ request }) => {
+        nomesBuscados.push(new URL(request.url).searchParams.get('nome'))
+        return HttpResponse.json(criarPaginaTrilhas())
+      }),
+    )
+    const usuario = userEvent.setup()
+
+    renderizarTrilhas()
+    await screen.findByRole('link', { name: /Onboarding/ })
+
+    await usuario.type(screen.getByLabelText('Buscar'), 'onbo')
+
+    await waitFor(() => expect(nomesBuscados).toContain('onbo'))
+    // Uma busca ao abrir e uma depois de digitar — nenhuma por tecla.
+    expect(nomesBuscados).toEqual([null, 'onbo'])
+  })
+
+  it('avisa quando nenhum resultado combina com os filtros', async () => {
+    server.use(
+      http.get('*/api/trilhas', ({ request }) =>
+        HttpResponse.json(
+          criarPaginaTrilhas(
+            new URL(request.url).searchParams.has('status')
+              ? []
+              : [criarTrilhaResumo()],
+          ),
+        ),
+      ),
+    )
+    const usuario = userEvent.setup()
+
+    renderizarTrilhas()
+    await screen.findByRole('link', { name: /Onboarding/ })
+
+    await usuario.selectOptions(screen.getByLabelText('Status'), 'Concluída')
+
+    expect(
+      await screen.findByText('Nenhuma trilha encontrada'),
+    ).toBeInTheDocument()
+    await usuario.click(screen.getByRole('button', { name: 'Limpar filtros' }))
+    expect(
+      await screen.findByRole('link', { name: /Onboarding/ }),
+    ).toBeInTheDocument()
+  })
+
+  it('recomenda as trilhas da área do usuário no catálogo', async () => {
+    const area = { id: 'area-vendas', nome: 'Vendas' }
+    const urls: URL[] = []
+    server.use(
+      http.get('*/api/trilhas', ({ request }) => {
+        const url = new URL(request.url)
+        urls.push(url)
+        return HttpResponse.json(
+          criarPaginaTrilhas(
+            url.searchParams.get('areaId') === area.id
+              ? [
+                  criarTrilhaResumo({
+                    id: 'rec',
+                    nome: 'Técnicas de Venda',
+                    area,
+                  }),
+                ]
+              : [criarTrilhaResumo()],
+          ),
+        )
+      }),
+    )
+
+    renderizarComProvedores({
+      rota: '/trilhas?aba=catalogo',
+      usuario: criarUsuario({ area }),
+    })
+
+    const secao = await screen.findByRole('list', {
+      name: 'Recomendadas para sua área',
+    })
+    expect(
+      within(secao).getByRole('link', { name: /Técnicas de Venda/ }),
+    ).toBeInTheDocument()
+    expect(screen.getByText('Trilhas da área Vendas.')).toBeInTheDocument()
+    // O catálogo também traz as da área primeiro.
+    await waitFor(() =>
+      expect(
+        urls.some((url) => url.searchParams.get('recomendar') === 'AREA'),
+      ).toBe(true),
+    )
+  })
+
+  it('não mostra recomendações para quem não tem área', async () => {
+    const urls: URL[] = []
+    server.use(
+      http.get('*/api/trilhas', ({ request }) => {
+        urls.push(new URL(request.url))
+        return HttpResponse.json(criarPaginaTrilhas())
+      }),
+    )
+
+    renderizarComProvedores({
+      rota: '/trilhas?aba=catalogo',
+      usuario: criarUsuario({ area: null }),
+    })
+
+    await screen.findByRole('link', { name: /Onboarding/ })
+    expect(
+      screen.queryByRole('heading', { name: 'Recomendadas para sua área' }),
+    ).toBeNull()
+    expect(urls.every((url) => !url.searchParams.has('recomendar'))).toBe(true)
+    expect(urls.every((url) => !url.searchParams.has('areaId'))).toBe(true)
+  })
+
+  it('não mostra recomendações na aba "Minhas trilhas"', async () => {
+    renderizarComProvedores({
+      rota: '/trilhas',
+      usuario: criarUsuario({ area: { id: 'a', nome: 'Vendas' } }),
+    })
+
+    await screen.findByRole('link', { name: /Onboarding/ })
+    expect(
+      screen.queryByRole('heading', { name: 'Recomendadas para sua área' }),
+    ).toBeNull()
   })
 
   it('mostra erro amigável e tenta de novo', async () => {
@@ -209,6 +492,10 @@ describe('TrilhasPage', () => {
       within(dialogo).getByLabelText('Área'),
       'Tecnologia',
     )
+    await usuario.type(
+      within(dialogo).getByLabelText('Descrição'),
+      'Trilha do time comercial.',
+    )
     await usuario.type(within(dialogo).getByLabelText('Prazo (dias)'), '30')
     await usuario.type(
       within(dialogo).getByLabelText('Objetivo'),
@@ -221,6 +508,7 @@ describe('TrilhasPage', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     expect(corpo).toEqual({
       nome: 'Excelência em Vendas',
+      descricao: 'Trilha do time comercial.',
       areaId: '33333333-3333-3333-3333-333333333333',
       prazoDias: 30,
       objetivos: 'Vender com método.',
@@ -289,7 +577,9 @@ describe('TrilhasPage', () => {
     expect(
       await screen.findByText(/Não foi possível carregar as áreas/),
     ).toBeInTheDocument()
-    expect(screen.getByLabelText('Área')).toHaveValue('')
+    expect(
+      within(screen.getByRole('dialog')).getByLabelText('Área'),
+    ).toHaveValue('')
   })
 
   it('fecha o diálogo com Esc e devolve o foco ao botão', async () => {

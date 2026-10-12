@@ -1,15 +1,18 @@
 import { http, HttpResponse } from 'msw'
 import {
   criarArea,
+  criarAtribuicao,
+  criarColaboradorAcompanhamento,
   criarCompetencia,
   criarPagina,
+  criarPaginaTrilhas,
+  criarPaginaUsuarios,
   criarPdiAcao,
   criarPdiDetalhe,
   criarPdiItem,
   criarPdiResumo,
-  criarPaginaTrilhas,
-  criarPaginaUsuarios,
   criarProgressoTrilha,
+  criarResultadoAtribuicao,
   criarTrilhaDetalhe,
   criarTrilhaResumo,
   criarUsuario,
@@ -61,6 +64,23 @@ export const handlers = [
     HttpResponse.json(criarTrilhaResumo(), { status: 201 }),
   ),
 
+  // Editar, inativar e ativar respondem com o RESUMO da trilha
+  // (`TrilhaResumoResponse`), não com o detalhe — é o que a API faz, e a tela
+  // depende disso para reler o detalhe em vez de confiar na resposta.
+  http.put('*/api/trilhas/:id', () => HttpResponse.json(criarTrilhaResumo())),
+
+  http.patch('*/api/trilhas/:id/inativar', () =>
+    HttpResponse.json(criarTrilhaResumo()),
+  ),
+
+  http.patch('*/api/trilhas/:id/ativar', () =>
+    HttpResponse.json(criarTrilhaResumo()),
+  ),
+
+  http.post('*/api/trilhas/:id/atribuicoes', () =>
+    HttpResponse.json(criarResultadoAtribuicao(), { status: 201 }),
+  ),
+
   // Resumo mínimo (id + nome), do jeito que o formulário de Trilha consome
   // para popular o select de área. O CRUD completo de Área (abaixo) sempre
   // sobrescreve este handler nos próprios testes, então os dois convivem.
@@ -85,6 +105,30 @@ export const handlers = [
 
   http.patch('*/api/areas/:id/ativar', () =>
     HttpResponse.json(criarArea({ ativo: true })),
+  ),
+
+  http.get('*/api/areas/:id/trilhas', () =>
+    HttpResponse.json(criarPaginaTrilhas()),
+  ),
+
+  http.get('*/api/atribuicoes', () =>
+    HttpResponse.json(criarPagina([criarAtribuicao()])),
+  ),
+
+  http.get('*/api/atribuicoes/colaboradores/:usuarioId', () =>
+    HttpResponse.json(criarColaboradorAcompanhamento()),
+  ),
+
+  http.get(
+    '*/api/atribuicoes/exportar',
+    () =>
+      new HttpResponse('Colaborador;Trilha\nAna Souza;Onboarding\n', {
+        headers: {
+          'Content-Type': 'text/csv;charset=UTF-8',
+          'Content-Disposition':
+            'attachment; filename="acompanhamento-trilhas.csv"',
+        },
+      }),
   ),
 
   // PDI (issue #42). As rotas fixas vêm antes de /api/pdis/:id.

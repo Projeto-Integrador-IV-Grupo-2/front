@@ -71,9 +71,9 @@ sempre lê `import.meta.env.VITE_API_URL`.
 
 ### Mock temporário das trilhas
 
-Enquanto o backend não expõe todos os endpoints de trilhas (cadastro e
-atualização de progresso ainda não existem), `VITE_TRILHAS_MOCK=true` faz o
-`trilhaService` responder com dados em memória
+Enquanto o backend não expõe todos os endpoints de trilhas (cadastro,
+progresso, edição, inativação e atribuição ainda não existem),
+`VITE_TRILHAS_MOCK=true` faz o `trilhaService` responder com dados em memória
 (`src/services/mocks/trilhasMock.ts`). O mock é um _adapter_ do Axios: os
 caminhos, os corpos e os interceptors de sessão são os mesmos da API real, então
 trocar para o backend é só mudar a flag para `false`. Os dados voltam ao estado
@@ -113,6 +113,63 @@ tradução intermediária:
 | `GET /api/auth/me`     | —                  | `{ id, tenantId, nomeCompleto, email, papel }` |
 
 `papel` é `ADMIN`, `GESTOR` ou `COLABORADOR` (enum `papel_usuario` do banco).
+
+---
+
+## Trilhas
+
+A tela de trilhas tem duas rotas: a listagem (`/trilhas`), com as abas
+"Minhas trilhas" e "Catálogo", e o detalhe (`/trilhas/:id`), onde o usuário
+acompanha o próprio progresso e onde fica a gestão da trilha.
+
+### Chamadas usadas
+
+| Chamada                              | Para quê                                | Quem pode        |
+| ------------------------------------ | --------------------------------------- | ---------------- |
+| `GET /api/trilhas`                   | listagem, com filtros e paginação       | autenticado      |
+| `GET /api/trilhas/{id}`              | detalhe + progresso de quem está logado | autenticado      |
+| `POST /api/trilhas`                  | cadastro                                | `ADMIN`          |
+| `PUT /api/trilhas/{id}`              | edição                                  | `ADMIN`          |
+| `PATCH /api/trilhas/{id}/inativar`   | tira a trilha de circulação             | `ADMIN`          |
+| `PATCH /api/trilhas/{id}/ativar`     | devolve a trilha à listagem             | `ADMIN`          |
+| `POST /api/trilhas/{id}/atribuicoes` | atribui a colaboradores ou a uma área   | `ADMIN` `GESTOR` |
+| `POST /api/trilhas/{id}/progresso`   | inicia a trilha para si                 | autenticado      |
+| `PATCH /api/trilhas/{id}/progresso`  | conclui ou retoma a própria trilha      | autenticado      |
+
+Toda chamada passa pelo `trilhaService` — nenhum componente conhece o Axios —,
+e os erros chegam à tela como `TrilhaServiceError` (`message`, `status`,
+`fieldErrors`), com os erros de validação exibidos no campo correspondente.
+
+### Gestão da trilha (issue #40)
+
+- **Editar e inativar/reativar** ficam no detalhe e só aparecem para `ADMIN`
+  (`PERFIS_GESTAO_TRILHA`). A edição reaproveita o `TrilhaFormulario`, que é o
+  mesmo diálogo do cadastro — muda só o estado inicial e os textos.
+- **Depois de escrever, a tela relê o detalhe.** `PUT /api/trilhas/{id}` e os
+  dois `PATCH` de situação respondem com o **resumo** da trilha
+  (`TrilhaResumoResponse`), que não traz `descricao`, `prazoDias`, `ativo` nem
+  `criadoEm`. Montar o detalhe a partir dele mostraria a trilha errada — como
+  inativa, sem data de criação e sem progresso —, então a tela busca o detalhe
+  de novo e exibe o que a API guardou, a mesma postura já usada no progresso.
+  Continua sem recarregar a página.
+- **Inativar pede confirmação** (`ConfirmacaoSituacaoTrilha`) antes de enviar.
+  A trilha inativa sai da listagem dos colaboradores e não pode ser atribuída,
+  mas o progresso de quem já a recebeu é mantido. Se a API recusar, a mensagem
+  aparece no próprio diálogo, que continua aberto; enquanto a requisição está
+  em andamento, Esc não fecha.
+- **Atribuir** é de `ADMIN` e `GESTOR` (`PERFIS_ATRIBUIR_TRILHA`). O diálogo
+  escolhe uma lista de colaboradores **ou** uma área inteira, mais o prazo, e
+  a tela mostra quantos receberam e quantos foram ignorados por já terem a
+  trilha. Se a lista de colaboradores não vier (um gestor recebe 403 em
+  `GET /api/usuarios`), sobra a atribuição por área, e o diálogo avisa.
+- **Colaboradores atribuídos** é o painel do protótipo no detalhe, com quem
+  recebeu a trilha, o progresso e a situação de cada um. É um resumo (os 10
+  primeiros) do mesmo dado da tela de Acompanhamento — lê de
+  `GET /api/atribuicoes?trilhaId=...` e aparece para `ADMIN` e `GESTOR`
+  (`PERFIS_ACOMPANHAMENTO`). Depois de atribuir, o painel se refaz sozinho.
+- **Atraso** aparece onde a pessoa olha primeiro: o selo "Atrasada" e a data
+  vencida em destaque, tanto no cartão da listagem quanto no detalhe. Quem
+  decide o status é a API — o frontend só apresenta o que ela devolve.
 
 ---
 

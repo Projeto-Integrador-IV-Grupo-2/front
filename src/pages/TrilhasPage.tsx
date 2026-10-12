@@ -1,13 +1,18 @@
-import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { TrilhaCard } from '../components/trilhas/TrilhaCard.tsx'
 import { TrilhaFormulario } from '../components/trilhas/TrilhaFormulario.tsx'
+import {
+  TrilhasFiltros,
+  type ValoresFiltroTrilhas,
+} from '../components/trilhas/TrilhasFiltros.tsx'
 import { useAuth } from '../hooks/useAuth.ts'
+import { usePermissao } from '../hooks/usePermissao.ts'
+import { useValorAdiado } from '../hooks/useValorAdiado.ts'
 import { ROTAS } from '../routes/paths.ts'
 import {
   PERFIS_CRIAR_TRILHA,
   PERFIS_GESTAO_PDI,
-  temPermissao,
 } from '../routes/permissions.ts'
 import {
   criarTrilha,
@@ -16,18 +21,71 @@ import {
   TrilhaServiceError,
 } from '../services/trilhaService.ts'
 import type { ApiFieldError } from '../types/api.ts'
-import type { CriarTrilhaRequest, TrilhaResumo } from '../types/trilha.ts'
+import type {
+  CriarTrilhaRequest,
+  TrilhaFiltro,
+  TrilhaPaginacao,
+  TrilhaResumo,
+} from '../types/trilha.ts'
 import type { Pagina, RecursoResumo } from '../types/usuario.ts'
 import styles from './TrilhasPage.module.css'
 
 const TAMANHO_PAGINA = 12
+const TAMANHO_RECOMENDADAS = 4
 const CARTOES_ESQUELETO = 4
 
+const FILTRO_VAZIO: ValoresFiltroTrilhas = { nome: '', areaId: '', status: '' }
+
+type Aba = 'minhas' | 'catalogo'
+
+const ABAS: Array<{ id: Aba; rotulo: string }> = [
+  { id: 'minhas', rotulo: 'Minhas trilhas' },
+  { id: 'catalogo', rotulo: 'Catálogo' },
+]
+
+/** Parâmetro da URL que guarda a aba — recarregar a página mantém a escolha. */
+const PARAMETRO_ABA = 'aba'
+
+function abaDaUrl(valor: string | null): Aba {
+  return valor === 'catalogo' ? 'catalogo' : 'minhas'
+}
+
 interface ResultadoBusca {
-  /** Identifica a busca que produziu este resultado (recarga). */
-  chave: number
+  /** Identifica a busca que produziu este resultado (aba + filtros + recarga). */
+  chave: string
   paginas: Pagina<TrilhaResumo>[]
   erro: string | null
+}
+
+interface ResultadoRecomendadas {
+  chave: string
+  trilhas: TrilhaResumo[]
+  erro: string | null
+}
+
+/**
+ * Filtro enviado à API. "Minhas trilhas" usa `minhas=true`; no catálogo, quem
+ * tem área recebe as trilhas dela primeiro (`recomendar=AREA`).
+ */
+function filtroDaBusca(
+  aba: Aba,
+  nome: string,
+  areaId: string,
+  status: TrilhaFiltro['status'],
+  recomendarArea: boolean,
+): TrilhaFiltro {
+  return {
+    nome,
+    areaId,
+    status,
+    minhas: aba === 'minhas',
+    recomendar: recomendarArea ? 'AREA' : undefined,
+  }
+}
+
+/** Nas minhas trilhas, o prazo mais próximo primeiro; no catálogo, por nome. */
+function ordenacaoDa(aba: Aba): TrilhaPaginacao['sort'] {
+  return aba === 'minhas' ? 'prazo' : 'nome'
 }
 
 function mensagemDe(causa: unknown, padrao: string): string {
@@ -35,17 +93,26 @@ function mensagemDe(causa: unknown, padrao: string): string {
 }
 
 /**
- * Listagem de trilhas do tenant (Card 12) e cadastro de nova trilha.
+ * Trilhas do tenant em duas abas — "Minhas trilhas" (as que a pessoa iniciou
+ * ou recebeu, por prazo) e "Catálogo" (todas) — com busca, filtros de área e
+ * status, recomendações da área do usuário e cadastro de nova trilha.
  *
- * A página é a dona da comunicação com a API: cartões e formulário só
- * apresentam e avisam a intenção. A listagem cresce com "Carregar mais" em vez
- * de páginas numeradas — em grade de cartões é o que se espera, e a posição de
- * rolagem não se perde ao pedir mais.
+ * A página é a dona da comunicação com a API: cartões, filtros e formulário
+ * só apresentam e avisam a intenção. A listagem cresce com "Carregar mais";
+ * qualquer mudança de aba ou filtro recomeça da primeira página.
  */
 export function TrilhasPage() {
   const { user } = useAuth()
-  const podeCriar = temPermissao(PERFIS_CRIAR_TRILHA, user?.papel)
-  const gerePdi = temPermissao(PERFIS_GESTAO_PDI, user?.papel)
+  const podeCriar = usePermissao(PERFIS_CRIAR_TRILHA)
+  const gerePdi = usePermissao(PERFIS_GESTAO_PDI)
+  const areaDoUsuario = user?.area ?? null
+
+  const [searchParams, setSearchParams] = useSearchParams()
+  const aba = abaDaUrl(searchParams.get(PARAMETRO_ABA))
+
+  const [filtros, setFiltros] = useState<ValoresFiltroTrilhas>(FILTRO_VAZIO)
+  // Só o nome é adiado: os selects não geram uma requisição por tecla.
+  const nomeBuscado = useValorAdiado(filtros.nome.trim())
 
   // Contador de recarga: "Tentar novamente" e o cadastro incrementam para
   // refazer a busca do início.
@@ -53,6 +120,8 @@ export function TrilhasPage() {
   const [resultado, setResultado] = useState<ResultadoBusca | null>(null)
   const [carregandoMais, setCarregandoMais] = useState(false)
   const [erroMais, setErroMais] = useState<string | null>(null)
+  const [recomendadas, setRecomendadas] =
+    useState<ResultadoRecomendadas | null>(null)
 
   const [formularioAberto, setFormularioAberto] = useState(false)
   const [salvando, setSalvando] = useState(false)
@@ -62,29 +131,43 @@ export function TrilhasPage() {
   const [areasIndisponiveis, setAreasIndisponiveis] = useState(false)
   const [aviso, setAviso] = useState<string | null>(null)
   const novaTrilhaRef = useRef<HTMLButtonElement>(null)
+  const abasRef = useRef<Array<HTMLButtonElement | null>>([])
+
+  const { areaId, status } = filtros
+  const recomendarArea = aba === 'catalogo' && areaDoUsuario !== null
+  const filtroApi = filtroDaBusca(
+    aba,
+    nomeBuscado,
+    areaId,
+    status,
+    recomendarArea,
+  )
+  const ordenacao = ordenacaoDa(aba)
+  const chaveBusca = JSON.stringify([filtroApi, ordenacao, recarga])
 
   // `carregando` é derivado do resultado em mãos, como em UsuariosPage: evita
   // acender o indicador por setState dentro do efeito.
-  const carregando = resultado?.chave !== recarga
-  const erroBusca = resultado?.chave === recarga ? resultado.erro : null
-  const paginas = resultado?.chave === recarga ? resultado.paginas : []
+  const carregando = resultado?.chave !== chaveBusca
+  const erroBusca = resultado?.chave === chaveBusca ? resultado.erro : null
+  const paginas = resultado?.chave === chaveBusca ? resultado.paginas : []
 
   useEffect(() => {
     const controlador = new AbortController()
 
     listarTrilhas(
-      { page: 0, size: TAMANHO_PAGINA },
+      filtroDaBusca(aba, nomeBuscado, areaId, status, recomendarArea),
+      { page: 0, size: TAMANHO_PAGINA, sort: ordenacaoDa(aba) },
       { signal: controlador.signal },
     )
       .then((pagina) => {
         if (!controlador.signal.aborted) {
-          setResultado({ chave: recarga, paginas: [pagina], erro: null })
+          setResultado({ chave: chaveBusca, paginas: [pagina], erro: null })
         }
       })
       .catch((causa: unknown) => {
         if (!controlador.signal.aborted) {
           setResultado({
-            chave: recarga,
+            chave: chaveBusca,
             paginas: [],
             erro: mensagemDe(causa, 'Não foi possível carregar as trilhas.'),
           })
@@ -92,13 +175,47 @@ export function TrilhasPage() {
       })
 
     return () => controlador.abort()
-  }, [recarga])
+  }, [chaveBusca, aba, nomeBuscado, areaId, status, recomendarArea])
 
-  // As áreas só são buscadas na primeira vez que o formulário abre.
+  // Recomendadas: só no catálogo e só para quem tem área.
+  const chaveRecomendadas =
+    aba === 'catalogo' && areaDoUsuario ? areaDoUsuario.id : null
   useEffect(() => {
-    if (!formularioAberto || areas !== null) {
+    if (chaveRecomendadas === null) {
       return
     }
+    const controlador = new AbortController()
+    listarTrilhas(
+      { areaId: chaveRecomendadas },
+      { page: 0, size: TAMANHO_RECOMENDADAS },
+      { signal: controlador.signal },
+    )
+      .then((pagina) => {
+        if (!controlador.signal.aborted) {
+          setRecomendadas({
+            chave: chaveRecomendadas,
+            trilhas: pagina.content,
+            erro: null,
+          })
+        }
+      })
+      .catch((causa: unknown) => {
+        if (!controlador.signal.aborted) {
+          setRecomendadas({
+            chave: chaveRecomendadas,
+            trilhas: [],
+            erro: mensagemDe(
+              causa,
+              'Não foi possível carregar as recomendações.',
+            ),
+          })
+        }
+      })
+    return () => controlador.abort()
+  }, [chaveRecomendadas])
+
+  // As áreas alimentam o filtro e o cadastro; falha aqui só esconde o filtro.
+  useEffect(() => {
     let ativo = true
     listarAreasParaTrilha()
       .then((lista) => {
@@ -115,7 +232,7 @@ export function TrilhasPage() {
     return () => {
       ativo = false
     }
-  }, [formularioAberto, areas])
+  }, [])
 
   const trilhas = paginas.flatMap((pagina) => pagina.content)
   const ultimaPagina = paginas[paginas.length - 1]
@@ -123,6 +240,44 @@ export function TrilhasPage() {
     ultimaPagina !== undefined &&
     ultimaPagina.page.number < ultimaPagina.page.totalPages - 1
   const total = ultimaPagina?.page.totalElements ?? 0
+  const temFiltro =
+    filtros.nome.trim() !== '' || filtros.areaId !== '' || filtros.status !== ''
+
+  function trocarAba(nova: Aba) {
+    if (nova === aba) {
+      return
+    }
+    setErroMais(null)
+    setSearchParams(
+      (atuais) => {
+        const proximos = new URLSearchParams(atuais)
+        proximos.set(PARAMETRO_ABA, nova)
+        return proximos
+      },
+      { replace: true },
+    )
+  }
+
+  // Setas trocam de aba, como pede o padrão de abas do WAI-ARIA.
+  function aoTeclarAba(
+    evento: KeyboardEvent<HTMLButtonElement>,
+    indice: number,
+  ) {
+    const passo =
+      evento.key === 'ArrowRight' ? 1 : evento.key === 'ArrowLeft' ? -1 : 0
+    if (passo === 0) {
+      return
+    }
+    evento.preventDefault()
+    const proximo = (indice + passo + ABAS.length) % ABAS.length
+    trocarAba(ABAS[proximo].id)
+    abasRef.current[proximo]?.focus()
+  }
+
+  function alterarFiltros(valores: ValoresFiltroTrilhas) {
+    setErroMais(null)
+    setFiltros(valores)
+  }
 
   function recarregar() {
     setErroMais(null)
@@ -133,13 +288,14 @@ export function TrilhasPage() {
     if (!ultimaPagina || carregandoMais) {
       return
     }
-    const chave = recarga
+    const chave = chaveBusca
     setCarregandoMais(true)
     setErroMais(null)
     try {
-      const proxima = await listarTrilhas({
+      const proxima = await listarTrilhas(filtroApi, {
         page: ultimaPagina.page.number + 1,
         size: TAMANHO_PAGINA,
+        sort: ordenacao,
       })
       setResultado((atual) =>
         atual && atual.chave === chave
@@ -190,14 +346,16 @@ export function TrilhasPage() {
   }
 
   const listaVazia = !carregando && erroBusca === null && trilhas.length === 0
+  const recomendadasAtuais =
+    chaveRecomendadas !== null && recomendadas?.chave === chaveRecomendadas
+      ? recomendadas
+      : null
 
   return (
     <div className={styles.page}>
       <header className={styles.cabecalho}>
         <div>
-          <h1 className={styles.titulo}>
-            {podeCriar ? 'Trilhas' : 'Minhas trilhas'}
-          </h1>
+          <h1 className={styles.titulo}>Trilhas</h1>
           <p className={styles.hint}>
             {podeCriar
               ? 'Acompanhe a criação e a execução das trilhas de desenvolvimento.'
@@ -206,7 +364,8 @@ export function TrilhasPage() {
         </div>
         <div className={styles.acoesCabecalho}>
           {/* O PDI vive dentro de Trilhas: sem item no menu, entra por aqui.
-              Quando as abas da Task 6 chegarem em dev, vira mais uma aba. */}
+              Fica fora das abas porque "Minhas trilhas" e "Catálogo" listam
+              trilhas, e o PDI tem rotas próprias (/trilhas/pdi). */}
           <Link to={ROTAS.pdi} className={styles.linkPdi}>
             {gerePdi ? 'PDI' : 'Meu PDI'}
           </Link>
@@ -242,80 +401,126 @@ export function TrilhasPage() {
         {aviso && <p className={styles.aviso}>{aviso}</p>}
       </div>
 
-      {carregando && (
-        <div aria-busy="true">
-          <p role="status" className="visually-hidden">
-            Carregando trilhas…
-          </p>
-          <ul className={styles.grade} aria-hidden="true">
-            {Array.from({ length: CARTOES_ESQUELETO }, (_, indice) => (
-              <li key={indice} className={styles.esqueleto}>
-                <span className={styles.esqSelo} />
-                <span className={styles.esqTitulo} />
-                <span className={styles.esqTexto} />
-                <span className={styles.esqTexto} />
-                <span className={styles.esqBarra} />
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      <div
+        className={styles.abas}
+        role="tablist"
+        aria-label="Visões das trilhas"
+      >
+        {ABAS.map((item, indice) => {
+          const ativa = item.id === aba
+          return (
+            <button
+              key={item.id}
+              ref={(elemento) => {
+                abasRef.current[indice] = elemento
+              }}
+              type="button"
+              role="tab"
+              id={`aba-${item.id}`}
+              aria-selected={ativa}
+              aria-controls="painel-trilhas"
+              tabIndex={ativa ? 0 : -1}
+              className={
+                ativa ? `${styles.aba} ${styles.abaAtiva}` : styles.aba
+              }
+              onClick={() => trocarAba(item.id)}
+              onKeyDown={(evento) => aoTeclarAba(evento, indice)}
+            >
+              {item.rotulo}
+            </button>
+          )
+        })}
+      </div>
 
-      {erroBusca && (
-        <div className={styles.erro} role="alert">
-          <p>{erroBusca}</p>
-          <button type="button" onClick={recarregar}>
-            Tentar novamente
-          </button>
-        </div>
-      )}
+      <div
+        id="painel-trilhas"
+        role="tabpanel"
+        aria-labelledby={`aba-${aba}`}
+        className={styles.painel}
+      >
+        {recomendadasAtuais && areaDoUsuario && (
+          <SecaoRecomendadas
+            area={areaDoUsuario}
+            trilhas={recomendadasAtuais.trilhas}
+            erro={recomendadasAtuais.erro}
+          />
+        )}
 
-      {listaVazia && (
-        <div className={styles.vazio}>
-          <TrilhaVaziaIcone />
-          <p className={styles.vazioTitulo}>
-            {podeCriar
-              ? 'Nenhuma trilha cadastrada ainda'
-              : 'Nenhuma trilha disponível no momento'}
-          </p>
-          <p className={styles.vazioTexto}>
-            {podeCriar
-              ? 'Crie a primeira trilha para organizar o desenvolvimento das equipes.'
-              : 'Quando uma trilha for liberada para você, ela aparece aqui.'}
-          </p>
-        </div>
-      )}
+        <TrilhasFiltros
+          valores={filtros}
+          onChange={alterarFiltros}
+          onLimpar={() => alterarFiltros(FILTRO_VAZIO)}
+          areas={areas}
+        />
 
-      {!carregando && erroBusca === null && trilhas.length > 0 && (
-        <>
-          <ul className={styles.grade} aria-label="Trilhas">
-            {trilhas.map((trilha) => (
-              <TrilhaCard key={trilha.id} trilha={trilha} />
-            ))}
-          </ul>
-
-          <div className={styles.rodape}>
-            <p className={styles.contagem}>
-              {trilhas.length} de {total} {total === 1 ? 'trilha' : 'trilhas'}
+        {carregando && (
+          <div aria-busy="true">
+            <p role="status" className="visually-hidden">
+              Carregando trilhas…
             </p>
-            {erroMais && (
-              <p className={styles.erroMais} role="alert">
-                {erroMais}
-              </p>
-            )}
-            {temMais && (
-              <button
-                type="button"
-                className={styles.mais}
-                onClick={() => void carregarMais()}
-                disabled={carregandoMais}
-              >
-                {carregandoMais ? 'Carregando…' : 'Carregar mais trilhas'}
-              </button>
-            )}
+            <ul className={styles.grade} aria-hidden="true">
+              {Array.from({ length: CARTOES_ESQUELETO }, (_, indice) => (
+                <li key={indice} className={styles.esqueleto}>
+                  <span className={styles.esqSelo} />
+                  <span className={styles.esqTitulo} />
+                  <span className={styles.esqTexto} />
+                  <span className={styles.esqTexto} />
+                  <span className={styles.esqBarra} />
+                </li>
+              ))}
+            </ul>
           </div>
-        </>
-      )}
+        )}
+
+        {erroBusca && (
+          <div className={styles.erro} role="alert">
+            <p>{erroBusca}</p>
+            <button type="button" onClick={recarregar}>
+              Tentar novamente
+            </button>
+          </div>
+        )}
+
+        {listaVazia && (
+          <EstadoVazio
+            aba={aba}
+            temFiltro={temFiltro}
+            podeCriar={podeCriar}
+            onVerCatalogo={() => trocarAba('catalogo')}
+          />
+        )}
+
+        {!carregando && erroBusca === null && trilhas.length > 0 && (
+          <>
+            <ul className={styles.grade} aria-label="Trilhas">
+              {trilhas.map((trilha) => (
+                <TrilhaCard key={trilha.id} trilha={trilha} />
+              ))}
+            </ul>
+
+            <div className={styles.rodape}>
+              <p className={styles.contagem}>
+                {trilhas.length} de {total} {total === 1 ? 'trilha' : 'trilhas'}
+              </p>
+              {erroMais && (
+                <p className={styles.erroMais} role="alert">
+                  {erroMais}
+                </p>
+              )}
+              {temMais && (
+                <button
+                  type="button"
+                  className={styles.mais}
+                  onClick={() => void carregarMais()}
+                  disabled={carregandoMais}
+                >
+                  {carregandoMais ? 'Carregando…' : 'Carregar mais trilhas'}
+                </button>
+              )}
+            </div>
+          </>
+        )}
+      </div>
 
       {formularioAberto && (
         <TrilhaFormulario
@@ -324,9 +529,89 @@ export function TrilhasPage() {
           salvando={salvando}
           erro={erroFormulario}
           fieldErrors={fieldErrors}
-          onCriar={(request) => void cadastrar(request)}
+          onSalvar={(request) => void cadastrar(request)}
           onFechar={fecharFormulario}
         />
+      )}
+    </div>
+  )
+}
+
+interface SecaoRecomendadasProps {
+  area: RecursoResumo
+  trilhas: TrilhaResumo[]
+  erro: string | null
+}
+
+/** Trilhas da área do usuário. Sem nada a recomendar, a seção não aparece. */
+function SecaoRecomendadas({ area, trilhas, erro }: SecaoRecomendadasProps) {
+  if (erro === null && trilhas.length === 0) {
+    return null
+  }
+  return (
+    <section
+      className={styles.recomendadas}
+      aria-labelledby="titulo-recomendadas"
+    >
+      <div>
+        <h2 id="titulo-recomendadas" className={styles.subtitulo}>
+          Recomendadas para sua área
+        </h2>
+        <p className={styles.hint}>Trilhas da área {area.nome}.</p>
+      </div>
+      {erro ? (
+        <p className={styles.erroMais}>{erro}</p>
+      ) : (
+        <ul className={styles.grade} aria-label="Recomendadas para sua área">
+          {trilhas.map((trilha) => (
+            <TrilhaCard key={trilha.id} trilha={trilha} />
+          ))}
+        </ul>
+      )}
+    </section>
+  )
+}
+
+interface EstadoVazioProps {
+  aba: Aba
+  temFiltro: boolean
+  podeCriar: boolean
+  onVerCatalogo: () => void
+}
+
+function EstadoVazio({
+  aba,
+  temFiltro,
+  podeCriar,
+  onVerCatalogo,
+}: EstadoVazioProps) {
+  let titulo: string
+  let texto: string
+  if (temFiltro) {
+    titulo = 'Nenhuma trilha encontrada'
+    texto = 'Nenhuma trilha combina com a busca e os filtros atuais.'
+  } else if (aba === 'minhas') {
+    titulo = 'Você ainda não tem trilhas'
+    texto =
+      'As trilhas que você iniciar ou receber aparecem aqui, ordenadas pelo prazo.'
+  } else if (podeCriar) {
+    titulo = 'Nenhuma trilha cadastrada ainda'
+    texto =
+      'Crie a primeira trilha para organizar o desenvolvimento das equipes.'
+  } else {
+    titulo = 'Nenhuma trilha disponível no momento'
+    texto = 'Quando uma trilha for liberada para você, ela aparece aqui.'
+  }
+
+  return (
+    <div className={styles.vazio}>
+      <TrilhaVaziaIcone />
+      <p className={styles.vazioTitulo}>{titulo}</p>
+      <p className={styles.vazioTexto}>{texto}</p>
+      {!temFiltro && aba === 'minhas' && (
+        <button type="button" className={styles.mais} onClick={onVerCatalogo}>
+          Ver catálogo
+        </button>
       )}
     </div>
   )

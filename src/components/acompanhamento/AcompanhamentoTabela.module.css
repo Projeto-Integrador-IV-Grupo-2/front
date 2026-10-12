@@ -1,0 +1,130 @@
+.tabela {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.tabela th,
+.tabela td {
+  padding: var(--space-3) var(--space-4);
+  text-align: left;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tabela th {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: var(--color-bg);
+}
+
+.tabela tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Atrasada: faixa à esquerda e fundo de alerta, além do selo "Atrasada". */
+.atrasada td {
+  background: var(--color-danger-bg);
+}
+
+.atrasada td:first-child {
+  box-shadow: inset 3px 0 0 var(--color-danger);
+}
+
+.prazoVencido {
+  font-weight: 600;
+  color: var(--color-danger);
+}
+
+.colaborador {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 0;
+  text-align: left;
+  background: transparent;
+  border: none;
+}
+
+.nome {
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.colaborador:hover .nome {
+  text-decoration: underline;
+}
+
+.email {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.progresso {
+  min-width: 140px;
+}
+
+/* Abaixo do breakpoint a tabela vira cartões: cada linha é um bloco e o
+   rótulo da coluna aparece antes do valor, vindo de data-rotulo. */
+@media (max-width: 760px) {
+  .tabela,
+  .tabela tbody,
+  .tabela tr,
+  .tabela td {
+    display: block;
+  }
+
+  .tabela thead {
+    display: none;
+  }
+
+  .tabela tr {
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .atrasada {
+    background: var(--color-danger-bg);
+    box-shadow: inset 3px 0 0 var(--color-danger);
+  }
+
+  .atrasada td:first-child {
+    box-shadow: none;
+  }
+
+  .tabela td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    padding: var(--space-1) var(--space-4);
+    border-bottom: none;
+  }
+
+  .tabela td::before {
+    content: attr(data-rotulo);
+    flex: 0 0 auto;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+  }
+
+  .colaborador {
+    align-items: flex-end;
+    text-align: right;
+  }
+
+  .progresso {
+    min-width: 0;
+  }
+
+  .progresso > * {
+    flex: 0 1 180px;
+  }
+}

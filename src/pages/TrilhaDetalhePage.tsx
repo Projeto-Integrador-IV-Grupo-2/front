@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { AtribuirTrilha } from '../components/trilhas/AtribuirTrilha.tsx'
+import { ColaboradoresAtribuidos } from '../components/trilhas/ColaboradoresAtribuidos.tsx'
+import { ConfirmacaoSituacaoTrilha } from '../components/trilhas/ConfirmacaoSituacaoTrilha.tsx'
 import {
   formatarData,
   formatarInstante,
@@ -8,25 +11,66 @@ import { AdicionarAoPdi } from '../components/pdi/AdicionarAoPdi.tsx'
 import { JornadaTrilha } from '../components/trilhas/JornadaTrilha.tsx'
 import {
   BarraProgresso,
+  Selo,
   SeloStatus,
 } from '../components/trilhas/StatusProgresso.tsx'
+import { TrilhaFormulario } from '../components/trilhas/TrilhaFormulario.tsx'
 import { usePermissao } from '../hooks/usePermissao.ts'
 import { ROTAS } from '../routes/paths.ts'
 import { PERFIS_GESTAO_PDI } from '../routes/permissions.ts'
 import {
+  PERFIS_ACOMPANHAMENTO,
+  PERFIS_ATRIBUIR_TRILHA,
+  PERFIS_GESTAO_TRILHA,
+} from '../routes/permissions.ts'
+import { HTTP_STATUS } from '../utils/errorHandler.ts'
+import {
+  AtribuicaoServiceError,
+  listarAtribuicoes,
+} from '../services/atribuicaoService.ts'
+import {
+  ativarTrilha,
+  atribuirTrilha,
   atualizarProgresso,
+  atualizarTrilha,
   buscarTrilha,
   iniciarTrilha,
+  inativarTrilha,
+  listarAreasParaTrilha,
+  listarUsuariosParaAtribuicao,
   TrilhaServiceError,
 } from '../services/trilhaService.ts'
-import type { StatusProgresso, TrilhaDetalhe } from '../types/trilha.ts'
+import type { ApiFieldError } from '../types/api.ts'
+import type { AtribuicaoAcompanhamento } from '../types/atribuicao.ts'
+import type {
+  AtribuirTrilhaRequest,
+  CriarTrilhaRequest,
+  ResultadoAtribuicao,
+  StatusProgresso,
+  TrilhaDetalhe,
+} from '../types/trilha.ts'
+import type { RecursoResumo, Usuario } from '../types/usuario.ts'
 import styles from './TrilhaDetalhePage.module.css'
+
+/**
+ * Quantos colaboradores o painel do detalhe mostra. É um resumo: quem precisa
+ * da lista inteira, com filtros e paginação, vai para o Acompanhamento.
+ */
+const COLABORADORES_NO_PAINEL = 10
 
 interface ResultadoBusca {
   /** Identifica a busca que produziu este resultado (id + recarga). */
   chave: string
   trilha: TrilhaDetalhe | null
   erro: TrilhaServiceError | null
+}
+
+interface ResultadoAtribuidos {
+  /** Identifica a busca que produziu este resultado (trilha + recarga). */
+  chave: string
+  atribuicoes: AtribuicaoAcompanhamento[] | null
+  total: number
+  erro: string | null
 }
 
 interface Acao {
@@ -36,6 +80,9 @@ interface Acao {
   secundaria: boolean
   executar: (id: string) => Promise<unknown>
 }
+
+/** Qual diálogo está aberto. Um por vez: os três são modais. */
+type Dialogo = 'edicao' | 'situacao' | 'atribuicao'
 
 /** A ação oferecida depende só do status atual — uma por vez, sem ambiguidade. */
 const ACAO_POR_STATUS: Record<StatusProgresso, Acao> = {
@@ -75,15 +122,39 @@ function erroDe(causa: unknown, padrao: string): TrilhaServiceError {
     : new TrilhaServiceError(padrao)
 }
 
+/** "2 colaboradores receberam a trilha. 1 já tinha e foi ignorado." */
+function avisoDaAtribuicao({
+  atribuidos,
+  ignorados,
+}: ResultadoAtribuicao): string {
+  const recebeu =
+    atribuidos === 0
+      ? 'Ninguém novo recebeu a trilha'
+      : `${atribuidos} ${atribuidos === 1 ? 'colaborador recebeu' : 'colaboradores receberam'} a trilha`
+  if (ignorados === 0) {
+    return `${recebeu}.`
+  }
+  return `${recebeu}. ${ignorados} já ${ignorados === 1 ? 'tinha' : 'tinham'} e ${ignorados === 1 ? 'foi ignorado' : 'foram ignorados'}.`
+}
+
 /**
- * Detalhe de uma trilha com o progresso do usuário autenticado (Card 13).
+ * Detalhe de uma trilha com o progresso do usuário autenticado (Card 13) e a
+ * gestão da trilha (issue #40): o administrador edita e inativa/reativa, e
+ * administrador e gestor atribuem a trilha a colaboradores ou a uma área.
  *
  * Depois de iniciar ou concluir, a tela não confia na resposta da escrita nem
  * atualiza de forma otimista: busca o detalhe de novo e mostra o que a API
  * devolveu. É o mesmo dado que a listagem lê, então as duas ficam iguais.
+ * Edição e inativação já respondem com o detalhe salvo, que entra direto no
+ * lugar do antigo — a tela se atualiza sem recarregar a página.
  */
 export function TrilhaDetalhePage() {
   const { id = '' } = useParams()
+  const podeGerenciar = usePermissao(PERFIS_GESTAO_TRILHA)
+  const podeAtribuir = usePermissao(PERFIS_ATRIBUIR_TRILHA)
+  // Mesma permissão da tela de Acompanhamento, de onde vem o dado do painel.
+  const podeVerAtribuidos = usePermissao(PERFIS_ACOMPANHAMENTO)
+
   const [recarga, setRecarga] = useState(0)
   const [resultado, setResultado] = useState<ResultadoBusca | null>(null)
   const [salvando, setSalvando] = useState(false)
@@ -92,6 +163,22 @@ export function TrilhaDetalhePage() {
   const tituloRef = useRef<HTMLHeadingElement>(null)
   const podeAdicionarAoPdi = usePermissao(PERFIS_GESTAO_PDI)
   const [adicionandoAoPdi, setAdicionandoAoPdi] = useState(false)
+
+  const [recargaAtribuidos, setRecargaAtribuidos] = useState(0)
+  const [atribuidos, setAtribuidos] = useState<ResultadoAtribuidos | null>(null)
+
+  const [dialogo, setDialogo] = useState<Dialogo | null>(null)
+  const [erroDialogo, setErroDialogo] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<ApiFieldError[]>([])
+  const [areas, setAreas] = useState<RecursoResumo[] | null>(null)
+  const [areasIndisponiveis, setAreasIndisponiveis] = useState(false)
+  const [colaboradores, setColaboradores] = useState<Usuario[] | null>(null)
+  const [colaboradoresIndisponiveis, setColaboradoresIndisponiveis] =
+    useState(false)
+  // Devolve o foco a quem abriu o diálogo quando ele fecha.
+  const editarRef = useRef<HTMLButtonElement>(null)
+  const situacaoRef = useRef<HTMLButtonElement>(null)
+  const atribuirRef = useRef<HTMLButtonElement>(null)
 
   const chaveBusca = `${id}:${recarga}`
   const carregando = resultado?.chave !== chaveBusca
@@ -129,6 +216,153 @@ export function TrilhaDetalhePage() {
     }
   }, [idCarregado])
 
+  // Quem recebeu a trilha. Só para quem pode acompanhar; refeito depois de
+  // cada atribuição, para o painel já mostrar quem acabou de entrar.
+  const chaveAtribuidos = podeVerAtribuidos
+    ? `${id}:${recargaAtribuidos}`
+    : null
+  useEffect(() => {
+    if (chaveAtribuidos === null) {
+      return
+    }
+    const controlador = new AbortController()
+
+    listarAtribuicoes(
+      { trilhaId: id },
+      { page: 0, size: COLABORADORES_NO_PAINEL },
+      { signal: controlador.signal },
+    )
+      .then((pagina) => {
+        if (!controlador.signal.aborted) {
+          setAtribuidos({
+            chave: chaveAtribuidos,
+            atribuicoes: pagina.content,
+            total: pagina.page.totalElements,
+            erro: null,
+          })
+        }
+      })
+      .catch((causa: unknown) => {
+        if (!controlador.signal.aborted) {
+          setAtribuidos({
+            chave: chaveAtribuidos,
+            atribuicoes: [],
+            total: 0,
+            erro:
+              causa instanceof AtribuicaoServiceError
+                ? causa.message
+                : 'Não foi possível carregar os colaboradores desta trilha.',
+          })
+        }
+      })
+
+    return () => controlador.abort()
+  }, [chaveAtribuidos, id])
+
+  // As áreas alimentam a edição e a atribuição; são buscadas uma vez, quando
+  // o primeiro diálogo que precisa delas abre.
+  const precisaDeAreas = dialogo === 'edicao' || dialogo === 'atribuicao'
+  useEffect(() => {
+    if (!precisaDeAreas || areas !== null) {
+      return
+    }
+    let ativo = true
+    listarAreasParaTrilha()
+      .then((lista) => {
+        if (ativo) {
+          setAreas(lista)
+        }
+      })
+      .catch(() => {
+        if (ativo) {
+          setAreas([])
+          setAreasIndisponiveis(true)
+        }
+      })
+    return () => {
+      ativo = false
+    }
+  }, [precisaDeAreas, areas])
+
+  // Um gestor pode receber 403 na lista de usuários: aí sobra a atribuição
+  // por área, e o diálogo avisa.
+  useEffect(() => {
+    if (dialogo !== 'atribuicao' || colaboradores !== null) {
+      return
+    }
+    let ativo = true
+    listarUsuariosParaAtribuicao()
+      .then((lista) => {
+        if (ativo) {
+          setColaboradores(lista)
+        }
+      })
+      .catch(() => {
+        if (ativo) {
+          setColaboradores([])
+          setColaboradoresIndisponiveis(true)
+        }
+      })
+    return () => {
+      ativo = false
+    }
+  }, [dialogo, colaboradores])
+
+  function abrirDialogo(qual: Dialogo) {
+    setErroDialogo(null)
+    setFieldErrors([])
+    setAviso(null)
+    setErroAcao(null)
+    setDialogo(qual)
+  }
+
+  function fecharDialogo() {
+    const aberto = dialogo
+    setDialogo(null)
+    setErroDialogo(null)
+    setFieldErrors([])
+    // Sem isso o foco cairia no <body> quando o diálogo some.
+    const origem =
+      aberto === 'edicao'
+        ? editarRef
+        : aberto === 'situacao'
+          ? situacaoRef
+          : atribuirRef
+    origem.current?.focus()
+  }
+
+  /**
+   * Relê o detalhe depois de uma escrita e avisa o que aconteceu.
+   *
+   * Editar, inativar e ativar respondem com o **resumo** da trilha, que não
+   * traz `descricao`, `prazoDias`, `ativo` nem `criadoEm`. Montar o detalhe a
+   * partir dele mostraria a trilha errada — inativa, sem data de criação e
+   * sem progresso. Então a tela faz o mesmo que já fazia no progresso: busca
+   * de novo e mostra o que a API guardou.
+   *
+   * A escrita já valeu neste ponto; se a releitura falhar, o aviso de sucesso
+   * fica e a tela cai no mesmo bloco de erro da busca, com "Tentar novamente".
+   */
+  async function releDetalhe(id: string, mensagem: string) {
+    setAviso(mensagem)
+    try {
+      const atualizado = await buscarTrilha(id)
+      setResultado({ chave: chaveBusca, trilha: atualizado, erro: null })
+    } catch (causa) {
+      setResultado({
+        chave: chaveBusca,
+        trilha: null,
+        erro: erroDe(causa, 'Não foi possível recarregar a trilha.'),
+      })
+    }
+  }
+
+  function registrarErroDoDialogo(causa: unknown, padrao: string) {
+    const erro = erroDe(causa, padrao)
+    setErroDialogo(erro.message)
+    setFieldErrors(erro.fieldErrors)
+  }
+
   async function executarAcao(detalhe: TrilhaDetalhe) {
     const acao = ACAO_POR_STATUS[detalhe.progresso.status]
     setSalvando(true)
@@ -150,6 +384,71 @@ export function TrilhaDetalhePage() {
     }
   }
 
+  async function salvarEdicao(
+    detalhe: TrilhaDetalhe,
+    request: CriarTrilhaRequest,
+  ) {
+    setSalvando(true)
+    setErroDialogo(null)
+    setFieldErrors([])
+    try {
+      await atualizarTrilha(detalhe.id, request)
+    } catch (causa) {
+      registrarErroDoDialogo(causa, 'Não foi possível salvar as alterações.')
+      return
+    } finally {
+      setSalvando(false)
+    }
+    // Daqui em diante a trilha já está salva: o que pode falhar é a leitura.
+    fecharDialogo()
+    await releDetalhe(detalhe.id, 'Trilha atualizada.')
+  }
+
+  async function alternarSituacao(detalhe: TrilhaDetalhe) {
+    setSalvando(true)
+    setErroDialogo(null)
+    try {
+      if (detalhe.ativo) {
+        await inativarTrilha(detalhe.id)
+      } else {
+        await ativarTrilha(detalhe.id)
+      }
+    } catch (causa) {
+      registrarErroDoDialogo(
+        causa,
+        'Não foi possível alterar a situação da trilha.',
+      )
+      return
+    } finally {
+      setSalvando(false)
+    }
+    fecharDialogo()
+    await releDetalhe(
+      detalhe.id,
+      detalhe.ativo ? 'Trilha inativada.' : 'Trilha reativada.',
+    )
+  }
+
+  async function atribuir(
+    detalhe: TrilhaDetalhe,
+    request: AtribuirTrilhaRequest,
+  ) {
+    setSalvando(true)
+    setErroDialogo(null)
+    setFieldErrors([])
+    try {
+      const resumo = await atribuirTrilha(detalhe.id, request)
+      fecharDialogo()
+      setAviso(avisoDaAtribuicao(resumo))
+      // O painel de colaboradores passa a incluir quem acabou de receber.
+      setRecargaAtribuidos((atual) => atual + 1)
+    } catch (causa) {
+      registrarErroDoDialogo(causa, 'Não foi possível atribuir a trilha.')
+    } finally {
+      setSalvando(false)
+    }
+  }
+
   return (
     <div className={styles.page}>
       <Link to={ROTAS.trilhas} className={styles.voltar}>
@@ -166,26 +465,34 @@ export function TrilhaDetalhePage() {
         Voltar para trilhas
       </Link>
 
+      {/* Live region única da página, fora do bloco da trilha: o aviso de uma
+          escrita bem-sucedida continua na tela mesmo que a releitura falhe. */}
+      <div role="status" aria-live="polite" className={styles.avisoRegiao}>
+        {aviso && <p className={styles.aviso}>{aviso}</p>}
+      </div>
+
       {carregando && <EsqueletoDetalhe />}
 
       {erroBusca && (
         <div
           className={
-            erroBusca.status === 404 ? styles.naoEncontrada : styles.erro
+            erroBusca.status === HTTP_STATUS.NOT_FOUND
+              ? styles.naoEncontrada
+              : styles.erro
           }
           role="alert"
         >
           <p className={styles.erroTitulo}>
-            {erroBusca.status === 404
+            {erroBusca.status === HTTP_STATUS.NOT_FOUND
               ? 'Trilha não encontrada'
               : 'Não foi possível abrir a trilha'}
           </p>
           <p>
-            {erroBusca.status === 404
+            {erroBusca.status === HTTP_STATUS.NOT_FOUND
               ? 'Ela pode ter sido removida ou não estar disponível para você.'
               : erroBusca.message}
           </p>
-          {erroBusca.status === 404 ? (
+          {erroBusca.status === HTTP_STATUS.NOT_FOUND ? (
             <Link to={ROTAS.trilhas} className={styles.erroAcao}>
               Ver todas as trilhas
             </Link>
@@ -204,33 +511,70 @@ export function TrilhaDetalhePage() {
       {trilha && (
         <>
           <header className={styles.cabecalho}>
-            <div className={styles.cabecalhoTopo}>
-              <h1 ref={tituloRef} tabIndex={-1} className={styles.titulo}>
-                {trilha.nome}
-              </h1>
-              {podeAdicionarAoPdi && (
-                <button
-                  type="button"
-                  className={styles.botaoSecundario}
-                  onClick={() => {
-                    setAviso(null)
-                    setAdicionandoAoPdi(true)
-                  }}
-                >
-                  Adicionar ao PDI
-                </button>
+            <div className={styles.identificacao}>
+              <div className={styles.selosTitulo}>
+                <h1 ref={tituloRef} tabIndex={-1} className={styles.titulo}>
+                  {trilha.nome}
+                </h1>
+                {trilha.progresso.status === 'ATRASADA' && (
+                  <Selo tom="perigo">Atrasada</Selo>
+                )}
+                {!trilha.ativo && <Selo tom="neutro">Inativa</Selo>}
+              </div>
+              {(trilha.descricao ?? trilha.objetivos) && (
+                <p className={styles.hint}>
+                  {trilha.descricao ?? trilha.objetivos}
+                </p>
               )}
             </div>
-            {(trilha.descricao ?? trilha.objetivos) && (
-              <p className={styles.hint}>
-                {trilha.descricao ?? trilha.objetivos}
-              </p>
+
+            {(podeGerenciar || podeAtribuir || podeAdicionarAoPdi) && (
+              <div className={styles.acoesGestao}>
+                {podeGerenciar && (
+                  <>
+                    <button
+                      ref={editarRef}
+                      type="button"
+                      className={styles.botaoSecundario}
+                      onClick={() => abrirDialogo('edicao')}
+                    >
+                      Editar trilha
+                    </button>
+                    <button
+                      ref={situacaoRef}
+                      type="button"
+                      className={styles.botaoSecundario}
+                      onClick={() => abrirDialogo('situacao')}
+                    >
+                      {trilha.ativo ? 'Inativar' : 'Reativar'}
+                    </button>
+                  </>
+                )}
+                {podeAtribuir && trilha.ativo && (
+                  <button
+                    ref={atribuirRef}
+                    type="button"
+                    className={styles.botao}
+                    onClick={() => abrirDialogo('atribuicao')}
+                  >
+                    Atribuir colaboradores
+                  </button>
+                )}
+                {podeAdicionarAoPdi && trilha.ativo && (
+                  <button
+                    type="button"
+                    className={styles.botaoSecundario}
+                    onClick={() => {
+                      setAviso(null)
+                      setAdicionandoAoPdi(true)
+                    }}
+                  >
+                    Adicionar ao PDI
+                  </button>
+                )}
+              </div>
             )}
           </header>
-
-          <div role="status" aria-live="polite" className={styles.avisoRegiao}>
-            {aviso && <p className={styles.aviso}>{aviso}</p>}
-          </div>
 
           <div className={styles.colunas}>
             <section aria-labelledby="titulo-jornada">
@@ -242,12 +586,19 @@ export function TrilhaDetalhePage() {
                   progresso={trilha.progresso}
                   prazoDias={trilha.prazoDias}
                 />
-                <AcaoProgresso
-                  trilha={trilha}
-                  salvando={salvando}
-                  erro={erroAcao}
-                  onExecutar={() => void executarAcao(trilha)}
-                />
+                {trilha.ativo ? (
+                  <AcaoProgresso
+                    trilha={trilha}
+                    salvando={salvando}
+                    erro={erroAcao}
+                    onExecutar={() => void executarAcao(trilha)}
+                  />
+                ) : (
+                  <p className={styles.inativaAviso}>
+                    Trilha inativa: o progresso de quem já a recebeu fica
+                    guardado, mas não pode ser alterado.
+                  </p>
+                )}
               </div>
             </section>
 
@@ -269,12 +620,49 @@ export function TrilhaDetalhePage() {
                     semValor
                   />
                   {trilha.progresso.prazo && (
-                    <p className={styles.prazo}>
-                      Prazo: {formatarData(trilha.progresso.prazo)}
+                    <p
+                      className={
+                        trilha.progresso.status === 'ATRASADA'
+                          ? `${styles.prazo} ${styles.prazoAtrasado}`
+                          : styles.prazo
+                      }
+                    >
+                      {trilha.progresso.status === 'ATRASADA'
+                        ? 'Prazo vencido em '
+                        : 'Prazo: '}
+                      {formatarData(trilha.progresso.prazo)}
                     </p>
                   )}
                 </div>
               </section>
+
+              {podeVerAtribuidos && (
+                <section aria-labelledby="titulo-atribuidos">
+                  <h2 id="titulo-atribuidos" className={styles.secao}>
+                    Colaboradores atribuídos
+                  </h2>
+                  <ColaboradoresAtribuidos
+                    atribuicoes={
+                      atribuidos?.chave === chaveAtribuidos
+                        ? atribuidos.atribuicoes
+                        : null
+                    }
+                    total={
+                      atribuidos?.chave === chaveAtribuidos
+                        ? atribuidos.total
+                        : 0
+                    }
+                    erro={
+                      atribuidos?.chave === chaveAtribuidos
+                        ? atribuidos.erro
+                        : null
+                    }
+                    onTentarNovamente={() =>
+                      setRecargaAtribuidos((atual) => atual + 1)
+                    }
+                  />
+                </section>
+              )}
 
               <section aria-labelledby="titulo-sobre">
                 <h2 id="titulo-sobre" className={styles.secao}>
@@ -303,10 +691,51 @@ export function TrilhaDetalhePage() {
                     <dt>Criada em</dt>
                     <dd>{formatarInstante(trilha.criadoEm)}</dd>
                   </div>
+                  <div>
+                    <dt>Situação</dt>
+                    <dd>{trilha.ativo ? 'Ativa' : 'Inativa'}</dd>
+                  </div>
                 </dl>
               </section>
             </div>
           </div>
+
+          {dialogo === 'edicao' && (
+            <TrilhaFormulario
+              trilha={trilha}
+              areas={areas ?? []}
+              areasIndisponiveis={areasIndisponiveis}
+              salvando={salvando}
+              erro={erroDialogo}
+              fieldErrors={fieldErrors}
+              onSalvar={(request) => void salvarEdicao(trilha, request)}
+              onFechar={fecharDialogo}
+            />
+          )}
+
+          {dialogo === 'situacao' && (
+            <ConfirmacaoSituacaoTrilha
+              trilha={trilha}
+              processando={salvando}
+              erro={erroDialogo}
+              onConfirmar={() => void alternarSituacao(trilha)}
+              onCancelar={fecharDialogo}
+            />
+          )}
+
+          {dialogo === 'atribuicao' && (
+            <AtribuirTrilha
+              trilha={trilha}
+              colaboradores={colaboradores}
+              colaboradoresIndisponiveis={colaboradoresIndisponiveis}
+              areas={areas ?? []}
+              salvando={salvando}
+              erro={erroDialogo}
+              fieldErrors={fieldErrors}
+              onAtribuir={(request) => void atribuir(trilha, request)}
+              onFechar={fecharDialogo}
+            />
+          )}
 
           {adicionandoAoPdi && (
             <AdicionarAoPdi

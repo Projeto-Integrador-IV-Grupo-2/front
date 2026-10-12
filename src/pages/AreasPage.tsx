@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { AreaFormulario } from '../components/areas/AreaFormulario.tsx'
+import { AreaTrilhasPainel } from '../components/areas/AreaTrilhasPainel.tsx'
 import { AreasTabela } from '../components/areas/AreasTabela.tsx'
 import { Paginacao } from '../components/areas/Paginacao.tsx'
 import { usePermissao } from '../hooks/usePermissao.ts'
@@ -12,7 +13,12 @@ import {
   inativarArea,
   listarAreas,
 } from '../services/areaService.ts'
+import {
+  listarTrilhasDaArea,
+  TrilhaServiceError,
+} from '../services/trilhaService.ts'
 import type { ApiFieldError } from '../types/api.ts'
+import type { TrilhaResumo } from '../types/trilha.ts'
 import type {
   Area,
   AtualizarAreaRequest,
@@ -22,6 +28,7 @@ import type {
 import styles from './AreasPage.module.css'
 
 const TAMANHO_PAGINA = 10
+const TAMANHO_TRILHAS_DA_AREA = 50
 
 /**
  * Listagem de áreas: busca por nome, paginação, cadastro/edição em modal e
@@ -35,6 +42,13 @@ interface ResultadoBusca {
   /** Identifica a busca que produziu este resultado (nome + página + recarga). */
   chave: string
   dados: Pagina<Area> | null
+  erro: string | null
+}
+
+interface ResultadoTrilhas {
+  /** Área + tentativa que produziram este resultado. */
+  chave: string
+  dados: Pagina<TrilhaResumo> | null
   erro: string | null
 }
 
@@ -67,6 +81,12 @@ export function AreasPage() {
   )
   const [aviso, setAviso] = useState<string | null>(null)
   const [erroOperacao, setErroOperacao] = useState<string | null>(null)
+
+  const [areaDasTrilhas, setAreaDasTrilhas] = useState<Area | null>(null)
+  const [recargaTrilhas, setRecargaTrilhas] = useState(0)
+  const [trilhasDaArea, setTrilhasDaArea] = useState<ResultadoTrilhas | null>(
+    null,
+  )
 
   const chaveBusca = JSON.stringify([nomeBuscado, pagina, recarga])
 
@@ -101,6 +121,44 @@ export function AreasPage() {
 
     return () => controlador.abort()
   }, [chaveBusca, nomeBuscado, pagina])
+
+  // Trilhas da área aberta no painel. Mesmo padrão de chave da listagem: o
+  // resultado de outra área (ou de outra tentativa) não aparece no painel.
+  const idAreaDasTrilhas = areaDasTrilhas?.id ?? null
+  const chaveTrilhas = JSON.stringify([idAreaDasTrilhas, recargaTrilhas])
+  const trilhasAtuais =
+    trilhasDaArea?.chave === chaveTrilhas ? trilhasDaArea : null
+
+  useEffect(() => {
+    if (idAreaDasTrilhas === null) {
+      return
+    }
+    const controlador = new AbortController()
+    listarTrilhasDaArea(
+      idAreaDasTrilhas,
+      {},
+      { page: 0, size: TAMANHO_TRILHAS_DA_AREA },
+      { signal: controlador.signal },
+    )
+      .then((busca) => {
+        if (!controlador.signal.aborted) {
+          setTrilhasDaArea({ chave: chaveTrilhas, dados: busca, erro: null })
+        }
+      })
+      .catch((causa: unknown) => {
+        if (!controlador.signal.aborted) {
+          setTrilhasDaArea({
+            chave: chaveTrilhas,
+            dados: null,
+            erro:
+              causa instanceof TrilhaServiceError
+                ? causa.message
+                : 'Não foi possível carregar as trilhas da área.',
+          })
+        }
+      })
+    return () => controlador.abort()
+  }, [chaveTrilhas, idAreaDasTrilhas])
 
   function recarregar() {
     setRecarga((atual) => atual + 1)
@@ -292,6 +350,7 @@ export function AreasPage() {
             podeGerenciar={podeGerenciar}
             onEditar={abrirFormulario}
             onAlterarSituacao={(area) => void alternarSituacao(area)}
+            onVerTrilhas={setAreaDasTrilhas}
           />
           <Paginacao
             pagina={dados?.page.number ?? 0}
@@ -301,6 +360,17 @@ export function AreasPage() {
             desabilitado={carregando}
           />
         </>
+      )}
+
+      {areaDasTrilhas && (
+        <AreaTrilhasPainel
+          area={areaDasTrilhas}
+          trilhas={trilhasAtuais?.dados?.content ?? null}
+          total={trilhasAtuais?.dados?.page.totalElements ?? 0}
+          erro={trilhasAtuais?.erro ?? null}
+          onTentarDeNovo={() => setRecargaTrilhas((atual) => atual + 1)}
+          onFechar={() => setAreaDasTrilhas(null)}
+        />
       )}
     </div>
   )

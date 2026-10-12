@@ -21,3 +21,9 @@ export function formatarData(valor: string): string {
     timeZone: 'UTC',
   })
 }
+
+/** `LocalDate` da API em dd/mm/aaaa, sem passar por fuso — para tabelas. */
+export function formatarDataCurta(valor: string): string {
+  const [ano, mes, dia] = valor.split('-')
+  return dia && mes && ano ? `${dia}/${mes}/${ano}` : valor
+}
