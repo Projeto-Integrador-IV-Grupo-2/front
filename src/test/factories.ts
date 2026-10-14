@@ -3,6 +3,8 @@ import type {
   ColaboradorAcompanhamento,
 } from '../types/atribuicao.ts'
 import type { Area } from '../types/area.ts'
+import type { Categoria, Conteudo } from '../types/conteudo.ts'
+import type { Etapa } from '../types/etapa.ts'
 import type { Competencia } from '../types/competencia.ts'
 import type { PdiAcao, PdiDetalhe, PdiItem, PdiResumo } from '../types/pdi.ts'
 import type {
@@ -226,6 +228,18 @@ export function criarColaboradorAcompanhamento(
   }
 }
 
+/** Categoria de conteúdo (`CategoriaResponse`). */
+export function criarCategoria(overrides: Partial<Categoria> = {}): Categoria {
+  return {
+    id: '66666666-6666-6666-6666-666666666666',
+    nome: 'Onboarding',
+    descricao: null,
+    ativo: true,
+    criadoEm: '2026-09-01T12:00:00Z',
+    atualizadoEm: '2026-09-01T12:00:00Z',
+  }
+}
+
 /** Competência do catálogo (`CompetenciaResponse`). */
 export function criarCompetencia(
   overrides: Partial<Competencia> = {},
@@ -237,6 +251,27 @@ export function criarCompetencia(
     tipo: 'COMPORTAMENTAL',
     ativo: true,
     ...overrides,
+  }
+}
+
+/** Conteúdo de vídeo publicado (`ConteudoResponse`). */
+export function criarConteudo(overrides: Partial<Conteudo> = {}): Conteudo {
+  return {
+    id: '77777777-7777-7777-7777-777777777777',
+    titulo: 'Boas-vindas',
+    descricao: null,
+    tipo: 'VIDEO',
+    status: 'PUBLICADO',
+    categoria: null,
+    area: null,
+    videoUrl: 'https://vimeo.com/22439234',
+    duracaoSegundos: 185,
+    miniaturaUrl: 'https://i.vimeocdn.com/video/1.jpg',
+    corpo: null,
+    linkUrl: null,
+    criadoEm: '2026-09-01T12:00:00Z',
+    atualizadoEm: '2026-09-01T12:00:00Z',
+    publicadoEm: '2026-09-02T12:00:00Z',
   }
 }
 
@@ -259,6 +294,27 @@ export function criarPdiAcao(overrides: Partial<PdiAcao> = {}): PdiAcao {
   }
 }
 
+/** Etapa de trilha (`EtapaResponse`); por padrão, de texto e não concluída. */
+export function criarEtapa(overrides: Partial<Etapa> = {}): Etapa {
+  return {
+    id: '88888888-8888-8888-8888-888888888888',
+    ordem: 1,
+    titulo: 'Leia o manual',
+    descricao: null,
+    conteudo: {
+      id: '77777777-7777-7777-7777-777777777777',
+      titulo: 'Manual',
+      tipo: 'TEXTO',
+      status: 'PUBLICADO',
+      videoUrl: null,
+      duracaoSegundos: null,
+      miniaturaUrl: null,
+      corpo: 'Conteúdo do manual.',
+      linkUrl: null,
+    },
+    concluida: false,
+  }
+}
 /** Competência dentro do PDI (`PdiItemResponse`), com uma trilha ligada. */
 export function criarPdiItem(overrides: Partial<PdiItem> = {}): PdiItem {
   return {

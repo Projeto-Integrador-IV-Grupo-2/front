@@ -322,3 +322,15 @@
     animation: none;
   }
 }
+
+/* Link com cara de botão: leva à tela de estudo (issue #39). */
+.estudar {
+  display: inline-block;
+  align-self: flex-start;
+  margin-top: var(--space-3);
+  text-decoration: none;
+}
+
+.secaoEtapas {
+  margin-top: var(--space-5);
+}

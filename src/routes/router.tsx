@@ -7,12 +7,15 @@ import { ProtectedRoute } from '../components/auth/ProtectedRoute.tsx'
 import { AppLayout } from '../components/layout/AppLayout.tsx'
 import { AcompanhamentoPage } from '../pages/AcompanhamentoPage.tsx'
 import { AreasPage } from '../pages/AreasPage.tsx'
+import { CategoriasPage } from '../pages/CategoriasPage.tsx'
+import { ConteudosPage } from '../pages/ConteudosPage.tsx'
 import { DashboardPage } from '../pages/DashboardPage.tsx'
 import { LoginPage } from '../pages/LoginPage.tsx'
 import { NotFoundPage } from '../pages/NotFoundPage.tsx'
 import { PdiEditorPage } from '../pages/PdiEditorPage.tsx'
 import { PdiPage } from '../pages/PdiPage.tsx'
 import { TrilhaDetalhePage } from '../pages/TrilhaDetalhePage.tsx'
+import { TrilhaEstudoPage } from '../pages/TrilhaEstudoPage.tsx'
 import { TrilhasPage } from '../pages/TrilhasPage.tsx'
 import { UsuariosPage } from '../pages/UsuariosPage.tsx'
 import { ROTAS } from './paths.ts'
@@ -32,6 +35,7 @@ export const routes: RouteObject[] = [
           { path: ROTAS.dashboard, element: <DashboardPage /> },
           { path: ROTAS.trilhas, element: <TrilhasPage /> },
           { path: ROTAS.trilhaDetalhe, element: <TrilhaDetalhePage /> },
+          { path: ROTAS.trilhaEstudo, element: <TrilhaEstudoPage /> },
           // Rota estática: o router a prefere a /trilhas/:id.
           { path: ROTAS.pdi, element: <PdiPage /> },
           {
@@ -40,6 +44,8 @@ export const routes: RouteObject[] = [
             children: [{ path: ROTAS.pdiDetalhe, element: <PdiEditorPage /> }],
           },
           { path: ROTAS.areas, element: <AreasPage /> },
+          { path: ROTAS.conteudos, element: <ConteudosPage /> },
+          { path: ROTAS.categorias, element: <CategoriasPage /> },
           {
             // Área administrativa: o perfil exigido fica na rota, não na página.
             element: <ProtectedRoute perfis={['ADMIN']} />,
