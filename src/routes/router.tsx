@@ -12,12 +12,14 @@ import { ConteudosPage } from '../pages/ConteudosPage.tsx'
 import { DashboardPage } from '../pages/DashboardPage.tsx'
 import { LoginPage } from '../pages/LoginPage.tsx'
 import { NotFoundPage } from '../pages/NotFoundPage.tsx'
+import { PdiEditorPage } from '../pages/PdiEditorPage.tsx'
+import { PdiPage } from '../pages/PdiPage.tsx'
 import { TrilhaDetalhePage } from '../pages/TrilhaDetalhePage.tsx'
 import { TrilhaEstudoPage } from '../pages/TrilhaEstudoPage.tsx'
 import { TrilhasPage } from '../pages/TrilhasPage.tsx'
 import { UsuariosPage } from '../pages/UsuariosPage.tsx'
 import { ROTAS } from './paths.ts'
-import { PERFIS_ACOMPANHAMENTO } from './permissions.ts'
+import { PERFIS_ACOMPANHAMENTO, PERFIS_GESTAO_PDI } from './permissions.ts'
 
 // Exportada à parte do router para poder ser reutilizada em testes com
 // createMemoryRouter (ver router.test.tsx), sem depender do histórico real
@@ -34,6 +36,13 @@ export const routes: RouteObject[] = [
           { path: ROTAS.trilhas, element: <TrilhasPage /> },
           { path: ROTAS.trilhaDetalhe, element: <TrilhaDetalhePage /> },
           { path: ROTAS.trilhaEstudo, element: <TrilhaEstudoPage /> },
+          // Rota estática: o router a prefere a /trilhas/:id.
+          { path: ROTAS.pdi, element: <PdiPage /> },
+          {
+            // O editor é de quem monta PDIs; o colaborador fica em "Meu PDI".
+            element: <ProtectedRoute perfis={PERFIS_GESTAO_PDI} />,
+            children: [{ path: ROTAS.pdiDetalhe, element: <PdiEditorPage /> }],
+          },
           { path: ROTAS.areas, element: <AreasPage /> },
           { path: ROTAS.conteudos, element: <ConteudosPage /> },
           { path: ROTAS.categorias, element: <CategoriasPage /> },

@@ -1,0 +1,66 @@
+.barra {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.dica {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+}
+
+.linha {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) auto minmax(0, 1.5fr);
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.quem {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.nome {
+  overflow: hidden;
+  font-weight: 500;
+  color: var(--color-primary);
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nome:hover {
+  text-decoration: underline;
+}
+
+.ciclo {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+
+.progresso {
+  min-width: 0;
+}
+
+.erroMais {
+  font-size: 0.875rem;
+  color: var(--color-danger);
+}
+
+@media (max-width: 640px) {
+  .linha {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .progresso {
+    grid-column: 1 / -1;
+  }
+}

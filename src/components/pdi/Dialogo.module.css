@@ -1,0 +1,211 @@
+.fundo {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-5);
+  background: rgb(10 14 24 / 50%);
+}
+
+.caixa {
+  display: flex;
+  flex-direction: column;
+  width: 520px;
+  max-width: 100%;
+  max-height: calc(100dvh - 2 * var(--space-5));
+  padding: var(--space-5);
+  overflow-y: auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  box-shadow: var(--shadow-md);
+}
+
+.cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-1);
+}
+
+.titulo {
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+
+.fechar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+}
+
+.fechar:hover:not(:disabled) {
+  background: var(--color-bg);
+}
+
+.subtitulo {
+  margin-bottom: var(--space-4);
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+
+.form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.cheio {
+  grid-column: 1 / -1;
+}
+
+.campo label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.campo input,
+.campo select,
+.campo textarea {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  font-size: 0.875rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.campo textarea {
+  resize: vertical;
+}
+
+.campo [aria-invalid='true'] {
+  border-color: var(--color-danger);
+}
+
+.rotuloComAcao {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+/* Botão com cara de link, ao lado do rótulo (ex.: "Nova competência"). */
+.link {
+  padding: 0;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-primary);
+  background: transparent;
+  border: 0;
+}
+
+.link:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.dica {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.erroCampo {
+  font-size: 0.8125rem;
+  color: var(--color-danger);
+}
+
+.erro {
+  grid-column: 1 / -1;
+  padding: var(--space-2) var(--space-3);
+  font-size: 0.875rem;
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-sm);
+}
+
+.rodape {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.cancelar,
+.criar {
+  padding: var(--space-2) var(--space-4);
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+}
+
+.cancelar {
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+}
+
+.criar {
+  color: var(--color-primary-contrast);
+  background: var(--color-primary);
+  border: 1px solid var(--color-primary);
+}
+
+.criar:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+
+.cancelar:disabled,
+.criar:disabled {
+  opacity: 0.6;
+}
+
+@media (max-width: 640px) {
+  .fundo {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  /* No celular o diálogo vira uma folha presa à base: mais área útil e os
+     botões ficam ao alcance do polegar. */
+  .caixa {
+    width: 100%;
+    max-height: 92dvh;
+    padding: var(--space-4);
+    border-radius: 14px 14px 0 0;
+  }
+
+  .form {
+    grid-template-columns: 1fr;
+  }
+
+  .rodape {
+    flex-direction: column-reverse;
+  }
+
+  .cancelar,
+  .criar {
+    width: 100%;
+    padding: var(--space-3) var(--space-4);
+  }
+}

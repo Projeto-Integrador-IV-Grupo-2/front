@@ -8,6 +8,7 @@ import {
   formatarInstante,
 } from '../components/trilhas/formatacao.ts'
 import { EtapasGestao } from '../components/trilhas/EtapasGestao.tsx'
+import { AdicionarAoPdi } from '../components/pdi/AdicionarAoPdi.tsx'
 import { JornadaTrilha } from '../components/trilhas/JornadaTrilha.tsx'
 import {
   BarraProgresso,
@@ -17,6 +18,8 @@ import {
 import { TrilhaFormulario } from '../components/trilhas/TrilhaFormulario.tsx'
 import { usePermissao } from '../hooks/usePermissao.ts'
 import { caminhoEstudo, ROTAS } from '../routes/paths.ts'
+import { ROTAS } from '../routes/paths.ts'
+import { PERFIS_GESTAO_PDI } from '../routes/permissions.ts'
 import {
   PERFIS_ACOMPANHAMENTO,
   PERFIS_ATRIBUIR_TRILHA,
@@ -162,6 +165,8 @@ export function TrilhaDetalhePage() {
   const [aviso, setAviso] = useState<string | null>(null)
   const [erroAcao, setErroAcao] = useState<string | null>(null)
   const tituloRef = useRef<HTMLHeadingElement>(null)
+  const podeAdicionarAoPdi = usePermissao(PERFIS_GESTAO_PDI)
+  const [adicionandoAoPdi, setAdicionandoAoPdi] = useState(false)
 
   const [recargaAtribuidos, setRecargaAtribuidos] = useState(0)
   const [atribuidos, setAtribuidos] = useState<ResultadoAtribuidos | null>(null)
@@ -540,7 +545,7 @@ export function TrilhaDetalhePage() {
               )}
             </div>
 
-            {(podeGerenciar || podeAtribuir) && (
+            {(podeGerenciar || podeAtribuir || podeAdicionarAoPdi) && (
               <div className={styles.acoesGestao}>
                 {podeGerenciar && (
                   <>
@@ -570,6 +575,18 @@ export function TrilhaDetalhePage() {
                     onClick={() => abrirDialogo('atribuicao')}
                   >
                     Atribuir colaboradores
+                  </button>
+                )}
+                {podeAdicionarAoPdi && trilha.ativo && (
+                  <button
+                    type="button"
+                    className={styles.botaoSecundario}
+                    onClick={() => {
+                      setAviso(null)
+                      setAdicionandoAoPdi(true)
+                    }}
+                  >
+                    Adicionar ao PDI
                   </button>
                 )}
               </div>
@@ -759,6 +776,17 @@ export function TrilhaDetalhePage() {
               fieldErrors={fieldErrors}
               onAtribuir={(request) => void atribuir(trilha, request)}
               onFechar={fecharDialogo}
+            />
+          )}
+
+          {adicionandoAoPdi && (
+            <AdicionarAoPdi
+              trilha={trilha}
+              onAdicionada={(mensagem) => {
+                setAdicionandoAoPdi(false)
+                setAviso(mensagem)
+              }}
+              onFechar={() => setAdicionandoAoPdi(false)}
             />
           )}
         </>
