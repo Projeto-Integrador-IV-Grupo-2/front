@@ -18,7 +18,6 @@ import {
 import { TrilhaFormulario } from '../components/trilhas/TrilhaFormulario.tsx'
 import { usePermissao } from '../hooks/usePermissao.ts'
 import { caminhoEstudo, ROTAS } from '../routes/paths.ts'
-import { ROTAS } from '../routes/paths.ts'
 import { PERFIS_GESTAO_PDI } from '../routes/permissions.ts'
 import {
   PERFIS_ACOMPANHAMENTO,

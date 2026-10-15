@@ -237,6 +237,7 @@ export function criarCategoria(overrides: Partial<Categoria> = {}): Categoria {
     ativo: true,
     criadoEm: '2026-09-01T12:00:00Z',
     atualizadoEm: '2026-09-01T12:00:00Z',
+    ...overrides,
   }
 }
 
@@ -272,6 +273,7 @@ export function criarConteudo(overrides: Partial<Conteudo> = {}): Conteudo {
     criadoEm: '2026-09-01T12:00:00Z',
     atualizadoEm: '2026-09-01T12:00:00Z',
     publicadoEm: '2026-09-02T12:00:00Z',
+    ...overrides,
   }
 }
 
@@ -313,8 +315,10 @@ export function criarEtapa(overrides: Partial<Etapa> = {}): Etapa {
       linkUrl: null,
     },
     concluida: false,
+    ...overrides,
   }
 }
+
 /** Competência dentro do PDI (`PdiItemResponse`), com uma trilha ligada. */
 export function criarPdiItem(overrides: Partial<PdiItem> = {}): PdiItem {
   return {

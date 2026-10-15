@@ -26,6 +26,8 @@ export function caminhoTrilha(id: string): string {
 /** Tela de estudo de uma trilha: player do Vimeo e conclusão das etapas. */
 export function caminhoEstudo(id: string): string {
   return ROTAS.trilhaEstudo.replace(':id', encodeURIComponent(id))
+}
+
 /** Caminho do editor de um PDI específico. */
 export function caminhoPdi(id: string): string {
   return ROTAS.pdiDetalhe.replace(':id', encodeURIComponent(id))
