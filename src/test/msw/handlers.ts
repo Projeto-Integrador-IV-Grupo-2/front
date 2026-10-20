@@ -4,6 +4,8 @@ import {
   criarAtribuicao,
   criarColaboradorAcompanhamento,
   criarCompetencia,
+  criarDashboardColaborador,
+  criarDashboardGestao,
   criarPagina,
   criarPaginaTrilhas,
   criarPaginaUsuarios,
@@ -35,6 +37,14 @@ export const handlers = [
   ),
 
   http.get('*/api/auth/me', () => HttpResponse.json(criarUsuario())),
+
+  http.get('*/api/dashboard/colaborador', () =>
+    HttpResponse.json(criarDashboardColaborador()),
+  ),
+
+  http.get('*/api/dashboard/gestao', () =>
+    HttpResponse.json(criarDashboardGestao()),
+  ),
 
   http.get('*/api/usuarios', () => HttpResponse.json(criarPaginaUsuarios())),
 
