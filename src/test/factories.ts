@@ -375,7 +375,6 @@ export function criarPdiDetalhe(
   }
 }
 
-
 /** Resposta da API para o dashboard pessoal do colaborador. */
 export function criarDashboardColaborador(
   overrides: Partial<DashboardColaboradorResponse> = {},

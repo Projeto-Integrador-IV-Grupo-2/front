@@ -1,8 +1,6 @@
 import { useAuth } from '../hooks/useAuth.ts'
 import { usePermissao } from '../hooks/usePermissao.ts'
-import {
-  DashboardColaborador,
-} from '../components/dashboard/DashboardColaborador.tsx'
+import { DashboardColaborador } from '../components/dashboard/DashboardColaborador.tsx'
 import { DashboardGestao } from '../components/dashboard/DashboardGestao.tsx'
 import styles from './DashboardPage.module.css'
 

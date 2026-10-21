@@ -20,9 +20,7 @@ export interface ProximoPrazoDashboard {
 }
 
 export type TipoInteracaoHistorico =
-  | 'TRILHA_ACESSADA'
-  | 'TRILHA_INICIADA'
-  | 'TRILHA_CONCLUIDA'
+  'TRILHA_ACESSADA' | 'TRILHA_INICIADA' | 'TRILHA_CONCLUIDA'
 
 /** Registro público do histórico, conforme DTO da API. */
 export interface HistoricoInteracaoDashboard {

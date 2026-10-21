@@ -1,8 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useDashboardRequest } from '../../hooks/useDashboardRequest.ts'
-import {
-  carregarDashboardColaborador,
-} from '../../services/dashboardService.ts'
+import { carregarDashboardColaborador } from '../../services/dashboardService.ts'
 import type {
   DashboardColaboradorResponse,
   HistoricoInteracaoDashboard,
@@ -265,32 +263,33 @@ function resumoValido(valor: unknown): valor is ResumoStatusDashboard {
   return somaStatus === total
 }
 
-function listaDePrazosValida(
-  valor: unknown,
-): valor is ProximoPrazoDashboard[] {
-  return Array.isArray(valor) && valor.every((item: unknown) => {
-    if (!item || typeof item !== 'object') return false
-    const prazo = item as Record<string, unknown>
-    return (
-      typeof prazo.atribuicaoId === 'string' &&
-      prazo.atribuicaoId.trim().length > 0 &&
-      typeof prazo.trilhaId === 'string' &&
-      prazo.trilhaId.trim().length > 0 &&
-      typeof prazo.trilhaNome === 'string' &&
-      prazo.trilhaNome.trim().length > 0 &&
-      typeof prazo.prazo === 'string' &&
-      prazo.prazo.trim().length > 0 &&
-      typeof prazo.percentual === 'number' &&
-      Number.isInteger(prazo.percentual) &&
-      prazo.percentual >= 0 &&
-      prazo.percentual <= 100 &&
-      typeof prazo.status === 'string' &&
-      Object.prototype.hasOwnProperty.call(
-        ROTULOS_STATUS_PROGRESSO,
-        prazo.status,
+function listaDePrazosValida(valor: unknown): valor is ProximoPrazoDashboard[] {
+  return (
+    Array.isArray(valor) &&
+    valor.every((item: unknown) => {
+      if (!item || typeof item !== 'object') return false
+      const prazo = item as Record<string, unknown>
+      return (
+        typeof prazo.atribuicaoId === 'string' &&
+        prazo.atribuicaoId.trim().length > 0 &&
+        typeof prazo.trilhaId === 'string' &&
+        prazo.trilhaId.trim().length > 0 &&
+        typeof prazo.trilhaNome === 'string' &&
+        prazo.trilhaNome.trim().length > 0 &&
+        typeof prazo.prazo === 'string' &&
+        prazo.prazo.trim().length > 0 &&
+        typeof prazo.percentual === 'number' &&
+        Number.isInteger(prazo.percentual) &&
+        prazo.percentual >= 0 &&
+        prazo.percentual <= 100 &&
+        typeof prazo.status === 'string' &&
+        Object.prototype.hasOwnProperty.call(
+          ROTULOS_STATUS_PROGRESSO,
+          prazo.status,
+        )
       )
-    )
-  })
+    })
+  )
 }
 
 function listaDeAtividadesValida(
@@ -318,8 +317,7 @@ function listaDeAtividadesValida(
         Boolean(atividade.usuario) &&
         typeof atividade.usuario === 'object' &&
         !Array.isArray(atividade.usuario) &&
-        typeof (atividade.usuario as Record<string, unknown>).id ===
-          'string' &&
+        typeof (atividade.usuario as Record<string, unknown>).id === 'string' &&
         typeof (atividade.usuario as Record<string, unknown>).nomeCompleto ===
           'string' &&
         typeof (atividade.usuario as Record<string, unknown>).email === 'string'

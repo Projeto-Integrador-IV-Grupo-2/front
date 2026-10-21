@@ -12,39 +12,36 @@ import { renderizarComProvedores } from '../test/renderWithProviders.tsx'
 const rotaDashboard = '/dashboard'
 
 describe('DashboardPage', () => {
-  it(
-    'mostra o dashboard pessoal e não solicita o painel de gestão',
-    async () => {
-      const dashboard = criarDashboardColaborador()
-      const requisicaoGestao = vi.fn()
-      server.use(
-        http.get('*/api/dashboard/colaborador', () =>
-          HttpResponse.json(dashboard),
-        ),
-        http.get('*/api/dashboard/gestao', () => {
-          requisicaoGestao()
-          return HttpResponse.json(criarDashboardGestao())
-        }),
-      )
+  it('mostra o dashboard pessoal e não solicita o painel de gestão', async () => {
+    const dashboard = criarDashboardColaborador()
+    const requisicaoGestao = vi.fn()
+    server.use(
+      http.get('*/api/dashboard/colaborador', () =>
+        HttpResponse.json(dashboard),
+      ),
+      http.get('*/api/dashboard/gestao', () => {
+        requisicaoGestao()
+        return HttpResponse.json(criarDashboardGestao())
+      }),
+    )
 
-      renderizarComProvedores({
-        rota: rotaDashboard,
-        usuario: criarUsuario({ papel: 'COLABORADOR' }),
-      })
+    renderizarComProvedores({
+      rota: rotaDashboard,
+      usuario: criarUsuario({ papel: 'COLABORADOR' }),
+    })
 
-      expect(await screen.findByText('66,67%')).toBeInTheDocument()
-      expect(
-        screen.getByRole('heading', { name: 'Suas trilhas' }),
-      ).toBeInTheDocument()
-      expect(screen.getAllByText('Onboarding').length).toBeGreaterThan(0)
-      expect(screen.getByText(/Você iniciou/)).toBeInTheDocument()
-      expect(screen.getByText('Não iniciadas')).toBeInTheDocument()
-      expect(
-        screen.queryByRole('heading', { name: 'Indicadores gerais' }),
-      ).not.toBeInTheDocument()
-      expect(requisicaoGestao).not.toHaveBeenCalled()
-    },
-  )
+    expect(await screen.findByText('66,67%')).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: 'Suas trilhas' }),
+    ).toBeInTheDocument()
+    expect(screen.getAllByText('Onboarding').length).toBeGreaterThan(0)
+    expect(screen.getByText(/Você iniciou/)).toBeInTheDocument()
+    expect(screen.getByText('Não iniciadas')).toBeInTheDocument()
+    expect(
+      screen.queryByRole('heading', { name: 'Indicadores gerais' }),
+    ).not.toBeInTheDocument()
+    expect(requisicaoGestao).not.toHaveBeenCalled()
+  })
 
   it.each(['ADMIN', 'GESTOR'] as const)(
     'mostra o dashboard de gestão para %s com os valores da API',
@@ -56,9 +53,7 @@ describe('DashboardPage', () => {
           requisicaoColaborador()
           return HttpResponse.json(criarDashboardColaborador())
         }),
-        http.get('*/api/dashboard/gestao', () =>
-          HttpResponse.json(dashboard),
-        ),
+        http.get('*/api/dashboard/gestao', () => HttpResponse.json(dashboard)),
       )
 
       renderizarComProvedores({
@@ -125,31 +120,28 @@ describe('DashboardPage', () => {
     expect(screen.getByText(/Acompanhe os indicadores/)).toBeInTheDocument()
   })
 
-  it(
-    'isola erro de um bloco de gestão e mantém os outros indicadores',
-    async () => {
-      server.use(
-        http.get('*/api/dashboard/gestao', () =>
-          HttpResponse.json({
-            ...criarDashboardGestao(),
-            areasComMaisAtraso: 'resposta-invalida',
-          }),
-        ),
-      )
+  it('isola erro de um bloco de gestão e mantém os outros indicadores', async () => {
+    server.use(
+      http.get('*/api/dashboard/gestao', () =>
+        HttpResponse.json({
+          ...criarDashboardGestao(),
+          areasComMaisAtraso: 'resposta-invalida',
+        }),
+      ),
+    )
 
-      renderizarComProvedores({
-        rota: rotaDashboard,
-        usuario: criarUsuario({ papel: 'ADMIN' }),
-      })
+    renderizarComProvedores({
+      rota: rotaDashboard,
+      usuario: criarUsuario({ papel: 'ADMIN' }),
+    })
 
-      expect(
-        await screen.findByText('A API retornou uma lista de áreas inválida.'),
-      ).toBeInTheDocument()
-      expect(screen.getByText('Trilhas ativas')).toBeInTheDocument()
-      expect(screen.getAllByText('12').length).toBeGreaterThan(0)
-      expect(screen.getByText('18 inícios')).toBeInTheDocument()
-    },
-  )
+    expect(
+      await screen.findByText('A API retornou uma lista de áreas inválida.'),
+    ).toBeInTheDocument()
+    expect(screen.getByText('Trilhas ativas')).toBeInTheDocument()
+    expect(screen.getAllByText('12').length).toBeGreaterThan(0)
+    expect(screen.getByText('18 inícios')).toBeInTheDocument()
+  })
 
   it('exibe estados vazios nas listas do dashboard de gestão', async () => {
     server.use(
@@ -212,42 +204,39 @@ describe('DashboardPage', () => {
     ).toBeInTheDocument()
   })
 
-  it(
-    'exibe estado vazio quando o colaborador ainda não tem dados de trilhas',
-    async () => {
-      server.use(
-        http.get('*/api/dashboard/colaborador', () =>
-          HttpResponse.json(
-            criarDashboardColaborador({
-              trilhasPorStatus: {
-                total: 0,
-                naoIniciadas: 0,
-                emAndamento: 0,
-                concluidas: 0,
-                atrasadas: 0,
-              },
-              proximosPrazos: [],
-              ultimasAtividades: [],
-              percentualMedio: 0,
-            }),
-          ),
+  it('exibe estado vazio quando o colaborador ainda não tem dados de trilhas', async () => {
+    server.use(
+      http.get('*/api/dashboard/colaborador', () =>
+        HttpResponse.json(
+          criarDashboardColaborador({
+            trilhasPorStatus: {
+              total: 0,
+              naoIniciadas: 0,
+              emAndamento: 0,
+              concluidas: 0,
+              atrasadas: 0,
+            },
+            proximosPrazos: [],
+            ultimasAtividades: [],
+            percentualMedio: 0,
+          }),
         ),
-      )
+      ),
+    )
 
-      renderizarComProvedores({
-        rota: rotaDashboard,
-        usuario: criarUsuario({ papel: 'COLABORADOR' }),
-      })
+    renderizarComProvedores({
+      rota: rotaDashboard,
+      usuario: criarUsuario({ papel: 'COLABORADOR' }),
+    })
 
-      expect(
-        await screen.findByText('Você ainda não tem trilhas atribuídas.'),
-      ).toBeInTheDocument()
-      expect(
-        screen.getByText('Você não tem prazos nos próximos sete dias.'),
-      ).toBeInTheDocument()
-      expect(
-        screen.getByText('Suas interações com as trilhas aparecerão aqui.'),
-      ).toBeInTheDocument()
-    },
-  )
+    expect(
+      await screen.findByText('Você ainda não tem trilhas atribuídas.'),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('Você não tem prazos nos próximos sete dias.'),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('Suas interações com as trilhas aparecerão aqui.'),
+    ).toBeInTheDocument()
+  })
 })

@@ -261,9 +261,7 @@ function GraficoLista({
   )
 }
 
-function resumoDeStatusValido(
-  valor: unknown,
-): valor is ResumoStatusDashboard {
+function resumoDeStatusValido(valor: unknown): valor is ResumoStatusDashboard {
   if (!valor || typeof valor !== 'object') return false
   const resumo = valor as Record<string, unknown>
   const campos = [
