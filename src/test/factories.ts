@@ -14,6 +14,10 @@ import type {
   TrilhaResumo,
 } from '../types/trilha.ts'
 import type { User } from '../types/user.ts'
+import type {
+  DashboardColaboradorResponse,
+  DashboardGestaoResponse,
+} from '../types/dashboard.ts'
 import type { Pagina, Usuario as UsuarioGestao } from '../types/usuario.ts'
 
 const TENANT_PADRAO = '11111111-1111-1111-1111-111111111111'
@@ -367,6 +371,82 @@ export function criarPdiDetalhe(
   return {
     ...criarPdiResumo(),
     itens: [criarPdiItem()],
+    ...overrides,
+  }
+}
+
+/** Resposta da API para o dashboard pessoal do colaborador. */
+export function criarDashboardColaborador(
+  overrides: Partial<DashboardColaboradorResponse> = {},
+): DashboardColaboradorResponse {
+  return {
+    trilhasPorStatus: {
+      total: 3,
+      naoIniciadas: 1,
+      emAndamento: 1,
+      concluidas: 1,
+      atrasadas: 0,
+    },
+    proximosPrazos: [
+      {
+        atribuicaoId: '77777777-7777-7777-7777-777777777777',
+        trilhaId: '44444444-4444-4444-4444-444444444444',
+        trilhaNome: 'Onboarding',
+        prazo: '2026-10-22',
+        status: 'EM_ANDAMENTO',
+        percentual: 50,
+      },
+    ],
+    percentualMedio: 66.67,
+    ultimasAtividades: [
+      {
+        id: '88888888-8888-8888-8888-888888888888',
+        tipo: 'TRILHA_INICIADA',
+        detalhes: {
+          trilhaId: '44444444-4444-4444-4444-444444444444',
+          trilhaNome: 'Onboarding',
+          origem: 'progresso alterado para EM_ANDAMENTO',
+        },
+        usuario: {
+          id: '00000000-0000-0000-0000-000000000001',
+          nomeCompleto: 'Ana Souza',
+          email: 'ana@nexo.com',
+        },
+        criadoEm: '2026-10-19T14:30:00Z',
+      },
+    ],
+    ...overrides,
+  }
+}
+
+/** Resposta da API para o dashboard de gestão. */
+export function criarDashboardGestao(
+  overrides: Partial<DashboardGestaoResponse> = {},
+): DashboardGestaoResponse {
+  return {
+    trilhasAtivas: 12,
+    atribuicoesPorStatus: {
+      total: 40,
+      naoIniciadas: 8,
+      emAndamento: 14,
+      concluidas: 12,
+      atrasadas: 6,
+    },
+    taxaConclusao: 30,
+    areasComMaisAtraso: [
+      {
+        areaId: '33333333-3333-3333-3333-333333333333',
+        areaNome: 'Tecnologia',
+        atribuicoesAtrasadas: 4,
+      },
+    ],
+    trilhasMaisIniciadas: [
+      {
+        trilhaId: '44444444-4444-4444-4444-444444444444',
+        trilhaNome: 'Onboarding',
+        totalIniciadas: 18,
+      },
+    ],
     ...overrides,
   }
 }
