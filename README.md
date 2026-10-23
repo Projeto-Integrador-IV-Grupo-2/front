@@ -197,18 +197,39 @@ erro normalizado (`message`, `status`, `fieldErrors`).
 
 ---
 
+## Conhecimento (issue #48)
+
+`/conhecimento` é a base de documentos da empresa, com item próprio no menu
+para todos os perfis. Usa os mesmos `conteudoService` e `categoriaService`; o
+documento é um conteúdo do tipo `DOCUMENTO` (back #54).
+
+- A tela abre nos documentos: `criarFiltroInicial()` já vem com o tipo
+  `DOCUMENTO`, e "Limpar filtros" volta para ele.
+- Busca por título (sai só quando a pessoa para de digitar, com
+  `useValorAdiado`) e filtros de categoria, área e tipo, combinados entre si.
+  `ADMIN` e `GESTOR` também filtram por status; o colaborador não vê esse
+  filtro e a tela nem envia status (a API já devolve só os publicados).
+- Qualquer mudança de filtro volta para a página 1.
+- Lista com título, categoria, área, tipo e data de atualização: tabela no
+  desktop, cartões no celular.
+- Lista vazia tem mensagem própria (diferente quando há filtro), separada do
+  erro, que oferece "Tentar novamente".
+
+---
+
 ## Rotas e permissões
 
-| Rota                   | Quem acessa                                              |
-| ---------------------- | -------------------------------------------------------- |
-| `/login`               | qualquer visitante                                       |
-| `/dashboard`           | qualquer usuário autenticado                             |
-| `/trilhas`             | qualquer usuário autenticado                             |
-| `/trilhas/:id`         | qualquer usuário autenticado                             |
-| `/trilhas/:id/estudar` | qualquer usuário autenticado                             |
-| `/conteudos`           | qualquer usuário autenticado (ações só `ADMIN`/`GESTOR`) |
-| `/categorias`          | qualquer usuário autenticado (ações só `ADMIN`/`GESTOR`) |
-| `/usuarios`            | apenas `ADMIN`                                           |
+| Rota                   | Quem acessa                                               |
+| ---------------------- | --------------------------------------------------------- |
+| `/login`               | qualquer visitante                                        |
+| `/dashboard`           | qualquer usuário autenticado                              |
+| `/trilhas`             | qualquer usuário autenticado                              |
+| `/trilhas/:id`         | qualquer usuário autenticado                              |
+| `/trilhas/:id/estudar` | qualquer usuário autenticado                              |
+| `/conteudos`           | qualquer usuário autenticado (ações só `ADMIN`/`GESTOR`)  |
+| `/categorias`          | qualquer usuário autenticado (ações só `ADMIN`/`GESTOR`)  |
+| `/conhecimento`        | qualquer usuário autenticado (status só `ADMIN`/`GESTOR`) |
+| `/usuarios`            | apenas `ADMIN`                                            |
 
 `/` leva ao dashboard, que por sua vez exige sessão.
 
