@@ -33,6 +33,9 @@ export const ITENS_MENU: ItemMenu[] = [
   // editar e publicar são ações internas restritas (ver PERFIS_GESTAO_CONTEUDO).
   { to: ROTAS.conteudos, rotulo: 'Conteúdos' },
   { to: ROTAS.categorias, rotulo: 'Categorias' },
+  // Base de documentos da empresa: todos os perfis entram (colaborador vê só
+  // os publicados — a API filtra).
+  { to: ROTAS.conhecimento, rotulo: 'Conhecimento' },
   {
     to: ROTAS.acompanhamento,
     rotulo: 'Acompanhamento',
