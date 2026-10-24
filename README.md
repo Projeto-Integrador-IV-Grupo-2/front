@@ -61,10 +61,11 @@ Toda variável lida pelo Vite no código do cliente precisa começar com
 `VITE_`. O `.env` **não é versionado** (ver `.gitignore`) — cada
 integrante mantém o seu, a partir do `.env.example`.
 
-| Variável            | Obrigatória | Descrição                                                               |
-| ------------------- | ----------- | ----------------------------------------------------------------------- |
-| `VITE_API_URL`      | Sim         | URL base da API (sem barra no final)                                    |
-| `VITE_TRILHAS_MOCK` | Não         | `true` responde as rotas de trilhas com um mock em memória (ver abaixo) |
+| Variável               | Obrigatória | Descrição                                                                                   |
+| ---------------------- | ----------- | ------------------------------------------------------------------------------------------- |
+| `VITE_API_URL`         | Sim         | URL base da API (sem barra no final)                                                        |
+| `VITE_TRILHAS_MOCK`    | Não         | `true` responde as rotas de trilhas com um mock em memória (ver abaixo)                     |
+| `VITE_ASSISTENTE_MOCK` | Não         | Mock do assistente de IA, **ligado por padrão**; `false` usa a API (ver "Assistente de IA") |
 
 A URL nunca fica fixa no código: o cliente Axios (`src/services/api.ts`)
 sempre lê `import.meta.env.VITE_API_URL`.
@@ -197,6 +198,45 @@ erro normalizado (`message`, `status`, `fieldErrors`).
 
 ---
 
+## Assistente de IA e histórico (Task 10)
+
+| Tela                    | O que faz                                                                                        |
+| ----------------------- | ------------------------------------------------------------------------------------------------ |
+| `/assistente`           | Conversa nova: atalhos por tema, sugestões e campo de pergunta                                   |
+| `/assistente/:sessaoId` | Conversa aberta. Fica na URL, então o link e o F5 funcionam                                      |
+| `/historico`            | Atividades do usuário agrupadas por dia, com busca (**estático**, ainda sem endpoint no backend) |
+
+O painel "Conversas" (ao lado da conversa; no celular, uma gaveta) lista as
+conversas da mais recente para a mais antiga, carrega mais ao rolar ou pelo
+botão, e permite abrir, renomear e apagar (com confirmação). Apagar a conversa
+aberta leva a uma conversa nova; link de conversa de outro usuário (a API
+responde 404) mostra "Conversa não encontrada".
+
+Como as peças conversam:
+
+- `assistenteService` é o único que chama a API (`/api/assistente/sessoes`,
+  `.../{id}`, `.../{id}/mensagens`), sempre pelo cliente `api`.
+- `AssistenteContext` é a fonte única do estado da conversa (mensagens,
+  envio, conversa aberta).
+- O contexto expõe um canal de eventos (`contexts/eventosAssistente.ts`,
+  Observer): ao enviar uma pergunta, a conversa publica `sessao-atualizada` e
+  o painel, que assina o canal, leva aquela conversa para o topo. A área de
+  conversa não conhece o painel.
+
+### Mock do assistente
+
+O backend ainda não tem os endpoints de sessões e mensagens, então o
+`assistenteService` responde pelo mock (`src/services/mocks/assistenteMock.ts`)
+enquanto `VITE_ASSISTENTE_MOCK` não for `false`. Ele segue o mesmo molde
+do mock das trilhas (um _adapter_ do Axios), com respostas fixas por
+palavra-chave copiadas do protótipo. Os dados ficam no `localStorage`
+(chave `nexo:assistente-mock`), para o F5 manter a conversa; apague essa
+chave para voltar às conversas iniciais. Para ver o "conversa não encontrada",
+abra `/assistente/c9000000-0000-4000-8000-000000000001` (uma conversa "de
+outro usuário" no mock).
+
+---
+
 ## Rotas e permissões
 
 | Rota                   | Quem acessa                                              |
@@ -208,6 +248,8 @@ erro normalizado (`message`, `status`, `fieldErrors`).
 | `/trilhas/:id/estudar` | qualquer usuário autenticado                             |
 | `/conteudos`           | qualquer usuário autenticado (ações só `ADMIN`/`GESTOR`) |
 | `/categorias`          | qualquer usuário autenticado (ações só `ADMIN`/`GESTOR`) |
+| `/assistente[/:id]`    | qualquer usuário autenticado (só as próprias conversas)  |
+| `/historico`           | qualquer usuário autenticado                             |
 | `/usuarios`            | apenas `ADMIN`                                           |
 
 `/` leva ao dashboard, que por sua vez exige sessão.

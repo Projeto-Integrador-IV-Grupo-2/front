@@ -16,7 +16,19 @@ export const ROTAS = {
   acompanhamento: '/acompanhamento',
   conteudos: '/conteudos',
   categorias: '/categorias',
+  assistente: '/assistente',
+  // Segmento opcional: abrir outra conversa troca só o parâmetro, e a tela
+  // (com o histórico já carregado) continua montada.
+  assistenteSessao: '/assistente/:sessaoId?',
+  historico: '/historico',
 } as const
+
+/** Conversa com o assistente; sem id, uma conversa nova. */
+export function caminhoAssistente(sessaoId?: string | null): string {
+  return sessaoId
+    ? `${ROTAS.assistente}/${encodeURIComponent(sessaoId)}`
+    : ROTAS.assistente
+}
 
 /** Caminho do detalhe de uma trilha específica. */
 export function caminhoTrilha(id: string): string {

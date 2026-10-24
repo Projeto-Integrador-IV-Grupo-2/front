@@ -38,6 +38,10 @@ export const ITENS_MENU: ItemMenu[] = [
     rotulo: 'Acompanhamento',
     perfis: PERFIS_ACOMPANHAMENTO,
   },
+  // O assistente e o histórico valem para qualquer autenticado: cada um vê
+  // só as próprias conversas e atividades.
+  { to: ROTAS.assistente, rotulo: 'IA' },
+  { to: ROTAS.historico, rotulo: 'Histórico' },
 ]
 
 /**

@@ -7,9 +7,11 @@ import { ProtectedRoute } from '../components/auth/ProtectedRoute.tsx'
 import { AppLayout } from '../components/layout/AppLayout.tsx'
 import { AcompanhamentoPage } from '../pages/AcompanhamentoPage.tsx'
 import { AreasPage } from '../pages/AreasPage.tsx'
+import { AssistentePage } from '../pages/AssistentePage.tsx'
 import { CategoriasPage } from '../pages/CategoriasPage.tsx'
 import { ConteudosPage } from '../pages/ConteudosPage.tsx'
 import { DashboardPage } from '../pages/DashboardPage.tsx'
+import { HistoricoPage } from '../pages/HistoricoPage.tsx'
 import { LoginPage } from '../pages/LoginPage.tsx'
 import { NotFoundPage } from '../pages/NotFoundPage.tsx'
 import { PdiEditorPage } from '../pages/PdiEditorPage.tsx'
@@ -46,6 +48,8 @@ export const routes: RouteObject[] = [
           { path: ROTAS.areas, element: <AreasPage /> },
           { path: ROTAS.conteudos, element: <ConteudosPage /> },
           { path: ROTAS.categorias, element: <CategoriasPage /> },
+          { path: ROTAS.assistenteSessao, element: <AssistentePage /> },
+          { path: ROTAS.historico, element: <HistoricoPage /> },
           {
             // Área administrativa: o perfil exigido fica na rota, não na página.
             element: <ProtectedRoute perfis={['ADMIN']} />,

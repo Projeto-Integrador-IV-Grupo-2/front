@@ -3,6 +3,10 @@ import type {
   ColaboradorAcompanhamento,
 } from '../types/atribuicao.ts'
 import type { Area } from '../types/area.ts'
+import type {
+  MensagemAssistente,
+  SessaoAssistente,
+} from '../types/assistente.ts'
 import type { Categoria, Conteudo } from '../types/conteudo.ts'
 import type { Etapa } from '../types/etapa.ts'
 import type { Competencia } from '../types/competencia.ts'
@@ -367,6 +371,32 @@ export function criarPdiDetalhe(
   return {
     ...criarPdiResumo(),
     itens: [criarPdiItem()],
+    ...overrides,
+  }
+}
+
+/** Conversa com o assistente, como vem de `GET /api/assistente/sessoes`. */
+export function criarSessaoAssistente(
+  overrides: Partial<SessaoAssistente> = {},
+): SessaoAssistente {
+  return {
+    id: 'c0000000-0000-4000-8000-000000000001',
+    titulo: 'Onde fica a política de reembolso?',
+    criadoEm: '2026-10-20T13:00:00Z',
+    atualizadoEm: '2026-10-20T13:00:04Z',
+    ...overrides,
+  }
+}
+
+export function criarMensagemAssistente(
+  overrides: Partial<MensagemAssistente> = {},
+): MensagemAssistente {
+  return {
+    id: 'm0000000-0000-4000-8000-000000000001',
+    papel: 'ASSISTENTE',
+    conteudo: 'Reembolsos seguem a Política de Reembolso v3.',
+    fontes: ['Política de Reembolso v3 · Atendimento'],
+    criadoEm: '2026-10-20T13:00:04Z',
     ...overrides,
   }
 }
