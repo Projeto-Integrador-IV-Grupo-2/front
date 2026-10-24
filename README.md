@@ -339,3 +339,34 @@ instalador em [nodejs.org](https://nodejs.org/) ou use um gerenciador de
 versões (`nvm-windows`, `fnm`, etc.), depois rode `npm install` novamente.
 
 </details>
+
+---
+
+## Visão geral — dashboards (issue de Dashboard)
+
+A rota `/dashboard` escolhe o painel por meio de `usePermissao`, usando a
+mesma política central de `src/routes/permissions.ts`:
+
+- `COLABORADOR`: `GET /api/dashboard/colaborador`, com total e status das
+  próprias trilhas, percentual médio, prazos próximos e últimas interações.
+- `ADMIN` e `GESTOR`: `GET /api/dashboard/gestao`, com trilhas ativas,
+  atribuições por status, taxa de conclusão, áreas com mais atraso e trilhas
+  mais iniciadas.
+
+Os contratos TypeScript ficam em `src/types/dashboard.ts`, e as chamadas e a
+normalização dos erros ficam em `src/services/dashboardService.ts`. Os
+componentes não acessam Axios diretamente. Cada bloco representa seu estado de
+carregamento, erro ou vazio e trata separadamente campos inválidos para que um
+bloco incompatível não desmonte os demais. Como a API entrega todos os dados de
+cada painel em uma resposta única, uma falha HTTP dessa chamada é compartilhada
+pelos blocos desse mesmo painel.
+
+Os gráficos usam barras CSS, mostram os valores numéricos e expõem a descrição
+para leitores de tela. Os estilos são CSS Modules e usam os tokens de cor da
+aplicação; o tema escuro acompanha a preferência do sistema operacional.
+
+Os testes Vitest da página usam MSW para simular os dois endpoints e cobrem
+`COLABORADOR`, `GESTOR`, `ADMIN`, a seleção exclusiva do endpoint de cada perfil,
+dados vazios, erros HTTP 403/500 e erro isolado de um bloco. Execute
+`npm test -- src/pages/DashboardPage.test.tsx` para rodar esse conjunto e
+`npm run build` para validar TypeScript e o bundle de produção.
