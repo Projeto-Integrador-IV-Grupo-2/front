@@ -14,6 +14,8 @@ import styles from './TrilhaFormulario.module.css'
 interface TrilhaFormularioProps {
   /** Trilha em edição. `null` (ou ausente) abre o diálogo de cadastro. */
   trilha?: TrilhaDetalhe | null
+  /** No cadastro, campos já preenchidos (ex.: rascunho sugerido pela IA). */
+  rascunho?: CriarTrilhaRequest | null
   areas: RecursoResumo[]
   /** As áreas não carregaram: o cadastro segue, só sem escolher área. */
   areasIndisponiveis: boolean
@@ -37,8 +39,20 @@ interface Campos {
   objetivos: string
 }
 
-/** Campos a partir da trilha em edição; vazios no cadastro. */
-function camposIniciais(trilha: TrilhaDetalhe | null): Campos {
+/** Campos a partir da trilha em edição, do rascunho ou vazios no cadastro. */
+function camposIniciais(
+  trilha: TrilhaDetalhe | null,
+  rascunho: CriarTrilhaRequest | null,
+): Campos {
+  if (!trilha && rascunho) {
+    return {
+      nome: rascunho.nome,
+      descricao: rascunho.descricao ?? '',
+      areaId: rascunho.areaId ?? '',
+      prazoDias: rascunho.prazoDias === null ? '' : String(rascunho.prazoDias),
+      objetivos: rascunho.objetivos ?? '',
+    }
+  }
   return {
     nome: trilha?.nome ?? '',
     descricao: trilha?.descricao ?? '',
@@ -89,6 +103,7 @@ function ouNulo(valor: string): string | null {
  */
 export function TrilhaFormulario({
   trilha = null,
+  rascunho = null,
   areas,
   areasIndisponiveis,
   salvando,
@@ -101,7 +116,9 @@ export function TrilhaFormulario({
   const caixaRef = useRef<HTMLDivElement>(null)
   const nomeRef = useRef<HTMLInputElement>(null)
   const editando = trilha !== null
-  const [campos, setCampos] = useState<Campos>(() => camposIniciais(trilha))
+  const [campos, setCampos] = useState<Campos>(() =>
+    camposIniciais(trilha, rascunho),
+  )
   const [errosLocais, setErrosLocais] = useState<ErrosLocais>({})
 
   useEffect(() => {

@@ -50,6 +50,36 @@
   border-color: var(--color-primary);
 }
 
+.botaoIa {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-primary);
+  background: #eef2ff;
+  border: 1px solid #d7defb;
+  border-radius: var(--radius-sm);
+}
+
+.botaoIa:hover {
+  border-color: var(--color-primary);
+}
+
+.contadorIa {
+  min-width: 18px;
+  padding: 0 5px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  color: var(--color-primary-contrast);
+  background: var(--color-primary);
+  border-radius: 999px;
+}
+
 .nova {
   display: inline-flex;
   align-items: center;
@@ -289,6 +319,7 @@
   }
 
   .linkPdi,
+  .botaoIa,
   .nova,
   .mais {
     width: 100%;

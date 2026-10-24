@@ -60,6 +60,19 @@ export const handlers = [
 
   http.get('*/api/trilhas', () => HttpResponse.json(criarPaginaTrilhas())),
 
+  // Antes de /api/trilhas/:id, senão "sugestoes" seria lido como um id.
+  // Padrão sem sugestões: a seção não aparece nos testes que não tratam dela.
+  http.get('*/api/trilhas/sugestoes', () =>
+    HttpResponse.json({ origem: 'IA', sugestoes: [] }),
+  ),
+
+  http.post('*/api/trilhas/sugestoes/ajuda', () =>
+    HttpResponse.json({
+      texto: 'Posso ajudar com as trilhas.',
+      rascunho: null,
+    }),
+  ),
+
   http.get('*/api/trilhas/:id', () => HttpResponse.json(criarTrilhaDetalhe())),
 
   http.post('*/api/trilhas/:id/progresso', () =>

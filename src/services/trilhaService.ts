@@ -6,6 +6,8 @@ import {
   normalizarErro,
   type MensagensPorStatus,
 } from '../utils/errorHandler.ts'
+import { emitirEventoTrilha } from './eventosTrilha.ts'
+import { criarAdaptadorSugestoesMock } from './mocks/sugestoesMock.ts'
 import { adaptadorTrilhasMock } from './mocks/trilhasMock.ts'
 import type { ApiFieldError } from '../types/api.ts'
 import type {
@@ -15,6 +17,8 @@ import type {
   CriarTrilhaRequest,
   ProgressoTrilha,
   ResultadoAtribuicao,
+  RespostaAjudaTrilhas,
+  SugestoesTrilhas,
   TrilhaDetalhe,
   TrilhaFiltro,
   TrilhaPaginacao,
@@ -317,9 +321,46 @@ export async function iniciarTrilha(id: string): Promise<ProgressoTrilha> {
       undefined,
       configBase(),
     )
+    // Observer: quem mostra a trilha como "não iniciada" (as sugestões) se
+    // atualiza sem esta ação saber quem está ouvindo.
+    emitirEventoTrilha({ tipo: 'trilha-iniciada', trilhaId: id })
     return data
   } catch (error) {
     throw toServiceError(error, 'Não foi possível iniciar a trilha.')
+  }
+}
+
+/**
+ * O endpoint de sugestões (Task 11) ainda não existe, então o mock fica ligado
+ * por padrão; `VITE_SUGESTOES_MOCK=false` passa a usar a API. O mock monta as
+ * sugestões a partir do catálogo de verdade (ver `mocks/sugestoesMock.ts`).
+ */
+const adaptadorSugestoesMock = criarAdaptadorSugestoesMock(async () => {
+  const pagina = await listarTrilhas({}, { page: 0, size: 20 })
+  return pagina.content
+})
+
+function configSugestoes(): AxiosRequestConfig {
+  return import.meta.env.VITE_SUGESTOES_MOCK === 'false'
+    ? {}
+    : { adapter: adaptadorSugestoesMock }
+}
+
+/**
+ * Trilhas sugeridas para o usuário autenticado, com o motivo de cada uma.
+ * `origem: 'AREA'` indica que a IA não respondeu e a API recomendou por área.
+ */
+export async function listarSugestoes(config?: {
+  signal?: AbortSignal
+}): Promise<SugestoesTrilhas> {
+  try {
+    const { data } = await api.get<SugestoesTrilhas>('/api/trilhas/sugestoes', {
+      ...configSugestoes(),
+      signal: config?.signal,
+    })
+    return data
+  } catch (error) {
+    throw toServiceError(error, 'Não foi possível carregar as sugestões.')
   }
 }
 
@@ -337,5 +378,24 @@ export async function atualizarProgresso(
     return data
   } catch (error) {
     throw toServiceError(error, 'Não foi possível atualizar o progresso.')
+  }
+}
+
+/**
+ * Pergunta livre à IA sobre trilhas: o que estudar, lacunas da equipe ou um
+ * rascunho de trilha nova (`rascunho` vem preenchido quando faz sentido).
+ */
+export async function pedirAjudaTrilhas(
+  pergunta: string,
+): Promise<RespostaAjudaTrilhas> {
+  try {
+    const { data } = await api.post<RespostaAjudaTrilhas>(
+      '/api/trilhas/sugestoes/ajuda',
+      { pergunta },
+      configSugestoes(),
+    )
+    return data
+  } catch (error) {
+    throw toServiceError(error, 'A IA não conseguiu responder agora.')
   }
 }

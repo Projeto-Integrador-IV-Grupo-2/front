@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { AssistenteTrilhas } from '../components/trilhas/AssistenteTrilhas.tsx'
 import { TrilhaCard } from '../components/trilhas/TrilhaCard.tsx'
 import { TrilhaFormulario } from '../components/trilhas/TrilhaFormulario.tsx'
 import {
   TrilhasFiltros,
   type ValoresFiltroTrilhas,
 } from '../components/trilhas/TrilhasFiltros.tsx'
+import { useSugestoesTrilhas } from '../components/trilhas/useSugestoesTrilhas.ts'
 import { useAuth } from '../hooks/useAuth.ts'
 import { usePermissao } from '../hooks/usePermissao.ts'
 import { useValorAdiado } from '../hooks/useValorAdiado.ts'
@@ -124,6 +126,14 @@ export function TrilhasPage() {
     useState<ResultadoRecomendadas | null>(null)
 
   const [formularioAberto, setFormularioAberto] = useState(false)
+  // Rascunho vindo da IA: abre o cadastro já preenchido.
+  const [rascunho, setRascunho] = useState<CriarTrilhaRequest | null>(null)
+  const [iaAberta, setIaAberta] = useState(false)
+  // Carrega em paralelo à listagem, que nunca espera por ela; o botão da IA
+  // mostra quantas sugestões chegaram.
+  const sugestoes = useSugestoesTrilhas()
+  const totalSugestoes = sugestoes?.sugestoes.length ?? 0
+  const iaRef = useRef<HTMLButtonElement>(null)
   const [salvando, setSalvando] = useState(false)
   const [erroFormulario, setErroFormulario] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<ApiFieldError[]>([])
@@ -310,14 +320,30 @@ export function TrilhasPage() {
   }
 
   function abrirFormulario() {
+    setRascunho(null)
     setErroFormulario(null)
     setFieldErrors([])
     setAviso(null)
     setFormularioAberto(true)
   }
 
+  function fecharIa() {
+    setIaAberta(false)
+    iaRef.current?.focus()
+  }
+
+  function usarRascunho(sugerido: CriarTrilhaRequest) {
+    setIaAberta(false)
+    setErroFormulario(null)
+    setFieldErrors([])
+    setAviso(null)
+    setRascunho(sugerido)
+    setFormularioAberto(true)
+  }
+
   function fecharFormulario() {
     setFormularioAberto(false)
+    setRascunho(null)
     setErroFormulario(null)
     setFieldErrors([])
     // Sem isso o foco cairia no <body> quando o diálogo some.
@@ -369,6 +395,40 @@ export function TrilhasPage() {
           <Link to={ROTAS.pdi} className={styles.linkPdi}>
             {gerePdi ? 'PDI' : 'Meu PDI'}
           </Link>
+          {/* A IA mora ao lado do PDI: sugestões e ajuda para montar trilhas
+              num painel, sem ocupar a tela da listagem. */}
+          <button
+            ref={iaRef}
+            type="button"
+            className={styles.botaoIa}
+            onClick={() => setIaAberta(true)}
+            aria-haspopup="dialog"
+          >
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              aria-hidden="true"
+            >
+              <path d="M12 3v3M12 18v3M3 12h3M18 12h3" />
+              <rect x="7" y="7" width="10" height="10" rx="3" />
+            </svg>
+            IA
+            {totalSugestoes > 0 && (
+              <span className={styles.contadorIa}>
+                {totalSugestoes}
+                <span className="visually-hidden">
+                  {totalSugestoes === 1
+                    ? ' sugestão de trilha'
+                    : ' sugestões de trilha'}
+                </span>
+              </span>
+            )}
+          </button>
           {podeCriar && (
             <button
               ref={novaTrilhaRef}
@@ -522,8 +582,18 @@ export function TrilhasPage() {
         )}
       </div>
 
+      {iaAberta && (
+        <AssistenteTrilhas
+          sugestoes={sugestoes}
+          podeCriar={podeCriar}
+          onUsarRascunho={usarRascunho}
+          onFechar={fecharIa}
+        />
+      )}
+
       {formularioAberto && (
         <TrilhaFormulario
+          rascunho={rascunho}
           areas={areas ?? []}
           areasIndisponiveis={areasIndisponiveis}
           salvando={salvando}
