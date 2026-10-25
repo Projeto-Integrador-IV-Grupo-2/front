@@ -429,4 +429,120 @@ describe('DocumentoDetalhePage', () => {
     expect(await screen.findByText('Documento atualizado.')).toBeInTheDocument()
     expect(categoriaIdSalva).toBe('99999999-9999-9999-9999-999999999999')
   })
+
+  it('envia vários arquivos de uma vez, um por um', async () => {
+    const user = userEvent.setup()
+    const enviados: string[] = []
+    server.use(
+      http.get('*/api/conteudos/:id/arquivos', () => HttpResponse.json([])),
+      http.post('*/api/conteudos/:id/arquivos', async ({ request }) => {
+        const corpo = await request.formData()
+        const enviado = corpo.get('arquivo') as Blob | null
+        enviados.push(String(enviado?.size ?? 0))
+        return HttpResponse.json(
+          criarArquivo({
+            id: `arq-${enviados.length}`,
+            nomeOriginal: `documento-${enviados.length}.pdf`,
+          }),
+          { status: 201 },
+        )
+      }),
+    )
+
+    renderizar(criarUsuario({ papel: 'GESTOR' }))
+
+    await tituloCarregado()
+    await user.upload(screen.getByLabelText('Enviar arquivo'), [
+      arquivoLocal('primeiro.pdf', 'application/pdf', 10),
+      arquivoLocal('segundo.md', 'text/markdown', 20),
+    ])
+    // Os dois entram na fila antes de qualquer envio.
+    expect(screen.getByRole('button', { name: 'Enviar (2)' })).toBeEnabled()
+
+    await user.click(screen.getByRole('button', { name: 'Enviar (2)' }))
+
+    expect(
+      await screen.findByText('"documento-2.pdf" enviado.'),
+    ).toBeInTheDocument()
+    expect(enviados).toEqual(['10', '20'])
+  })
+
+  it('na escolha múltipla, só o arquivo recusado fica de fora', async () => {
+    const user = userEvent.setup({ applyAccept: false })
+    const enviados: number[] = []
+    server.use(
+      http.get('*/api/conteudos/:id/arquivos', () => HttpResponse.json([])),
+      http.post('*/api/conteudos/:id/arquivos', () => {
+        enviados.push(1)
+        return HttpResponse.json(criarArquivo(), { status: 201 })
+      }),
+    )
+
+    renderizar(criarUsuario({ papel: 'ADMIN' }))
+
+    await tituloCarregado()
+    await user.upload(screen.getByLabelText('Enviar arquivo'), [
+      arquivoLocal('bom.pdf', 'application/pdf'),
+      arquivoLocal('planilha.xlsx', 'application/vnd.ms-excel'),
+    ])
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      /planilha\.xlsx.*Formato não aceito/,
+    )
+    // Sobrou um só na fila, então o botão não mostra contagem.
+    await user.click(screen.getByRole('button', { name: 'Enviar' }))
+
+    expect(
+      await screen.findByText('"politica-de-ferias.pdf" enviado.'),
+    ).toBeInTheDocument()
+    expect(enviados).toHaveLength(1)
+  })
+
+  it('falha no meio da fila não reenvia o que já subiu', async () => {
+    const user = userEvent.setup()
+    let tentativas = 0
+    server.use(
+      http.get('*/api/conteudos/:id/arquivos', () => HttpResponse.json([])),
+      http.post('*/api/conteudos/:id/arquivos', async ({ request }) => {
+        tentativas += 1
+        const corpo = await request.formData()
+        const tamanho = (corpo.get('arquivo') as Blob | null)?.size ?? 0
+        // O segundo arquivo (20 bytes) falha só na primeira tentativa.
+        if (tamanho === 20 && tentativas === 2) {
+          return HttpResponse.json(
+            { status: 500, message: 'Falha ao gravar o arquivo' },
+            { status: 500 },
+          )
+        }
+        return HttpResponse.json(
+          criarArquivo({
+            id: `arq-${tentativas}`,
+            nomeOriginal: `n-${tamanho}.pdf`,
+          }),
+          { status: 201 },
+        )
+      }),
+    )
+
+    renderizar(criarUsuario({ papel: 'ADMIN' }))
+
+    await tituloCarregado()
+    await user.upload(screen.getByLabelText('Enviar arquivo'), [
+      arquivoLocal('primeiro.pdf', 'application/pdf', 10),
+      arquivoLocal('segundo.pdf', 'application/pdf', 20),
+    ])
+    await user.click(screen.getByRole('button', { name: 'Enviar (2)' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Falha ao gravar o arquivo',
+    )
+    // O primeiro já subiu: sobra um na fila, sem contagem no botão.
+    await user.click(
+      await screen.findByRole('button', { name: 'Tentar novamente' }),
+    )
+
+    expect(await screen.findByText('"n-20.pdf" enviado.')).toBeInTheDocument()
+    // Três chamadas no total: dois arquivos + a repetição do que falhou.
+    expect(tentativas).toBe(3)
+  })
 })

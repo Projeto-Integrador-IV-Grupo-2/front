@@ -228,15 +228,18 @@ arquivos.
   aqui são arquivos.
 - **Cadastro de categoria em modal**, a partir do próprio formulário; a
   categoria nova já fica selecionada.
-- **Envio com barra de progresso.** `EnvioDeArquivos` se inscreve no
-  `onUploadProgress` do Axios, que o `arquivoService` repassa — a barra é um
-  observador do próprio envio.
+- **Envio com barra de progresso.** `EnvioDeArquivos` aceita vários arquivos
+  de uma vez e envia um por um, em ordem, e se inscreve no `onUploadProgress`
+  do Axios que o `arquivoService` repassa — a barra é um observador do próprio
+  envio. Com mais de um, ela mostra "2 de 3".
 - **Validação antes de enviar.** Tipo (PDF, DOCX, TXT, MD) e tamanho (até
   **10 MB**, o mesmo `DOCUMENTOS_TAMANHO_MAXIMO` da API) são conferidos no
   front, para o usuário não esperar um upload que vai falhar. A API confere de
   novo.
-- **Falha no meio do upload** mostra o erro e deixa o arquivo escolhido no
-  lugar: o botão vira "Tentar novamente", sem refazer a escolha.
+- **Falha no meio do upload** para a fila naquele arquivo e mostra o erro. O
+  botão vira "Tentar novamente": o que já subiu não sobe de novo, e ninguém
+  precisa reescolher o que faltou. Na escolha múltipla, um arquivo recusado
+  sai da fila com o motivo ao lado e os demais seguem.
 - **Download com o nome original**: o service lê o `Content-Disposition` da
   API, e o navegador salva com esse nome — nunca com o id.
 - **Pré-visualização por Factory Method**: `PreviaDeArquivo` escolhe a prévia
