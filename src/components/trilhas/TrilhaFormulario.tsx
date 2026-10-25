@@ -49,7 +49,7 @@ function camposIniciais(
       nome: rascunho.nome,
       descricao: rascunho.descricao ?? '',
       areaId: rascunho.areaId ?? '',
-      prazoDias: rascunho.prazoDias === null ? '' : String(rascunho.prazoDias),
+      prazoDias: rascunho.prazoDias == null ? '' : String(rascunho.prazoDias),
       objetivos: rascunho.objetivos ?? '',
     }
   }

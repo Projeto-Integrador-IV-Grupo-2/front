@@ -348,13 +348,13 @@ function configSugestoes(): AxiosRequestConfig {
 }
 
 /**
- * A ajuda da IA ainda não tem endpoint no backend, então responde pelo mock
- * por padrão; `VITE_AJUDA_IA_MOCK=false` passa a usar a API quando existir.
+ * A ajuda vem da API (`POST /api/trilhas/sugestoes/ajuda`).
+ * `VITE_AJUDA_IA_MOCK=true` responde pelo mock, para trabalhar sem o backend.
  */
 function configAjuda(): AxiosRequestConfig {
-  return import.meta.env.VITE_AJUDA_IA_MOCK === 'false'
-    ? {}
-    : { adapter: adaptadorSugestoesMock }
+  return import.meta.env.VITE_AJUDA_IA_MOCK === 'true'
+    ? { adapter: adaptadorSugestoesMock }
+    : {}
 }
 
 /**
@@ -408,6 +408,10 @@ export async function pedirAjudaTrilhas(
     )
     return data
   } catch (error) {
-    throw toServiceError(error, 'A IA não conseguiu responder agora.')
+    // 503 é a IA fora do ar (sem chave, limite de uso, timeout do provedor).
+    throw toServiceError(error, 'A IA não conseguiu responder agora.', {
+      [HTTP_STATUS.INTERNAL_SERVER_ERROR]:
+        'A IA não está disponível agora. Tente de novo em instantes.',
+    })
   }
 }

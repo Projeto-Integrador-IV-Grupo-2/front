@@ -9,7 +9,7 @@ interface ImportMetaEnv {
    * simulando a IA fora do ar. Sem a variável, usa a API.
    */
   readonly VITE_SUGESTOES_MOCK?: string
-  /** Mock da ajuda da IA nas trilhas: ligado por padrão; `'false'` usa a API. */
+  /** `'true'` responde a ajuda da IA nas trilhas com o mock. Sem a variável, usa a API. */
   readonly VITE_AJUDA_IA_MOCK?: string
 }
 

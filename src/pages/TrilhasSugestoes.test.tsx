@@ -340,7 +340,9 @@ describe('TrilhasPage — IA (sugestões e ajuda)', () => {
     await user.type(campo, 'Ajuda?')
     await user.click(painel.getByRole('button', { name: 'Enviar' }))
 
-    expect(await painel.findByRole('alert')).toBeInTheDocument()
+    expect(await painel.findByRole('alert')).toHaveTextContent(
+      'A IA não está disponível agora. Tente de novo em instantes.',
+    )
     expect(campo).toHaveValue('Ajuda?')
   })
 })

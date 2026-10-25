@@ -66,7 +66,7 @@ integrante mantém o seu, a partir do `.env.example`.
 | `VITE_API_URL`        | Sim         | URL base da API (sem barra no final)                                                                              |
 | `VITE_TRILHAS_MOCK`   | Não         | `true` responde as rotas de trilhas com um mock em memória (ver abaixo)                                           |
 | `VITE_SUGESTOES_MOCK` | Não         | `true` responde as sugestões da IA pelo mock; `area` também, simulando a IA fora do ar. Sem a variável, usa a API |
-| `VITE_AJUDA_IA_MOCK`  | Não         | Mock da conversa de ajuda da IA em Trilhas, **ligado por padrão** (ainda sem endpoint); `false` usa a API         |
+| `VITE_AJUDA_IA_MOCK`  | Não         | `true` responde a conversa de ajuda da IA em Trilhas pelo mock. Sem a variável, usa a API                         |
 
 A URL nunca fica fixa no código: o cliente Axios (`src/services/api.ts`)
 sempre lê `import.meta.env.VITE_API_URL`.
@@ -195,17 +195,20 @@ O contador no botão mostra quantas sugestões há.
   sugestões, que assinam o evento, tiram a trilha da lista. A ação de iniciar
   não conhece quem ouve.
 
-**Sugestões: dados reais.** Vêm de `GET /api/trilhas/sugestoes` (branch
-`feat/sugestao-trilhas-ia` do backend), no formato
+**Sugestões: dados reais.** Vêm de `GET /api/trilhas/sugestoes` (já na `dev`
+do backend), no formato
 `{ geradoPorIa, aviso, sugestoes: [{ id, nome, area, objetivos, motivo }] }`.
 A API tira só as trilhas **concluídas**; as **em andamento** o front tira
 cruzando com "minhas trilhas" (só quando há sugestões). Backend sem o
 endpoint responde erro, e a seção apenas não aparece.
 
-**Ajuda (conversa): ainda simulada.** O backend não tem
-`POST /api/trilhas/sugestoes/ajuda`, então a conversa responde pelo mock
-`services/mocks/sugestoesMock.ts` (por palavra-chave, com rascunhos fixos)
-enquanto `VITE_AJUDA_IA_MOCK` não for `false`.
+**Ajuda (conversa e rascunhos): dados reais.** `POST /api/trilhas/sugestoes/ajuda`
+(branch `feat/trilhas-ajuda-ia` do backend) recebe `{ pergunta }` e devolve
+`{ texto, rascunho }`. O rascunho só vem quando o pedido é para criar uma
+trilha, já dentro dos limites do cadastro, e "Criar com este rascunho" abre o
+formulário preenchido — nada é gravado antes de quem cria salvar. IA fora do
+ar (503) mostra "A IA não está disponível agora" no painel. Sem o backend,
+`VITE_AJUDA_IA_MOCK=true` responde pelo mock.
 
 Para trabalhar sem o backend, `VITE_SUGESTOES_MOCK=true` responde as
 sugestões pelo mesmo mock (montadas a partir do catálogo), e `area` simula

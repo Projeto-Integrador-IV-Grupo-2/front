@@ -262,7 +262,7 @@ function Rascunho({
       <p className={styles.rascunhoRotulo}>Rascunho da trilha</p>
       <p className={styles.rascunhoNome}>{rascunho.nome}</p>
       <dl className={styles.rascunhoCampos}>
-        {rascunho.prazoDias !== null && (
+        {rascunho.prazoDias != null && (
           <>
             <dt>Prazo</dt>
             <dd>{rascunho.prazoDias} dias</dd>
