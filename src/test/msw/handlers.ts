@@ -1,9 +1,11 @@
 import { http, HttpResponse } from 'msw'
 import {
   criarArea,
+  criarArquivo,
   criarAtribuicao,
   criarColaboradorAcompanhamento,
   criarCompetencia,
+  criarConteudo,
   criarDashboardColaborador,
   criarDashboardGestao,
   criarPagina,
@@ -73,6 +75,35 @@ export const handlers = [
   http.get('*/api/trilhas/:id/etapas', () => HttpResponse.json([])),
 
   http.get('*/api/conteudos', () => HttpResponse.json(criarPagina([]))),
+
+  http.get('*/api/conteudos/:id', () => HttpResponse.json(criarConteudo())),
+
+  http.patch('*/api/conteudos/:id/publicar', () =>
+    HttpResponse.json(criarConteudo({ status: 'PUBLICADO' })),
+  ),
+
+  http.patch('*/api/conteudos/:id/despublicar', () =>
+    HttpResponse.json(criarConteudo({ status: 'RASCUNHO' })),
+  ),
+
+  // Arquivos dos documentos (issue #49).
+  http.get('*/api/conteudos/:id/arquivos', () => HttpResponse.json([])),
+
+  http.post('*/api/conteudos/:id/arquivos', () =>
+    HttpResponse.json(criarArquivo(), { status: 201 }),
+  ),
+
+  http.get(
+    '*/api/arquivos/:id/download',
+    () =>
+      new HttpResponse('conteudo-do-arquivo', {
+        headers: {
+          'Content-Type': 'application/pdf',
+          'Content-Disposition':
+            "attachment; filename*=UTF-8''politica-de-ferias.pdf",
+        },
+      }),
+  ),
 
   http.get('*/api/categorias', () => HttpResponse.json(criarPagina([]))),
 

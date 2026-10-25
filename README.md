@@ -215,6 +215,42 @@ documento é um conteúdo do tipo `DOCUMENTO` (back #54).
 - Lista vazia tem mensagem própria (diferente quando há filtro), separada do
   erro, que oferece "Tentar novamente".
 
+### Cadastro, arquivos e visualização (issue #49)
+
+A issue #49 completa esta tela. `ADMIN` e `GESTOR` veem "+ Novo documento" no
+cabeçalho; o título de cada linha leva a `/conhecimento/:id`, onde ficam os
+arquivos.
+
+- **Formulário de documento** (título, descrição, categoria, área, tipo) para
+  criar e editar. É o mesmo `ConteudoFormulario` do catálogo de estudo, com a
+  lista de tipos começando em `DOCUMENTO` (`TIPOS_NO_FORMULARIO`) — por isso
+  `TIPOS_CONTEUDO` segue sem documento: lá o material é vídeo, texto ou link;
+  aqui são arquivos.
+- **Cadastro de categoria em modal**, a partir do próprio formulário; a
+  categoria nova já fica selecionada.
+- **Envio com barra de progresso.** `EnvioDeArquivos` se inscreve no
+  `onUploadProgress` do Axios, que o `arquivoService` repassa — a barra é um
+  observador do próprio envio.
+- **Validação antes de enviar.** Tipo (PDF, DOCX, TXT, MD) e tamanho (até
+  **10 MB**, o mesmo `DOCUMENTOS_TAMANHO_MAXIMO` da API) são conferidos no
+  front, para o usuário não esperar um upload que vai falhar. A API confere de
+  novo.
+- **Falha no meio do upload** mostra o erro e deixa o arquivo escolhido no
+  lugar: o botão vira "Tentar novamente", sem refazer a escolha.
+- **Download com o nome original**: o service lê o `Content-Disposition` da
+  API, e o navegador salva com esse nome — nunca com o id.
+- **Pré-visualização por Factory Method**: `PreviaDeArquivo` escolhe a prévia
+  pelo tipo (PDF no visualizador do navegador, TXT/MD como texto, DOCX sem
+  prévia). Um formato novo é só mais uma entrada no mapa. O texto é
+  renderizado dentro de `pre`, nunca como HTML.
+- **Publicar e despublicar pedem confirmação**, no detalhe do documento.
+- **Observer da listagem**: `conteudoEvents` avisa quem mostra listas sempre
+  que um documento é salvo, publicado, despublicado ou recebe um arquivo —
+  então a listagem recarrega mesmo quando quem mexeu foi a tela de detalhe.
+
+O upload usa o cliente HTTP único (`api`): não existe outra instância do
+Axios, senão o token e o tratamento de 401 teriam de ser repetidos.
+
 ---
 
 ## Rotas e permissões
@@ -229,6 +265,7 @@ documento é um conteúdo do tipo `DOCUMENTO` (back #54).
 | `/conteudos`           | qualquer usuário autenticado (ações só `ADMIN`/`GESTOR`)  |
 | `/categorias`          | qualquer usuário autenticado (ações só `ADMIN`/`GESTOR`)  |
 | `/conhecimento`        | qualquer usuário autenticado (status só `ADMIN`/`GESTOR`) |
+| `/conhecimento/:id`    | qualquer usuário autenticado (ações só `ADMIN`/`GESTOR`)  |
 | `/usuarios`            | apenas `ADMIN`                                            |
 
 `/` leva ao dashboard, que por sua vez exige sessão.

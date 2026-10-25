@@ -162,6 +162,23 @@
   font-size: 0.8125rem;
 }
 
+/* Atalho dentro de um campo (ex.: "+ Nova categoria"): parece link, não botão
+   principal, para não competir com o "Salvar" do formulário. */
+.acaoSecundaria {
+  align-self: flex-start;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.acaoSecundaria:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 @media (max-width: 640px) {
   .modal {
     padding: var(--space-4);
