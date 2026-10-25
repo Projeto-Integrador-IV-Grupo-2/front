@@ -7,23 +7,24 @@ import {
 import { assinarEventosTrilha } from '../eventosTrilha.ts'
 import type {
   CriarTrilhaRequest,
-  OrigemSugestao,
   RespostaAjudaTrilhas,
   SugestoesTrilhas,
   TrilhaResumo,
 } from '../../types/trilha.ts'
 
 /**
- * Sugestões de trilhas de mentira, enquanto o endpoint da Task 11 não existe.
- * É um *adapter* do Axios, como os outros mocks: o `trilhaService` chama
- * `GET /api/trilhas/sugestoes` e `POST /api/trilhas/sugestoes/ajuda` do
- * mesmo jeito e só troca quem responde. A ajuda responde por palavra-chave e,
- * quando a pergunta é para montar uma trilha, devolve um rascunho pronto.
+ * Mock da IA na tela de Trilhas. É um *adapter* do Axios, como os outros
+ * mocks: o `trilhaService` faz as mesmas chamadas e só troca quem responde.
  *
- * As trilhas sugeridas saem do catálogo de verdade (a listagem de trilhas,
- * com ou sem o mock das trilhas), para o clique levar a um detalhe que
- * existe. Só os motivos são fixos. Quando o backend chegar,
- * `VITE_SUGESTOES_MOCK=false` e este arquivo pode ser apagado.
+ * - `POST /api/trilhas/sugestoes/ajuda` (a conversa) ainda não existe no
+ *   backend, então responde por aqui por padrão (`VITE_AJUDA_IA_MOCK`): por
+ *   palavra-chave e, quando a pergunta é para montar uma trilha, com um
+ *   rascunho pronto.
+ * - `GET /api/trilhas/sugestoes` já existe na API; o mock só entra com
+ *   `VITE_SUGESTOES_MOCK=true` (ou `area`), para trabalhar sem o backend.
+ *
+ * As trilhas sugeridas saem do catálogo de verdade (a listagem de trilhas),
+ * para o clique levar a um detalhe que existe. Só os motivos são fixos.
  */
 
 const LATENCIA_MS = import.meta.env.MODE === 'test' ? 0 : 900
@@ -60,23 +61,29 @@ function jaIniciada(trilha: TrilhaResumo): boolean {
 }
 
 /** `VITE_SUGESTOES_MOCK=area` simula a IA fora do ar (recomendação por área). */
-function origemDoMock(): OrigemSugestao {
-  return import.meta.env.VITE_SUGESTOES_MOCK === 'area' ? 'AREA' : 'IA'
+function iaForaDoAr(): boolean {
+  return import.meta.env.VITE_SUGESTOES_MOCK === 'area'
 }
 
+/** Mesmo formato do `SugestoesDeTrilhaResponse` da API. */
 function sugestoesDe(catalogo: TrilhaResumo[]): SugestoesTrilhas {
-  const origem = origemDoMock()
+  const porArea = iaForaDoAr()
   return {
-    origem,
+    geradoPorIa: !porArea,
+    aviso: porArea
+      ? 'Não foi possível gerar as sugestões com a IA agora. Estas são as trilhas da sua área.'
+      : null,
     sugestoes: catalogo
       .filter((trilha) => !jaIniciada(trilha))
       .slice(0, QUANTIDADE)
       .map((trilha, indice) => ({
-        trilha,
-        motivo:
-          origem === 'IA'
-            ? MOTIVOS_IA[indice % MOTIVOS_IA.length]
-            : motivoPorArea(trilha),
+        id: trilha.id,
+        nome: trilha.nome,
+        area: trilha.area,
+        objetivos: trilha.objetivos ?? null,
+        motivo: porArea
+          ? motivoPorArea(trilha)
+          : MOTIVOS_IA[indice % MOTIVOS_IA.length],
       })),
   }
 }
@@ -171,7 +178,7 @@ function responderAjuda(
       rascunho: null,
     }
   }
-  const nomes = disponiveis.map((s) => `"${s.trilha.nome}"`).join(', ')
+  const nomes = disponiveis.map((s) => `"${s.nome}"`).join(', ')
   return {
     texto: `Pelo seu PDI e pelo que você tem estudado, comece por ${nomes}. Elas estão em "Sugeridas para você", aqui no painel — é só clicar para ver o detalhe e iniciar.`,
     rascunho: null,

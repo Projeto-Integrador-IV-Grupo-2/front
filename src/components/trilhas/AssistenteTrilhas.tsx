@@ -124,26 +124,27 @@ export function AssistenteTrilhas({
               </h3>
               <span
                 className={
-                  sugestoes.origem === 'IA'
+                  sugestoes.geradoPorIa
                     ? styles.selo
                     : `${styles.selo} ${styles.seloArea}`
                 }
               >
-                {sugestoes.origem === 'IA'
+                {sugestoes.geradoPorIa
                   ? 'Sugestão da IA'
                   : 'Recomendação por área'}
               </span>
             </div>
-            {sugestoes.origem === 'AREA' && (
+            {!sugestoes.geradoPorIa && (
               <p className={styles.nota}>
-                A IA não está disponível agora; estas são recomendações por
-                área.
+                {sugestoes.aviso ??
+                  'A IA não está disponível agora; estas são recomendações por área.'}
               </p>
             )}
             <ul className={styles.sugestoes} aria-label="Sugeridas para você">
-              {sugestoes.sugestoes.map(({ trilha, motivo }) => (
+              {sugestoes.sugestoes.map(({ motivo, ...trilha }) => (
                 <li key={trilha.id} className={styles.sugestao}>
                   <ul className={styles.cartao}>
+                    {/* A sugestão já tem o formato do resumo da listagem. */}
                     <TrilhaCard trilha={trilha} />
                   </ul>
                   <p className={styles.motivo}>

@@ -331,9 +331,9 @@ export async function iniciarTrilha(id: string): Promise<ProgressoTrilha> {
 }
 
 /**
- * O endpoint de sugestões (Task 11) ainda não existe, então o mock fica ligado
- * por padrão; `VITE_SUGESTOES_MOCK=false` passa a usar a API. O mock monta as
- * sugestões a partir do catálogo de verdade (ver `mocks/sugestoesMock.ts`).
+ * As sugestões vêm da API (`GET /api/trilhas/sugestoes`, Task 11). O mock
+ * (`mocks/sugestoesMock.ts`) fica para trabalhar sem o backend:
+ * `VITE_SUGESTOES_MOCK=true` liga, e `area` simula a IA fora do ar.
  */
 const adaptadorSugestoesMock = criarAdaptadorSugestoesMock(async () => {
   const pagina = await listarTrilhas({}, { page: 0, size: 20 })
@@ -341,14 +341,26 @@ const adaptadorSugestoesMock = criarAdaptadorSugestoesMock(async () => {
 })
 
 function configSugestoes(): AxiosRequestConfig {
-  return import.meta.env.VITE_SUGESTOES_MOCK === 'false'
+  const flag = import.meta.env.VITE_SUGESTOES_MOCK
+  return flag === 'true' || flag === 'area'
+    ? { adapter: adaptadorSugestoesMock }
+    : {}
+}
+
+/**
+ * A ajuda da IA ainda não tem endpoint no backend, então responde pelo mock
+ * por padrão; `VITE_AJUDA_IA_MOCK=false` passa a usar a API quando existir.
+ */
+function configAjuda(): AxiosRequestConfig {
+  return import.meta.env.VITE_AJUDA_IA_MOCK === 'false'
     ? {}
     : { adapter: adaptadorSugestoesMock }
 }
 
 /**
  * Trilhas sugeridas para o usuário autenticado, com o motivo de cada uma.
- * `origem: 'AREA'` indica que a IA não respondeu e a API recomendou por área.
+ * Com a IA fora do ar a API continua respondendo 200, com `geradoPorIa: false`,
+ * o `aviso` preenchido e a recomendação por área no lugar.
  */
 export async function listarSugestoes(config?: {
   signal?: AbortSignal
@@ -392,7 +404,7 @@ export async function pedirAjudaTrilhas(
     const { data } = await api.post<RespostaAjudaTrilhas>(
       '/api/trilhas/sugestoes/ajuda',
       { pergunta },
-      configSugestoes(),
+      configAjuda(),
     )
     return data
   } catch (error) {

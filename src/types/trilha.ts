@@ -147,20 +147,25 @@ export const ROTULOS_STATUS_PROGRESSO: Record<StatusProgresso, string> = {
 }
 
 /**
- * De onde vieram as sugestões (Task 11): `IA` quando o modelo escolheu;
- * `AREA` quando a IA não respondeu e a API caiu na recomendação por área.
+ * Uma trilha sugerida (record `SugestaoTrilhaResponse` da API). Os dados vêm
+ * da trilha no banco; o modelo só escolhe o id e escreve o motivo.
  */
-export type OrigemSugestao = 'IA' | 'AREA'
-
 export interface SugestaoTrilha {
-  trilha: TrilhaResumo
+  id: string
+  nome: string
+  area: RecursoResumo | null
+  objetivos: string | null
   /** Por que a trilha foi sugerida. Texto simples — nunca renderizar como HTML. */
   motivo: string
 }
 
-/** Resposta de `GET /api/trilhas/sugestoes`. */
+/** Resposta de `GET /api/trilhas/sugestoes` (record `SugestoesDeTrilhaResponse`). */
 export interface SugestoesTrilhas {
-  origem: OrigemSugestao
+  /** Falso quando a IA não respondeu e a lista veio da recomendação por área. */
+  geradoPorIa: boolean
+  /** Texto para o usuário quando `geradoPorIa` é falso; `null` no caminho normal. */
+  aviso: string | null
+  /** Até cinco trilhas. A API já tira as concluídas (as em andamento, não). */
   sugestoes: SugestaoTrilha[]
 }
 

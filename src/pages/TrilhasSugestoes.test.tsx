@@ -3,8 +3,9 @@ import userEvent from '@testing-library/user-event'
 import { delay, http, HttpResponse } from 'msw'
 import { describe, expect, it } from 'vitest'
 import { iniciarTrilha } from '../services/trilhaService.ts'
-import type { SugestoesTrilhas } from '../types/trilha.ts'
+import type { SugestaoTrilha, SugestoesTrilhas } from '../types/trilha.ts'
 import {
+  criarPaginaTrilhas,
   criarProgressoTrilha,
   criarTrilhaResumo,
   criarUsuario,
@@ -12,19 +13,36 @@ import {
 import { server } from '../test/msw/server.ts'
 import { renderizarComProvedores } from '../test/renderWithProviders.tsx'
 
+/** Uma sugestão no formato do `SugestaoTrilhaResponse` da API. */
+function sugestao(id: string, nome: string, motivo: string): SugestaoTrilha {
+  return {
+    id,
+    nome,
+    area: { id: '33333333-3333-3333-3333-333333333333', nome: 'Tecnologia' },
+    objetivos: null,
+    motivo,
+  }
+}
+
 const SUGESTOES: SugestoesTrilhas = {
-  origem: 'IA',
+  geradoPorIa: true,
+  aviso: null,
   sugestoes: [
-    {
-      trilha: criarTrilhaResumo({ id: 'sug-1', nome: 'Comunicação assertiva' }),
-      motivo: 'Combina com a meta de comunicação do seu PDI.',
-    },
-    {
-      trilha: criarTrilhaResumo({ id: 'sug-2', nome: 'Negociação' }),
-      motivo: 'Você consultou o tema na IA nesta semana.',
-    },
+    sugestao(
+      'sug-1',
+      'Comunicação assertiva',
+      'Combina com a meta de comunicação do seu PDI.',
+    ),
+    sugestao(
+      'sug-2',
+      'Negociação',
+      'Você consultou o tema na IA nesta semana.',
+    ),
   ],
 }
+
+const AVISO_SEM_IA =
+  'Não foi possível gerar as sugestões com a IA agora. Estas são as trilhas da sua área.'
 
 function responderSugestoes(corpo: SugestoesTrilhas) {
   server.use(
@@ -96,7 +114,7 @@ describe('TrilhasPage — IA (sugestões e ajuda)', () => {
 
   it('sem sugestões, o painel não mostra a seção (só a ajuda)', async () => {
     const user = userEvent.setup()
-    responderSugestoes({ origem: 'IA', sugestoes: [] })
+    responderSugestoes({ geradoPorIa: true, aviso: null, sugestoes: [] })
     abrir()
 
     const painel = await abrirPainel(user)
@@ -112,16 +130,19 @@ describe('TrilhasPage — IA (sugestões e ajuda)', () => {
 
   it('indica quando a recomendação é por área (a IA não respondeu)', async () => {
     const user = userEvent.setup()
-    responderSugestoes({ ...SUGESTOES, origem: 'AREA' })
+    responderSugestoes({
+      ...SUGESTOES,
+      geradoPorIa: false,
+      aviso: AVISO_SEM_IA,
+    })
     abrir()
     await waitFor(() => expect(botaoIa()).toHaveTextContent('2'), ESPERA)
 
     const painel = within(await abrirPainel(user))
 
     expect(painel.getByText('Recomendação por área')).toBeInTheDocument()
-    expect(
-      painel.getByText(/A IA não está disponível agora/),
-    ).toBeInTheDocument()
+    // O aviso é o texto que a própria API manda.
+    expect(painel.getByText(AVISO_SEM_IA)).toBeInTheDocument()
     expect(painel.queryByText('Sugestão da IA')).not.toBeInTheDocument()
   })
 
@@ -160,24 +181,33 @@ describe('TrilhasPage — IA (sugestões e ajuda)', () => {
     await waitFor(() => expect(botaoIa()).toHaveTextContent('2'), ESPERA)
   })
 
-  it('trilha já iniciada não entra nas sugestões', async () => {
-    responderSugestoes({
-      origem: 'IA',
-      sugestoes: [
-        ...SUGESTOES.sugestoes,
-        {
-          trilha: criarTrilhaResumo({
-            id: 'sug-3',
-            nome: 'Já começada',
-            progresso: criarProgressoTrilha({ status: 'EM_ANDAMENTO' }),
-          }),
-          motivo: 'Qualquer motivo.',
-        },
-      ],
-    })
+  it('trilha já iniciada não entra nas sugestões (a API só tira as concluídas)', async () => {
+    const user = userEvent.setup()
+    responderSugestoes(SUGESTOES)
+    // "Minhas trilhas": a Negociação já está em andamento.
+    server.use(
+      http.get('*/api/trilhas', () =>
+        HttpResponse.json(
+          criarPaginaTrilhas([
+            criarTrilhaResumo({
+              id: 'sug-2',
+              nome: 'Negociação',
+              progresso: criarProgressoTrilha({ status: 'EM_ANDAMENTO' }),
+            }),
+          ]),
+        ),
+      ),
+    )
     abrir()
 
-    await waitFor(() => expect(botaoIa()).toHaveTextContent('2'), ESPERA)
+    await waitFor(() => expect(botaoIa()).toHaveTextContent('1'), ESPERA)
+    const painel = within(await abrirPainel(user))
+    expect(
+      painel.getByRole('link', { name: /Comunicação assertiva/ }),
+    ).toBeInTheDocument()
+    expect(
+      painel.queryByRole('link', { name: /Negociação/ }),
+    ).not.toBeInTheDocument()
   })
 
   it('iniciar uma trilha a tira das sugestões (Observer)', async () => {
@@ -202,13 +232,9 @@ describe('TrilhasPage — IA (sugestões e ajuda)', () => {
     const user = userEvent.setup()
     const html = '<img src=x onerror="alert(1)"><b>importante</b>'
     responderSugestoes({
-      origem: 'IA',
-      sugestoes: [
-        {
-          trilha: criarTrilhaResumo({ id: 'sug-x', nome: 'Segurança' }),
-          motivo: html,
-        },
-      ],
+      geradoPorIa: true,
+      aviso: null,
+      sugestoes: [sugestao('sug-x', 'Segurança', html)],
     })
     abrir()
     await waitFor(() => expect(botaoIa()).toHaveTextContent('1'), ESPERA)

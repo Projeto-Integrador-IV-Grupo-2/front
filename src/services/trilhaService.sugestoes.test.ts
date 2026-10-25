@@ -11,13 +11,20 @@ import { criarPaginaTrilhas, criarTrilhaResumo } from '../test/factories.ts'
 import { server } from '../test/msw/server.ts'
 
 describe('trilhaService — sugestões da IA', () => {
-  it('devolve as sugestões com o motivo e a origem', async () => {
+  it('devolve as sugestões no formato da API, com o motivo', async () => {
     server.use(
       http.get('*/api/trilhas/sugestoes', () =>
         HttpResponse.json({
-          origem: 'IA',
+          geradoPorIa: true,
+          aviso: null,
           sugestoes: [
-            { trilha: criarTrilhaResumo(), motivo: 'Combina com o seu PDI.' },
+            {
+              id: 'sug-1',
+              nome: 'Onboarding',
+              area: null,
+              objetivos: 'Conhecer a empresa',
+              motivo: 'Combina com o seu PDI.',
+            },
           ],
         }),
       ),
@@ -25,7 +32,8 @@ describe('trilhaService — sugestões da IA', () => {
 
     const resposta = await listarSugestoes()
 
-    expect(resposta.origem).toBe('IA')
+    expect(resposta.geradoPorIa).toBe(true)
+    expect(resposta.sugestoes[0].nome).toBe('Onboarding')
     expect(resposta.sugestoes[0].motivo).toBe('Combina com o seu PDI.')
   })
 
@@ -52,7 +60,7 @@ describe('trilhaService — sugestões da IA', () => {
     })
   })
 
-  describe('com o mock ligado (sem o endpoint)', () => {
+  describe('com os mocks ligados (sem o backend)', () => {
     it('monta as sugestões a partir do catálogo e tira as iniciadas', async () => {
       vi.stubEnv('VITE_SUGESTOES_MOCK', 'true')
       server.use(
@@ -69,13 +77,13 @@ describe('trilhaService — sugestões da IA', () => {
       await iniciarTrilha('m-1')
       const resposta = await listarSugestoes()
 
-      expect(resposta.origem).toBe('IA')
-      expect(resposta.sugestoes.map((s) => s.trilha.id)).toEqual(['m-2'])
+      expect(resposta.geradoPorIa).toBe(true)
+      expect(resposta.sugestoes.map((s) => s.id)).toEqual(['m-2'])
       expect(resposta.sugestoes[0].motivo).not.toBe('')
     })
 
     it('pedir para montar uma trilha devolve um rascunho pronto', async () => {
-      vi.stubEnv('VITE_SUGESTOES_MOCK', 'true')
+      vi.stubEnv('VITE_AJUDA_IA_MOCK', 'true')
 
       const resposta = await pedirAjudaTrilhas(
         'Monte uma trilha de atendimento ao cliente',
@@ -99,7 +107,8 @@ describe('trilhaService — sugestões da IA', () => {
 
       const resposta = await listarSugestoes()
 
-      expect(resposta.origem).toBe('AREA')
+      expect(resposta.geradoPorIa).toBe(false)
+      expect(resposta.aviso).toMatch(/trilhas da sua área/)
       expect(resposta.sugestoes[0].motivo).toBe('Trilha da área Tecnologia.')
     })
   })

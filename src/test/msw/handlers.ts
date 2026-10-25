@@ -63,7 +63,7 @@ export const handlers = [
   // Antes de /api/trilhas/:id, senão "sugestoes" seria lido como um id.
   // Padrão sem sugestões: a seção não aparece nos testes que não tratam dela.
   http.get('*/api/trilhas/sugestoes', () =>
-    HttpResponse.json({ origem: 'IA', sugestoes: [] }),
+    HttpResponse.json({ geradoPorIa: true, aviso: null, sugestoes: [] }),
   ),
 
   http.post('*/api/trilhas/sugestoes/ajuda', () =>

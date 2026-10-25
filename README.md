@@ -61,11 +61,12 @@ Toda variável lida pelo Vite no código do cliente precisa começar com
 `VITE_`. O `.env` **não é versionado** (ver `.gitignore`) — cada
 integrante mantém o seu, a partir do `.env.example`.
 
-| Variável              | Obrigatória | Descrição                                                                                         |
-| --------------------- | ----------- | ------------------------------------------------------------------------------------------------- |
-| `VITE_API_URL`        | Sim         | URL base da API (sem barra no final)                                                              |
-| `VITE_TRILHAS_MOCK`   | Não         | `true` responde as rotas de trilhas com um mock em memória (ver abaixo)                           |
-| `VITE_SUGESTOES_MOCK` | Não         | Mock das sugestões da IA, **ligado por padrão**; `area` simula a IA fora do ar; `false` usa a API |
+| Variável              | Obrigatória | Descrição                                                                                                         |
+| --------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------- |
+| `VITE_API_URL`        | Sim         | URL base da API (sem barra no final)                                                                              |
+| `VITE_TRILHAS_MOCK`   | Não         | `true` responde as rotas de trilhas com um mock em memória (ver abaixo)                                           |
+| `VITE_SUGESTOES_MOCK` | Não         | `true` responde as sugestões da IA pelo mock; `area` também, simulando a IA fora do ar. Sem a variável, usa a API |
+| `VITE_AJUDA_IA_MOCK`  | Não         | Mock da conversa de ajuda da IA em Trilhas, **ligado por padrão** (ainda sem endpoint); `false` usa a API         |
 
 A URL nunca fica fixa no código: o cliente Axios (`src/services/api.ts`)
 sempre lê `import.meta.env.VITE_API_URL`.
@@ -180,8 +181,9 @@ O botão **IA**, ao lado do **PDI**, abre o painel **"Assistente de trilhas"**.
 O contador no botão mostra quantas sugestões há.
 
 - **Sugeridas para você:** as trilhas sugeridas, cada uma no `TrilhaCard`
-  com o motivo embaixo, como texto simples. Com `origem: 'AREA'` (a IA não
-  respondeu) o selo vira "Recomendação por área". Sem sugestões, ou com erro
+  com o motivo embaixo, como texto simples. Com `geradoPorIa: false` (a IA
+  não respondeu) o selo vira "Recomendação por área" e aparece o `aviso` da
+  API. Sem sugestões, ou com erro
   na consulta, a seção não aparece (sem mensagem de erro).
 - **Peça ajuda à IA:** conversa com atalhos por perfil. Quem cria trilhas
   (`PERFIS_CRIAR_TRILHA`) pode pedir para a IA montar uma trilha. A resposta
@@ -193,13 +195,21 @@ O contador no botão mostra quantas sugestões há.
   sugestões, que assinam o evento, tiram a trilha da lista. A ação de iniciar
   não conhece quem ouve.
 
-Os endpoints (Task 11) ainda não existem: `GET /api/trilhas/sugestoes` e
-`POST /api/trilhas/sugestoes/ajuda` respondem pelo mock
-`services/mocks/sugestoesMock.ts` enquanto `VITE_SUGESTOES_MOCK` não for
-`false`. As sugestões saem do catálogo real (o clique leva a um detalhe que
-existe); os motivos, as respostas e os rascunhos são fixos, por
-palavra-chave. `VITE_SUGESTOES_MOCK=area` mostra o caso da recomendação por
-área.
+**Sugestões: dados reais.** Vêm de `GET /api/trilhas/sugestoes` (branch
+`feat/sugestao-trilhas-ia` do backend), no formato
+`{ geradoPorIa, aviso, sugestoes: [{ id, nome, area, objetivos, motivo }] }`.
+A API tira só as trilhas **concluídas**; as **em andamento** o front tira
+cruzando com "minhas trilhas" (só quando há sugestões). Backend sem o
+endpoint responde erro, e a seção apenas não aparece.
+
+**Ajuda (conversa): ainda simulada.** O backend não tem
+`POST /api/trilhas/sugestoes/ajuda`, então a conversa responde pelo mock
+`services/mocks/sugestoesMock.ts` (por palavra-chave, com rascunhos fixos)
+enquanto `VITE_AJUDA_IA_MOCK` não for `false`.
+
+Para trabalhar sem o backend, `VITE_SUGESTOES_MOCK=true` responde as
+sugestões pelo mesmo mock (montadas a partir do catálogo), e `area` simula
+a IA fora do ar.
 
 ## Conteúdos, etapas e estudo (issue #39)
 
