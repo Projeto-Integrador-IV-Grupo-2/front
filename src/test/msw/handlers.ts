@@ -46,6 +46,53 @@ export const handlers = [
     HttpResponse.json(criarDashboardGestao()),
   ),
 
+  // Assistente de IA (Task 9): contrato compatível com SessaoResponse e
+  // RespostaAssistenteResponse do backend.
+  http.post('*/api/assistente/sessoes', () =>
+    HttpResponse.json(
+      {
+        id: 'sessao-assistente-teste',
+        contexto: 'CONHECIMENTO',
+        titulo: 'Nova conversa',
+        criadoEm: '2026-10-26T12:00:00Z',
+        atualizadoEm: '2026-10-26T12:00:00Z',
+      },
+      { status: 201 },
+    ),
+  ),
+
+  http.post(
+    '*/api/assistente/sessoes/:sessaoId/mensagens',
+    async ({ request, params }) => {
+      const corpo = (await request.json()) as { conteudo?: string }
+      const conteudo = corpo.conteudo ?? ''
+      const criadoEm = '2026-10-26T12:00:01Z'
+      return HttpResponse.json({
+        sessao: {
+          id: String(params.sessaoId),
+          contexto: 'CONHECIMENTO',
+          titulo: conteudo.slice(0, 200) || 'Nova conversa',
+          criadoEm: '2026-10-26T12:00:00Z',
+          atualizadoEm: criadoEm,
+        },
+        pergunta: {
+          id: 'pergunta-assistente-teste',
+          papel: 'USUARIO',
+          conteudo,
+          fontes: [],
+          criadoEm,
+        },
+        resposta: {
+          id: 'resposta-assistente-teste',
+          papel: 'ASSISTENTE',
+          conteudo: `Resposta de teste para: ${conteudo}`,
+          fontes: [],
+          criadoEm,
+        },
+      })
+    },
+  ),
+
   http.get('*/api/usuarios', () => HttpResponse.json(criarPaginaUsuarios())),
 
   http.post('*/api/usuarios', () =>

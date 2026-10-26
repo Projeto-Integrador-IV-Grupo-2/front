@@ -197,18 +197,73 @@ erro normalizado (`message`, `status`, `fieldErrors`).
 
 ---
 
+## Conhecimento (issue #48)
+
+`/conhecimento` é a base de documentos da empresa, com item próprio no menu
+para todos os perfis. Usa os mesmos `conteudoService` e `categoriaService`; o
+documento é um conteúdo do tipo `DOCUMENTO` (back #54).
+
+- A tela abre nos documentos: `criarFiltroInicial()` já vem com o tipo
+  `DOCUMENTO`, e "Limpar filtros" volta para ele.
+- Busca por título (sai só quando a pessoa para de digitar, com
+  `useValorAdiado`) e filtros de categoria, área e tipo, combinados entre si.
+  `ADMIN` e `GESTOR` também filtram por status; o colaborador não vê esse
+  filtro e a tela nem envia status (a API já devolve só os publicados).
+- Qualquer mudança de filtro volta para a página 1.
+- Lista com título, categoria, área, tipo e data de atualização: tabela no
+  desktop, cartões no celular.
+- Lista vazia tem mensagem própria (diferente quando há filtro), separada do
+  erro, que oferece "Tentar novamente".
+
+---
+
+## Assistente de IA (Task 9)
+
+`/assistente` está disponível para todos os perfis autenticados. A tela mantém a
+conversa em um único estado local e cria a sessão no primeiro envio; o histórico
+persistente de conversas fica para a Task 10.
+
+- `src/services/assistenteService.ts` centraliza a comunicação usando o cliente
+  `api` singleton e transforma erros do Axios em `AssistenteServiceError`.
+- `src/services/assistenteService.ts` centraliza a comunicação com o cliente
+  `api` singleton e transforma erros HTTP em `AssistenteServiceError`.
+- `src/types/assistente.ts` espelha os DTOs da API: `SessaoResponse`,
+  `PerguntaRequest`, `MensagemResponse` e `RespostaAssistenteResponse`.
+  O fluxo real é:
+  - `POST /api/assistente/sessoes` cria a sessão e retorna `id`, `contexto`,
+    `titulo`, `criadoEm` e `atualizadoEm`.
+  - `POST /api/assistente/sessoes/{sessaoId}/mensagens` recebe
+    `{ conteudo }` e retorna `{ sessao, pergunta, resposta }`. Cada mensagem
+    contém `id`, `papel`, `conteudo`, `fontes` e `criadoEm`.
+- A API fornece `fontes` como uma lista de títulos (`string[]`), sem ID, trecho
+  ou página. Cada fonte leva a `/conhecimento?titulo=...`, que abre a busca pelo
+  título do documento; o frontend não inventa identificadores que não existam
+  no DTO. O campo de pergunta respeita o limite de 2.000 caracteres do backend.
+- `503` mostra uma mensagem de indisponibilidade da IA; `429` informa o limite
+  de perguntas. A pergunta original permanece na conversa e pode ser reenviada.
+- A resposta é exibida como texto renderizado pelo React, sem interpretar HTML
+  vindo da API. Enter envia e Shift+Enter insere quebra de linha. Enquanto a
+  resposta está pendente, o envio fica bloqueado; novas mensagens são anunciadas
+  por uma região `role="log"` e o foco retorna ao campo de pergunta.
+- Os testes do service e da página usam MSW para cobrir o contrato real da API,
+  fontes, bloqueio de envio, erros `503`/`429` e nova tentativa.
+
+---
+
 ## Rotas e permissões
 
-| Rota                   | Quem acessa                                              |
-| ---------------------- | -------------------------------------------------------- |
-| `/login`               | qualquer visitante                                       |
-| `/dashboard`           | qualquer usuário autenticado                             |
-| `/trilhas`             | qualquer usuário autenticado                             |
-| `/trilhas/:id`         | qualquer usuário autenticado                             |
-| `/trilhas/:id/estudar` | qualquer usuário autenticado                             |
-| `/conteudos`           | qualquer usuário autenticado (ações só `ADMIN`/`GESTOR`) |
-| `/categorias`          | qualquer usuário autenticado (ações só `ADMIN`/`GESTOR`) |
-| `/usuarios`            | apenas `ADMIN`                                           |
+| Rota                   | Quem acessa                                               |
+| ---------------------- | --------------------------------------------------------- |
+| `/login`               | qualquer visitante                                        |
+| `/dashboard`           | qualquer usuário autenticado                              |
+| `/trilhas`             | qualquer usuário autenticado                              |
+| `/trilhas/:id`         | qualquer usuário autenticado                              |
+| `/trilhas/:id/estudar` | qualquer usuário autenticado                              |
+| `/conteudos`           | qualquer usuário autenticado (ações só `ADMIN`/`GESTOR`)  |
+| `/categorias`          | qualquer usuário autenticado (ações só `ADMIN`/`GESTOR`)  |
+| `/conhecimento`        | qualquer usuário autenticado (status só `ADMIN`/`GESTOR`) |
+| `/assistente`          | qualquer usuário autenticado                              |
+| `/usuarios`            | apenas `ADMIN`                                            |
 
 `/` leva ao dashboard, que por sua vez exige sessão.
 
