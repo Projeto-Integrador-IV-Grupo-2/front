@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom'
+import { caminhoDocumento } from '../../routes/paths.ts'
 import {
   ROTULOS_STATUS_CONTEUDO,
   ROTULOS_TIPO_CONTEUDO,
@@ -17,6 +19,9 @@ interface DocumentosListaProps {
  * Título, categoria, área, tipo e data de atualização. No desktop é uma
  * tabela; no celular cada linha vira um cartão, com o rótulo de cada dado ao
  * lado do valor (ver o CSS).
+ *
+ * O título leva ao detalhe do documento (issue #49), onde ficam os arquivos,
+ * o download e a pré-visualização.
  */
 export function DocumentosLista({
   documentos,
@@ -39,7 +44,9 @@ export function DocumentosLista({
         {documentos.map((documento) => (
           <tr key={documento.id}>
             <th scope="row" className={styles.titulo}>
-              <span>{documento.titulo}</span>
+              <Link to={caminhoDocumento(documento.id)} className={styles.link}>
+                {documento.titulo}
+              </Link>
               {documento.descricao && (
                 <span className={styles.descricao}>{documento.descricao}</span>
               )}

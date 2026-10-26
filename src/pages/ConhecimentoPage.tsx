@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { Paginacao } from '../components/areas/Paginacao.tsx'
 import { ConhecimentoFiltros } from '../components/conhecimento/ConhecimentoFiltros.tsx'
 import { DocumentosLista } from '../components/conhecimento/DocumentosLista.tsx'
+import { TIPOS_NO_FORMULARIO } from '../components/conhecimento/tiposDoDocumento.ts'
+import { ConteudoFormulario } from '../components/conteudos/ConteudoFormulario.tsx'
 import {
   criarFiltroInicial,
   paraFiltroDaApi,
@@ -13,12 +15,15 @@ import { useValorAdiado } from '../hooks/useValorAdiado.ts'
 import { PERFIS_GESTAO_CONTEUDO } from '../routes/permissions.ts'
 import { listarAreas } from '../services/areaService.ts'
 import { listarCategorias } from '../services/categoriaService.ts'
+import { aoMudarConteudos } from '../services/conteudoEvents.ts'
 import {
   ConteudoServiceError,
+  criarConteudo,
   listarConteudos,
 } from '../services/conteudoService.ts'
+import type { ApiFieldError } from '../types/api.ts'
 import type { Pagina } from '../types/area.ts'
-import type { Categoria, Conteudo } from '../types/conteudo.ts'
+import type { Categoria, Conteudo, ConteudoRequest } from '../types/conteudo.ts'
 import type { RecursoResumo } from '../types/usuario.ts'
 import styles from './ConhecimentoPage.module.css'
 
@@ -41,7 +46,10 @@ interface ResultadoBusca {
  * publicados: a API filtra, e a tela nem envia status.
  */
 export function ConhecimentoPage() {
-  const podeFiltrarStatus = usePermissao(PERFIS_GESTAO_CONTEUDO)
+  // Mesma lista de perfis para as duas coisas: quem enxerga rascunho é quem
+  // administra o acervo.
+  const podeGerenciar = usePermissao(PERFIS_GESTAO_CONTEUDO)
+  const podeFiltrarStatus = podeGerenciar
 
   const [tituloDigitado, setTituloDigitado] = useState('')
   const tituloBuscado = useValorAdiado(tituloDigitado.trim())
@@ -63,6 +71,12 @@ export function ConhecimentoPage() {
   const [resultado, setResultado] = useState<ResultadoBusca | null>(null)
   const [categorias, setCategorias] = useState<Categoria[]>([])
   const [areas, setAreas] = useState<RecursoResumo[]>([])
+
+  const [formularioAberto, setFormularioAberto] = useState(false)
+  const [salvando, setSalvando] = useState(false)
+  const [aviso, setAviso] = useState<string | null>(null)
+  const [erroFormulario, setErroFormulario] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<ApiFieldError[]>([])
 
   const chaveBusca = JSON.stringify([chaveFiltro, pagina, recarga])
   const carregando = resultado?.chave !== chaveBusca
@@ -117,6 +131,34 @@ export function ConhecimentoPage() {
     }
   }, [])
 
+  // Observer: a listagem se inscreve nas mudanças de documento, então ela
+  // recarrega mesmo quando quem salvou ou publicou foi a tela de detalhe.
+  useEffect(() => aoMudarConteudos(() => setRecarga((n) => n + 1)), [])
+
+  async function salvar(request: ConteudoRequest) {
+    setSalvando(true)
+    setErroFormulario(null)
+    setFieldErrors([])
+    try {
+      await criarConteudo(request)
+      setFormularioAberto(false)
+      setAviso(
+        'Documento cadastrado como rascunho. Envie os arquivos dele no detalhe.',
+      )
+    } catch (causa) {
+      const erro =
+        causa instanceof ConteudoServiceError
+          ? causa
+          : new ConteudoServiceError('Não foi possível cadastrar o documento.')
+      // Erro de campo aparece no próprio campo; o texto geral só repete
+      // quando não há campo para apontar.
+      setFieldErrors(erro.fieldErrors)
+      setErroFormulario(erro.fieldErrors.length > 0 ? null : erro.message)
+    } finally {
+      setSalvando(false)
+    }
+  }
+
   function limpar() {
     setTituloDigitado('')
     setSelecoes(criarFiltroInicial())
@@ -128,12 +170,31 @@ export function ConhecimentoPage() {
 
   return (
     <div className={styles.page}>
-      <header>
-        <h1 className={styles.titulo}>Conhecimento</h1>
-        <p className={styles.hint}>
-          Encontre as políticas, os manuais e os demais documentos da empresa.
-        </p>
+      <header className={styles.cabecalho}>
+        <div>
+          <h1 className={styles.titulo}>Conhecimento</h1>
+          <p className={styles.hint}>
+            Encontre as políticas, os manuais e os demais documentos da empresa.
+          </p>
+        </div>
+        {podeGerenciar && (
+          <button
+            type="button"
+            className={styles.novo}
+            onClick={() => {
+              setErroFormulario(null)
+              setFieldErrors([])
+              setFormularioAberto(true)
+            }}
+          >
+            + Novo documento
+          </button>
+        )}
       </header>
+
+      <div role="status" aria-live="polite" className={styles.avisoRegiao}>
+        {aviso && <p className={styles.aviso}>{aviso}</p>}
+      </div>
 
       <ConhecimentoFiltros
         tituloDigitado={tituloDigitado}
@@ -197,6 +258,24 @@ export function ConhecimentoPage() {
             itens="documentos"
           />
         </>
+      )}
+
+      {formularioAberto && (
+        <ConteudoFormulario
+          conteudo={null}
+          categorias={categorias}
+          areas={areas}
+          salvando={salvando}
+          erro={erroFormulario}
+          fieldErrors={fieldErrors}
+          onSalvar={(request) => void salvar(request)}
+          onFechar={() => setFormularioAberto(false)}
+          onCategoriaCriada={(categoria) =>
+            setCategorias((atuais) => [...atuais, categoria])
+          }
+          tipos={TIPOS_NO_FORMULARIO}
+          substantivo="documento"
+        />
       )}
     </div>
   )
