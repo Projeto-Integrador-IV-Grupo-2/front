@@ -169,10 +169,35 @@ export interface SugestoesTrilhas {
   sugestoes: SugestaoTrilha[]
 }
 
+/**
+ * Etapa montada pela IA (record `AjudaTrilhasResponse.Etapa`). O conteúdo é
+ * sempre um conteúdo publicado do tenant: vira `POST /api/trilhas/{id}/etapas`.
+ */
+export interface EtapaRascunho {
+  conteudoId: string
+  /** Título e tipo do conteúdo, lidos do banco — não escritos pela IA. */
+  conteudoTitulo: string
+  conteudoTipo: string | null
+  titulo: string
+  descricao: string | null
+}
+
+/** Trilha completa montada pela IA: o cadastro, as etapas e o que falta na base. */
+export interface RascunhoTrilha extends CriarTrilhaRequest {
+  /** Etapas em ordem de estudo. */
+  etapas: EtapaRascunho[]
+  /** Temas que ainda não têm conteúdo publicado para virar etapa. */
+  conteudosFaltando: string[]
+}
+
 /** Resposta de `POST /api/trilhas/sugestoes/ajuda`: a IA ajudando com trilhas. */
 export interface RespostaAjudaTrilhas {
   /** Texto simples — nunca renderizar como HTML. */
   texto: string
-  /** Quando a pergunta é para montar uma trilha: um rascunho do cadastro. */
-  rascunho: CriarTrilhaRequest | null
+  /** Quando a pergunta é para montar uma trilha: a trilha completa, não gravada. */
+  rascunho: RascunhoTrilha | null
+  /** Documentos que embasaram a resposta (só quando respondeu o assistente). */
+  fontes?: string[]
+  /** Sessão do assistente a reaproveitar na próxima pergunta, quando houver. */
+  sessaoId?: string
 }

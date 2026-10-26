@@ -16,6 +16,8 @@ interface TrilhaFormularioProps {
   trilha?: TrilhaDetalhe | null
   /** No cadastro, campos já preenchidos (ex.: rascunho sugerido pela IA). */
   rascunho?: CriarTrilhaRequest | null
+  /** Etapas que serão criadas junto com a trilha (rascunho da IA). */
+  totalEtapas?: number
   areas: RecursoResumo[]
   /** As áreas não carregaram: o cadastro segue, só sem escolher área. */
   areasIndisponiveis: boolean
@@ -104,6 +106,7 @@ function ouNulo(valor: string): string | null {
 export function TrilhaFormulario({
   trilha = null,
   rascunho = null,
+  totalEtapas = 0,
   areas,
   areasIndisponiveis,
   salvando,
@@ -247,7 +250,9 @@ export function TrilhaFormulario({
         <p id={ids.apoio} className={styles.subtitulo}>
           {editando
             ? 'As mudanças valem para todos — quem já faz a trilha mantém o progresso.'
-            : 'Defina o nome, a área e o objetivo. As etapas são montadas depois.'}
+            : totalEtapas > 0
+              ? `Revise os dados. As ${totalEtapas} etapas montadas pela IA entram na trilha, nesta ordem, ao criar.`
+              : 'Defina o nome, a área e o objetivo. As etapas são montadas depois.'}
         </p>
 
         <form className={styles.form} onSubmit={enviar} noValidate>
@@ -375,7 +380,9 @@ export function TrilhaFormulario({
                 ? 'Salvando…'
                 : editando
                   ? 'Salvar alterações'
-                  : 'Criar trilha'}
+                  : totalEtapas > 0
+                    ? `Criar trilha com ${totalEtapas} etapas`
+                    : 'Criar trilha'}
             </button>
           </div>
         </form>

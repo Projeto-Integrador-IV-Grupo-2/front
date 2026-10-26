@@ -245,22 +245,55 @@ describe('TrilhasPage — IA (sugestões e ajuda)', () => {
     expect(painel.querySelector('img, b')).toBeNull()
   })
 
-  it('quem cria trilhas pede ajuda e abre o cadastro com o rascunho da IA', async () => {
+  it('quem cria trilhas pede uma trilha completa e ela é criada com as etapas, em ordem', async () => {
     const user = userEvent.setup()
     let pergunta = ''
+    let trilhaCriada: unknown = null
+    const etapasCriadas: unknown[] = []
     server.use(
       http.post('*/api/trilhas/sugestoes/ajuda', async ({ request }) => {
         pergunta = ((await request.json()) as { pergunta: string }).pergunta
         return HttpResponse.json({
-          texto: 'Montei um rascunho para a trilha "Onboarding: 30 dias".',
+          texto: 'Montei a trilha "Onboarding: 30 dias" com 2 etapas.',
           rascunho: {
             nome: 'Onboarding: 30 dias',
             descricao: 'Primeiro mês na empresa.',
             areaId: null,
             prazoDias: 30,
             objetivos: 'Conhecer a empresa.',
+            etapas: [
+              {
+                conteudoId: 'c-cultura',
+                conteudoTitulo: 'Nossa cultura',
+                conteudoTipo: 'VIDEO',
+                titulo: 'Conheça a cultura',
+                descricao: 'Valores e jeito de trabalhar.',
+              },
+              {
+                conteudoId: 'c-ferramentas',
+                conteudoTitulo: 'Guia de ferramentas',
+                conteudoTipo: 'DOCUMENTO',
+                titulo: 'Ferramentas do dia a dia',
+                descricao: null,
+              },
+            ],
+            conteudosFaltando: ['Mapa de quem é quem na empresa'],
           },
         })
+      }),
+      http.post('*/api/trilhas', async ({ request }) => {
+        trilhaCriada = await request.json()
+        return HttpResponse.json(
+          criarTrilhaResumo({ id: 'nova', nome: 'Onboarding: 30 dias' }),
+          { status: 201 },
+        )
+      }),
+      http.post('*/api/trilhas/:id/etapas', async ({ request, params }) => {
+        etapasCriadas.push({
+          trilha: params.id,
+          ...((await request.json()) as Record<string, unknown>),
+        })
+        return HttpResponse.json({}, { status: 201 })
       }),
     )
     abrir('ADMIN')
@@ -272,25 +305,125 @@ describe('TrilhasPage — IA (sugestões e ajuda)', () => {
       }),
     )
 
-    expect(
-      await painel.findByText(/Montei um rascunho para a trilha/),
-    ).toBeInTheDocument()
+    const etapas = within(
+      await painel.findByRole('list', { name: 'Etapas da trilha montada' }),
+    )
     expect(pergunta).toBe(
       'Monte uma trilha de onboarding para novos colaboradores',
     )
+    expect(etapas.getAllByRole('listitem')).toHaveLength(2)
+    expect(etapas.getByText('Conheça a cultura')).toBeInTheDocument()
+    expect(etapas.getByText(/Vídeo · Nossa cultura/)).toBeInTheDocument()
+    expect(
+      painel.getByText('Mapa de quem é quem na empresa'),
+    ).toBeInTheDocument()
+
     await user.click(
-      painel.getByRole('button', { name: 'Criar com este rascunho' }),
+      painel.getByRole('button', { name: 'Criar trilha com 2 etapas' }),
+    )
+    const formulario = within(
+      await screen.findByRole('dialog', { name: /Nova trilha/ }),
+    )
+    expect(formulario.getByLabelText(/Nome/)).toHaveValue('Onboarding: 30 dias')
+    await user.click(
+      formulario.getByRole('button', { name: 'Criar trilha com 2 etapas' }),
     )
 
-    const formulario = await screen.findByRole('dialog', {
-      name: /Nova trilha/,
-    })
-    expect(within(formulario).getByLabelText(/Nome/)).toHaveValue(
-      'Onboarding: 30 dias',
-    )
+    // Abre o detalhe da trilha nova, com o aviso.
     expect(
-      screen.queryByRole('dialog', { name: 'Assistente de trilhas' }),
-    ).not.toBeInTheDocument()
+      await screen.findByText(
+        'Trilha “Onboarding: 30 dias” criada com 2 etapas.',
+      ),
+    ).toBeInTheDocument()
+    expect(trilhaCriada).toMatchObject({
+      nome: 'Onboarding: 30 dias',
+      prazoDias: 30,
+    })
+    expect(etapasCriadas).toEqual([
+      {
+        trilha: 'nova',
+        conteudoId: 'c-cultura',
+        titulo: 'Conheça a cultura',
+        descricao: 'Valores e jeito de trabalhar.',
+      },
+      {
+        trilha: 'nova',
+        conteudoId: 'c-ferramentas',
+        titulo: 'Ferramentas do dia a dia',
+        descricao: null,
+      },
+    ])
+  })
+
+  it('etapa recusada não desfaz a trilha: o detalhe avisa quantas faltaram', async () => {
+    const user = userEvent.setup()
+    server.use(
+      http.post('*/api/trilhas/sugestoes/ajuda', () =>
+        HttpResponse.json({
+          texto: 'Montei.',
+          rascunho: {
+            nome: 'LGPD',
+            descricao: null,
+            areaId: null,
+            prazoDias: null,
+            objetivos: null,
+            etapas: [
+              {
+                conteudoId: 'ok',
+                conteudoTitulo: 'A',
+                conteudoTipo: 'TEXTO',
+                titulo: 'A',
+                descricao: null,
+              },
+              {
+                conteudoId: 'despublicado',
+                conteudoTitulo: 'B',
+                conteudoTipo: 'TEXTO',
+                titulo: 'B',
+                descricao: null,
+              },
+            ],
+            conteudosFaltando: [],
+          },
+        }),
+      ),
+      http.post('*/api/trilhas', () =>
+        HttpResponse.json(criarTrilhaResumo({ id: 'nova', nome: 'LGPD' }), {
+          status: 201,
+        }),
+      ),
+      http.post('*/api/trilhas/:id/etapas', async ({ request }) => {
+        const { conteudoId } = (await request.json()) as { conteudoId: string }
+        return conteudoId === 'ok'
+          ? HttpResponse.json({}, { status: 201 })
+          : HttpResponse.json(
+              { message: 'Conteúdo não publicado' },
+              { status: 404 },
+            )
+      }),
+    )
+    abrir('ADMIN')
+
+    const painel = within(await abrirPainel(user))
+    await user.type(
+      painel.getByLabelText('Pergunta para a IA sobre trilhas'),
+      'Monte uma trilha de LGPD',
+    )
+    await user.click(painel.getByRole('button', { name: 'Enviar' }))
+    await user.click(
+      await painel.findByRole('button', { name: 'Criar trilha com 2 etapas' }),
+    )
+    await user.click(
+      within(
+        await screen.findByRole('dialog', { name: /Nova trilha/ }),
+      ).getByRole('button', { name: 'Criar trilha com 2 etapas' }),
+    )
+
+    expect(
+      await screen.findByText(
+        /criada, mas 1 de 2 etapas não puderam ser adicionadas/,
+      ),
+    ).toBeInTheDocument()
   })
 
   it('colaborador conversa com a IA, mas não recebe o botão de criar', async () => {
@@ -344,5 +477,43 @@ describe('TrilhasPage — IA (sugestões e ajuda)', () => {
       'A IA não está disponível agora. Tente de novo em instantes.',
     )
     expect(campo).toHaveValue('Ajuda?')
+  })
+
+  it('sem a rota de ajuda no backend, responde o assistente da dev, com as fontes', async () => {
+    const user = userEvent.setup()
+    server.use(
+      http.post('*/api/trilhas/sugestoes/ajuda', () =>
+        HttpResponse.json({ message: 'Not Found' }, { status: 404 }),
+      ),
+      http.post('*/api/assistente/sessoes', () =>
+        HttpResponse.json({ id: 'sessao-1' }, { status: 201 }),
+      ),
+      http.post('*/api/assistente/sessoes/:id/mensagens', () =>
+        HttpResponse.json({
+          resposta: {
+            conteudo: 'Comece pela política de reembolso.',
+            fontes: ['Política de Reembolso v3'],
+          },
+        }),
+      ),
+    )
+    abrir()
+
+    const painel = within(await abrirPainel(user))
+    await user.type(
+      painel.getByLabelText('Pergunta para a IA sobre trilhas'),
+      'O que estudar?',
+    )
+    await user.click(painel.getByRole('button', { name: 'Enviar' }))
+
+    expect(
+      await painel.findByText('Comece pela política de reembolso.'),
+    ).toBeInTheDocument()
+    expect(
+      within(painel.getByRole('list', { name: 'Fontes' })).getByText(
+        'Política de Reembolso v3',
+      ),
+    ).toBeInTheDocument()
+    expect(painel.queryByRole('alert')).not.toBeInTheDocument()
   })
 })

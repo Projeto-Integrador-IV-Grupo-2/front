@@ -4,7 +4,7 @@ import {
   pedirAjudaTrilhas,
   TrilhaServiceError,
 } from '../../services/trilhaService.ts'
-import type { CriarTrilhaRequest } from '../../types/trilha.ts'
+import type { RascunhoTrilha } from '../../types/trilha.ts'
 import { TrilhaCard } from './TrilhaCard.tsx'
 import type { EstadoSugestoes } from './useSugestoesTrilhas.ts'
 import styles from './AssistenteTrilhas.module.css'
@@ -14,7 +14,7 @@ interface AssistenteTrilhasProps {
   sugestoes: EstadoSugestoes | null
   /** Quem pode criar trilhas recebe os atalhos e o rascunho pronto. */
   podeCriar: boolean
-  onUsarRascunho: (rascunho: CriarTrilhaRequest) => void
+  onUsarRascunho: (rascunho: RascunhoTrilha) => void
   onFechar: () => void
 }
 
@@ -22,7 +22,8 @@ interface Mensagem {
   id: number
   autor: 'voce' | 'ia'
   texto: string
-  rascunho?: CriarTrilhaRequest | null
+  rascunho?: RascunhoTrilha | null
+  fontes?: string[]
 }
 
 const ATALHOS_GESTAO = [
@@ -57,6 +58,9 @@ export function AssistenteTrilhas({
   const [enviando, setEnviando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
   const proximoId = useRef(0)
+  // Sessão do assistente, quando é ele quem responde: a conversa do painel
+  // fica numa sessão só, em vez de uma por pergunta.
+  const sessaoRef = useRef<string | null>(null)
   const fimRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -82,11 +86,13 @@ export function AssistenteTrilhas({
     setEnviando(true)
     adicionar({ autor: 'voce', texto: limpa })
     try {
-      const resposta = await pedirAjudaTrilhas(limpa)
+      const resposta = await pedirAjudaTrilhas(limpa, sessaoRef.current)
+      sessaoRef.current = resposta.sessaoId ?? sessaoRef.current
       adicionar({
         autor: 'ia',
         texto: resposta.texto,
         rascunho: resposta.rascunho,
+        fontes: resposta.fontes,
       })
     } catch (causa) {
       setErro(
@@ -199,6 +205,15 @@ export function AssistenteTrilhas({
                   {mensagem.autor === 'voce' ? 'Você:' : 'IA:'}
                 </span>
                 <p className={styles.balao}>{mensagem.texto}</p>
+                {mensagem.fontes && mensagem.fontes.length > 0 && (
+                  <ul className={styles.fontes} aria-label="Fontes">
+                    {mensagem.fontes.map((fonte) => (
+                      <li key={fonte} className={styles.fonte}>
+                        {fonte}
+                      </li>
+                    ))}
+                  </ul>
+                )}
                 {mensagem.rascunho && podeCriar && (
                   <Rascunho
                     rascunho={mensagem.rascunho}
@@ -254,12 +269,13 @@ function Rascunho({
   rascunho,
   onUsar,
 }: {
-  rascunho: CriarTrilhaRequest
+  rascunho: RascunhoTrilha
   onUsar: () => void
 }) {
+  const { etapas, conteudosFaltando } = rascunho
   return (
     <div className={styles.rascunho}>
-      <p className={styles.rascunhoRotulo}>Rascunho da trilha</p>
+      <p className={styles.rascunhoRotulo}>Trilha montada pela IA</p>
       <p className={styles.rascunhoNome}>{rascunho.nome}</p>
       <dl className={styles.rascunhoCampos}>
         {rascunho.prazoDias != null && (
@@ -281,9 +297,58 @@ function Rascunho({
           </>
         )}
       </dl>
+
+      {etapas.length > 0 ? (
+        <>
+          <p className={styles.rascunhoSecao}>Etapas ({etapas.length})</p>
+          <ol className={styles.etapas} aria-label="Etapas da trilha montada">
+            {etapas.map((etapa) => (
+              <li key={etapa.conteudoId} className={styles.etapa}>
+                <span className={styles.etapaTitulo}>{etapa.titulo}</span>
+                <span className={styles.etapaConteudo}>
+                  {ROTULO_TIPO[etapa.conteudoTipo ?? ''] ?? 'Conteúdo'} ·{' '}
+                  {etapa.conteudoTitulo}
+                </span>
+                {etapa.descricao && (
+                  <span className={styles.etapaDescricao}>
+                    {etapa.descricao}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ol>
+        </>
+      ) : (
+        <p className={styles.nota}>
+          Nenhum conteúdo publicado da base serve para este tema ainda. A trilha
+          é criada sem etapas; publique os conteúdos abaixo e adicione-os
+          depois.
+        </p>
+      )}
+
+      {conteudosFaltando.length > 0 && (
+        <>
+          <p className={styles.rascunhoSecao}>Faltam conteúdos sobre</p>
+          <ul className={styles.faltando}>
+            {conteudosFaltando.map((tema) => (
+              <li key={tema}>{tema}</li>
+            ))}
+          </ul>
+        </>
+      )}
+
       <button type="button" className={styles.usar} onClick={onUsar}>
-        Criar com este rascunho
+        {etapas.length > 0
+          ? `Criar trilha com ${etapas.length} etapas`
+          : 'Criar com este rascunho'}
       </button>
     </div>
   )
+}
+
+const ROTULO_TIPO: Record<string, string> = {
+  VIDEO: 'Vídeo',
+  TEXTO: 'Texto',
+  LINK: 'Link',
+  DOCUMENTO: 'Documento',
 }

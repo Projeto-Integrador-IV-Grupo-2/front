@@ -237,3 +237,68 @@
 .enviar:disabled {
   opacity: 0.6;
 }
+
+.fontes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.fonte {
+  padding: 3px 9px;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 0.6875rem;
+  color: var(--color-text-muted);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+}
+
+.rascunhoSecao {
+  margin-top: var(--space-1);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.etapas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding-left: var(--space-5);
+}
+
+.etapa {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.etapaTitulo {
+  font-weight: 600;
+}
+
+.etapaConteudo {
+  font-size: 0.75rem;
+  color: var(--color-primary);
+}
+
+.etapaDescricao {
+  color: var(--color-text-muted);
+}
+
+.faltando {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding-left: var(--space-5);
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+  list-style: disc;
+}

@@ -60,6 +60,131 @@ describe('trilhaService — sugestões da IA', () => {
     })
   })
 
+  describe('ajuda da IA', () => {
+    const SEM_ROTA = () =>
+      HttpResponse.json({ message: 'Not Found' }, { status: 404 })
+
+    it('usa a rota de ajuda quando ela existe, com texto e rascunho', async () => {
+      server.use(
+        http.post('*/api/trilhas/sugestoes/ajuda', () =>
+          HttpResponse.json({
+            texto: 'Montei o rascunho.',
+            rascunho: {
+              nome: 'LGPD na prática',
+              descricao: null,
+              areaId: null,
+              prazoDias: 14,
+              objetivos: null,
+            },
+          }),
+        ),
+      )
+
+      const resposta = await pedirAjudaTrilhas('Monte uma trilha de LGPD')
+
+      expect(resposta.rascunho?.nome).toBe('LGPD na prática')
+    })
+
+    it('sem a rota no backend (404), pergunta ao assistente da dev e reaproveita a sessão', async () => {
+      let sessoesCriadas = 0
+      const perguntas: string[] = []
+      server.use(
+        http.post('*/api/trilhas/sugestoes/ajuda', SEM_ROTA),
+        http.post('*/api/assistente/sessoes', async ({ request }) => {
+          sessoesCriadas += 1
+          expect(await request.json()).toMatchObject({
+            contexto: 'CONHECIMENTO',
+          })
+          return HttpResponse.json({ id: 'sessao-1' }, { status: 201 })
+        }),
+        http.post(
+          '*/api/assistente/sessoes/:id/mensagens',
+          async ({ request, params }) => {
+            const { conteudo } = (await request.json()) as { conteudo: string }
+            perguntas.push(`${String(params.id)}:${conteudo}`)
+            return HttpResponse.json({
+              resposta: {
+                conteudo: 'Comece pela política de reembolso.',
+                fontes: ['Política de Reembolso v3'],
+              },
+            })
+          },
+        ),
+      )
+
+      const primeira = await pedirAjudaTrilhas('O que estudar?')
+      const segunda = await pedirAjudaTrilhas('E depois?', primeira.sessaoId)
+
+      expect(primeira).toMatchObject({
+        texto: 'Comece pela política de reembolso.',
+        rascunho: null,
+        fontes: ['Política de Reembolso v3'],
+        sessaoId: 'sessao-1',
+      })
+      expect(segunda.sessaoId).toBe('sessao-1')
+      expect(sessoesCriadas).toBe(1)
+      expect(perguntas).toEqual([
+        'sessao-1:O que estudar?',
+        'sessao-1:E depois?',
+      ])
+    })
+
+    it('sessão apagada (404) é recriada uma vez', async () => {
+      server.use(
+        http.post('*/api/trilhas/sugestoes/ajuda', SEM_ROTA),
+        http.post('*/api/assistente/sessoes', () =>
+          HttpResponse.json({ id: 'nova' }, { status: 201 }),
+        ),
+        http.post('*/api/assistente/sessoes/:id/mensagens', ({ params }) =>
+          params.id === 'antiga'
+            ? HttpResponse.json(
+                { message: 'Sessão não encontrada' },
+                { status: 404 },
+              )
+            : HttpResponse.json({ resposta: { conteudo: 'ok', fontes: [] } }),
+        ),
+      )
+
+      const resposta = await pedirAjudaTrilhas('Oi', 'antiga')
+
+      expect(resposta.sessaoId).toBe('nova')
+    })
+
+    it('IA fora do ar (503) não cai no plano B e avisa', async () => {
+      let assistenteChamado = false
+      server.use(
+        http.post('*/api/trilhas/sugestoes/ajuda', () =>
+          HttpResponse.json({ message: 'IA indisponível' }, { status: 503 }),
+        ),
+        http.post('*/api/assistente/sessoes', () => {
+          assistenteChamado = true
+          return HttpResponse.json({ id: 'x' }, { status: 201 })
+        }),
+      )
+
+      await expect(pedirAjudaTrilhas('Oi')).rejects.toThrow(
+        'A IA não está disponível agora. Tente de novo em instantes.',
+      )
+      expect(assistenteChamado).toBe(false)
+    })
+
+    it('assistente fora do ar no plano B também avisa', async () => {
+      server.use(
+        http.post('*/api/trilhas/sugestoes/ajuda', SEM_ROTA),
+        http.post('*/api/assistente/sessoes', () =>
+          HttpResponse.json({ id: 'sessao-1' }, { status: 201 }),
+        ),
+        http.post('*/api/assistente/sessoes/:id/mensagens', () =>
+          HttpResponse.json({ message: 'IA indisponível' }, { status: 503 }),
+        ),
+      )
+
+      await expect(pedirAjudaTrilhas('Oi')).rejects.toThrow(
+        'A IA não está disponível agora. Tente de novo em instantes.',
+      )
+    })
+  })
+
   describe('com os mocks ligados (sem o backend)', () => {
     it('monta as sugestões a partir do catálogo e tira as iniciadas', async () => {
       vi.stubEnv('VITE_SUGESTOES_MOCK', 'true')

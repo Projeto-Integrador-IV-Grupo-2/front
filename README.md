@@ -202,13 +202,20 @@ A API tira só as trilhas **concluídas**; as **em andamento** o front tira
 cruzando com "minhas trilhas" (só quando há sugestões). Backend sem o
 endpoint responde erro, e a seção apenas não aparece.
 
-**Ajuda (conversa e rascunhos): dados reais.** `POST /api/trilhas/sugestoes/ajuda`
-(branch `feat/trilhas-ajuda-ia` do backend) recebe `{ pergunta }` e devolve
-`{ texto, rascunho }`. O rascunho só vem quando o pedido é para criar uma
-trilha, já dentro dos limites do cadastro, e "Criar com este rascunho" abre o
-formulário preenchido — nada é gravado antes de quem cria salvar. IA fora do
-ar (503) mostra "A IA não está disponível agora" no painel. Sem o backend,
-`VITE_AJUDA_IA_MOCK=true` responde pelo mock.
+**Ajuda (conversa e rascunhos): dados reais.** O painel chama
+`POST /api/trilhas/sugestoes/ajuda` (PR `feat/trilhas-ajuda-ia` do backend),
+que devolve `{ texto, rascunho }`: o rascunho só vem quando o pedido é para
+criar uma trilha, e "Criar com este rascunho" abre o formulário preenchido —
+nada é gravado antes de quem cria salvar.
+
+Enquanto essa rota não estiver no backend (404), a pergunta vai para o
+**assistente da `dev`** (`POST /api/assistente/sessoes` e
+`.../{id}/mensagens`, contexto `CONHECIMENTO`): a resposta continua sendo da
+IA, com as fontes, só sem rascunho. A conversa do painel usa uma sessão só, e
+uma sessão apagada é recriada. Quando a rota entrar, os rascunhos aparecem sem
+mudar o front. IA fora do ar (5xx) mostra "A IA não está disponível agora" e
+não cai no plano B. Sem backend nenhum, `VITE_AJUDA_IA_MOCK=true` responde
+pelo mock.
 
 Para trabalhar sem o backend, `VITE_SUGESTOES_MOCK=true` responde as
 sugestões pelo mesmo mock (montadas a partir do catálogo), e `area` simula

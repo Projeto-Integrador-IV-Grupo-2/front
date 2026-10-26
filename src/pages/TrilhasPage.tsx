@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { AssistenteTrilhas } from '../components/trilhas/AssistenteTrilhas.tsx'
 import { TrilhaCard } from '../components/trilhas/TrilhaCard.tsx'
 import { TrilhaFormulario } from '../components/trilhas/TrilhaFormulario.tsx'
@@ -11,7 +11,7 @@ import { useSugestoesTrilhas } from '../components/trilhas/useSugestoesTrilhas.t
 import { useAuth } from '../hooks/useAuth.ts'
 import { usePermissao } from '../hooks/usePermissao.ts'
 import { useValorAdiado } from '../hooks/useValorAdiado.ts'
-import { ROTAS } from '../routes/paths.ts'
+import { caminhoTrilha, ROTAS } from '../routes/paths.ts'
 import {
   PERFIS_CRIAR_TRILHA,
   PERFIS_GESTAO_PDI,
@@ -22,9 +22,11 @@ import {
   listarTrilhas,
   TrilhaServiceError,
 } from '../services/trilhaService.ts'
+import { criarEtapa } from '../services/etapaService.ts'
 import type { ApiFieldError } from '../types/api.ts'
 import type {
   CriarTrilhaRequest,
+  RascunhoTrilha,
   TrilhaFiltro,
   TrilhaPaginacao,
   TrilhaResumo,
@@ -90,6 +92,28 @@ function ordenacaoDa(aba: Aba): TrilhaPaginacao['sort'] {
   return aba === 'minhas' ? 'prazo' : 'nome'
 }
 
+/** Cria as etapas do rascunho em ordem; devolve quantas falharam. */
+async function adicionarEtapas(
+  trilhaId: string,
+  etapas: RascunhoTrilha['etapas'],
+): Promise<number> {
+  let falhas = 0
+  // Uma por vez: a etapa nova vai para o fim, então a ordem de criação é a
+  // ordem da trilha.
+  for (const etapa of etapas) {
+    try {
+      await criarEtapa(trilhaId, {
+        conteudoId: etapa.conteudoId,
+        titulo: etapa.titulo,
+        descricao: etapa.descricao,
+      })
+    } catch {
+      falhas += 1
+    }
+  }
+  return falhas
+}
+
 function mensagemDe(causa: unknown, padrao: string): string {
   return causa instanceof TrilhaServiceError ? causa.message : padrao
 }
@@ -127,7 +151,8 @@ export function TrilhasPage() {
 
   const [formularioAberto, setFormularioAberto] = useState(false)
   // Rascunho vindo da IA: abre o cadastro já preenchido.
-  const [rascunho, setRascunho] = useState<CriarTrilhaRequest | null>(null)
+  const [rascunho, setRascunho] = useState<RascunhoTrilha | null>(null)
+  const navigate = useNavigate()
   const [iaAberta, setIaAberta] = useState(false)
   // Carrega em paralelo à listagem, que nunca espera por ela; o botão da IA
   // mostra quantas sugestões chegaram.
@@ -332,7 +357,7 @@ export function TrilhasPage() {
     iaRef.current?.focus()
   }
 
-  function usarRascunho(sugerido: CriarTrilhaRequest) {
+  function usarRascunho(sugerido: RascunhoTrilha) {
     setIaAberta(false)
     setErroFormulario(null)
     setFieldErrors([])
@@ -355,7 +380,25 @@ export function TrilhasPage() {
     setErroFormulario(null)
     setFieldErrors([])
     try {
-      await criarTrilha(request)
+      const criada = await criarTrilha(request)
+      const etapas = rascunho?.etapas ?? []
+      if (etapas.length > 0) {
+        // Trilha montada pela IA: as etapas entram em seguida, na ordem dela,
+        // pelo mesmo endpoint do cadastro manual. Uma etapa recusada (ex.:
+        // conteúdo despublicado no meio do caminho) não desfaz a trilha.
+        const falhas = await adicionarEtapas(criada.id, etapas)
+        setFormularioAberto(false)
+        setRascunho(null)
+        navigate(caminhoTrilha(criada.id), {
+          state: {
+            aviso:
+              falhas === 0
+                ? `Trilha “${request.nome}” criada com ${etapas.length} etapas.`
+                : `Trilha “${request.nome}” criada, mas ${falhas} de ${etapas.length} etapas não puderam ser adicionadas. Adicione-as em “Etapas da trilha”.`,
+          },
+        })
+        return
+      }
       fecharFormulario()
       setAviso(`Trilha “${request.nome}” criada.`)
       recarregar()
@@ -594,6 +637,7 @@ export function TrilhasPage() {
       {formularioAberto && (
         <TrilhaFormulario
           rascunho={rascunho}
+          totalEtapas={rascunho?.etapas.length ?? 0}
           areas={areas ?? []}
           areasIndisponiveis={areasIndisponiveis}
           salvando={salvando}

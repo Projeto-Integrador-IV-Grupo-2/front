@@ -155,7 +155,12 @@ function responderAjuda(
   const modelo = MODELOS.find((m) => m.chaves.test(s))
 
   if (QUER_CRIAR.test(s) || (modelo && /trilha/.test(s))) {
-    const rascunho = (modelo ?? MODELOS[0]).rascunho
+    // O mock não conhece os conteúdos publicados: a trilha vem sem etapas.
+    const rascunho = {
+      ...(modelo ?? MODELOS[0]).rascunho,
+      etapas: [],
+      conteudosFaltando: [],
+    }
     return {
       texto: `Montei um rascunho para a trilha "${rascunho.nome}", com prazo de ${rascunho.prazoDias} dias. Revise os campos, escolha a área e ajuste o que precisar antes de salvar. Depois de criada, você adiciona as etapas no detalhe da trilha.`,
       rascunho,
