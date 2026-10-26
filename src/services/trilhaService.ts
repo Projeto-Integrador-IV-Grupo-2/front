@@ -6,6 +6,8 @@ import {
   normalizarErro,
   type MensagensPorStatus,
 } from '../utils/errorHandler.ts'
+import { emitirEventoTrilha } from './eventosTrilha.ts'
+import { criarAdaptadorSugestoesMock } from './mocks/sugestoesMock.ts'
 import { adaptadorTrilhasMock } from './mocks/trilhasMock.ts'
 import type { ApiFieldError } from '../types/api.ts'
 import type {
@@ -15,6 +17,8 @@ import type {
   CriarTrilhaRequest,
   ProgressoTrilha,
   ResultadoAtribuicao,
+  RespostaAjudaTrilhas,
+  SugestoesTrilhas,
   TrilhaDetalhe,
   TrilhaFiltro,
   TrilhaPaginacao,
@@ -317,9 +321,58 @@ export async function iniciarTrilha(id: string): Promise<ProgressoTrilha> {
       undefined,
       configBase(),
     )
+    // Observer: quem mostra a trilha como "não iniciada" (as sugestões) se
+    // atualiza sem esta ação saber quem está ouvindo.
+    emitirEventoTrilha({ tipo: 'trilha-iniciada', trilhaId: id })
     return data
   } catch (error) {
     throw toServiceError(error, 'Não foi possível iniciar a trilha.')
+  }
+}
+
+/**
+ * As sugestões vêm da API (`GET /api/trilhas/sugestoes`, Task 11). O mock
+ * (`mocks/sugestoesMock.ts`) fica para trabalhar sem o backend:
+ * `VITE_SUGESTOES_MOCK=true` liga, e `area` simula a IA fora do ar.
+ */
+const adaptadorSugestoesMock = criarAdaptadorSugestoesMock(async () => {
+  const pagina = await listarTrilhas({}, { page: 0, size: 20 })
+  return pagina.content
+})
+
+function configSugestoes(): AxiosRequestConfig {
+  const flag = import.meta.env.VITE_SUGESTOES_MOCK
+  return flag === 'true' || flag === 'area'
+    ? { adapter: adaptadorSugestoesMock }
+    : {}
+}
+
+/**
+ * A ajuda vem da API (`POST /api/trilhas/sugestoes/ajuda`).
+ * `VITE_AJUDA_IA_MOCK=true` responde pelo mock, para trabalhar sem o backend.
+ */
+function configAjuda(): AxiosRequestConfig {
+  return import.meta.env.VITE_AJUDA_IA_MOCK === 'true'
+    ? { adapter: adaptadorSugestoesMock }
+    : {}
+}
+
+/**
+ * Trilhas sugeridas para o usuário autenticado, com o motivo de cada uma.
+ * Com a IA fora do ar a API continua respondendo 200, com `geradoPorIa: false`,
+ * o `aviso` preenchido e a recomendação por área no lugar.
+ */
+export async function listarSugestoes(config?: {
+  signal?: AbortSignal
+}): Promise<SugestoesTrilhas> {
+  try {
+    const { data } = await api.get<SugestoesTrilhas>('/api/trilhas/sugestoes', {
+      ...configSugestoes(),
+      signal: config?.signal,
+    })
+    return data
+  } catch (error) {
+    throw toServiceError(error, 'Não foi possível carregar as sugestões.')
   }
 }
 
@@ -337,5 +390,116 @@ export async function atualizarProgresso(
     return data
   } catch (error) {
     throw toServiceError(error, 'Não foi possível atualizar o progresso.')
+  }
+}
+
+/**
+ * Textos da ajuda. A chave `INTERNAL_SERVER_ERROR` vale para todo 5xx (ver
+ * `normalizarErro`) — na prática, o 503 da IA fora do ar (sem chave, limite de
+ * uso, timeout do provedor).
+ */
+const MENSAGENS_DA_AJUDA: MensagensPorStatus = {
+  [HTTP_STATUS.NOT_FOUND]: 'A IA não conseguiu responder agora.',
+  [HTTP_STATUS.INTERNAL_SERVER_ERROR]:
+    'A IA não está disponível agora. Tente de novo em instantes.',
+}
+
+/** Sessão do assistente usada como plano B (ver `pedirAjudaTrilhas`). */
+interface SessaoAssistente {
+  id: string
+}
+
+/** Resposta de `POST /api/assistente/sessoes/{id}/mensagens`. */
+interface RespostaAssistente {
+  resposta: { conteudo: string; fontes: string[] }
+}
+
+/**
+ * Plano B: o assistente de IA que já está na `dev` do backend
+ * (`/api/assistente/sessoes`), que responde com base nos documentos da
+ * empresa. Não monta rascunho; reaproveita a mesma sessão durante a conversa
+ * e cria outra se ela tiver sido apagada.
+ */
+async function perguntarAoAssistente(
+  pergunta: string,
+  sessaoId: string | null,
+): Promise<RespostaAjudaTrilhas> {
+  let id = sessaoId
+  if (!id) {
+    const { data } = await api.post<SessaoAssistente>(
+      '/api/assistente/sessoes',
+      {
+        titulo: 'Ajuda com trilhas',
+        contexto: 'CONHECIMENTO',
+      },
+    )
+    id = data.id
+  }
+  try {
+    const { data } = await api.post<RespostaAssistente>(
+      `/api/assistente/sessoes/${encodeURIComponent(id)}/mensagens`,
+      { conteudo: pergunta },
+    )
+    return {
+      texto: data.resposta.conteudo,
+      rascunho: null,
+      fontes: data.resposta.fontes,
+      sessaoId: id,
+    }
+  } catch (error) {
+    const { status } = normalizarErro(error, '')
+    if (sessaoId && status === HTTP_STATUS.NOT_FOUND) {
+      return perguntarAoAssistente(pergunta, null)
+    }
+    throw error
+  }
+}
+
+/** O backend ainda não tem a rota de ajuda (404, ou 405 casando com outra rota). */
+function semRotaDeAjuda(status: number | undefined): boolean {
+  return status === HTTP_STATUS.NOT_FOUND || status === 405
+}
+
+/**
+ * Pergunta livre à IA sobre trilhas: o que estudar, lacunas da equipe ou um
+ * rascunho de trilha nova (`rascunho` vem preenchido quando faz sentido).
+ *
+ * Usa `POST /api/trilhas/sugestoes/ajuda` (PR `feat/trilhas-ajuda-ia` do
+ * backend). Enquanto essa rota não estiver no backend, a pergunta vai para o
+ * assistente da `dev` (`perguntarAoAssistente`): a resposta continua sendo da
+ * IA, só sem rascunho. Quando a rota entrar, os rascunhos aparecem sozinhos.
+ *
+ * @param sessaoId sessão do assistente devolvida na resposta anterior, para a
+ *                 conversa do painel não abrir uma sessão por pergunta
+ */
+export async function pedirAjudaTrilhas(
+  pergunta: string,
+  sessaoId: string | null = null,
+): Promise<RespostaAjudaTrilhas> {
+  try {
+    const { data } = await api.post<RespostaAjudaTrilhas>(
+      '/api/trilhas/sugestoes/ajuda',
+      { pergunta },
+      configAjuda(),
+    )
+    return data
+  } catch (error) {
+    const { status } = normalizarErro(error, '')
+    if (!semRotaDeAjuda(status)) {
+      throw toServiceError(
+        error,
+        'A IA não conseguiu responder agora.',
+        MENSAGENS_DA_AJUDA,
+      )
+    }
+  }
+  try {
+    return await perguntarAoAssistente(pergunta, sessaoId)
+  } catch (error) {
+    throw toServiceError(
+      error,
+      'A IA não conseguiu responder agora.',
+      MENSAGENS_DA_AJUDA,
+    )
   }
 }

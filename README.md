@@ -61,10 +61,12 @@ Toda variável lida pelo Vite no código do cliente precisa começar com
 `VITE_`. O `.env` **não é versionado** (ver `.gitignore`) — cada
 integrante mantém o seu, a partir do `.env.example`.
 
-| Variável            | Obrigatória | Descrição                                                               |
-| ------------------- | ----------- | ----------------------------------------------------------------------- |
-| `VITE_API_URL`      | Sim         | URL base da API (sem barra no final)                                    |
-| `VITE_TRILHAS_MOCK` | Não         | `true` responde as rotas de trilhas com um mock em memória (ver abaixo) |
+| Variável              | Obrigatória | Descrição                                                                                                         |
+| --------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------- |
+| `VITE_API_URL`        | Sim         | URL base da API (sem barra no final)                                                                              |
+| `VITE_TRILHAS_MOCK`   | Não         | `true` responde as rotas de trilhas com um mock em memória (ver abaixo)                                           |
+| `VITE_SUGESTOES_MOCK` | Não         | `true` responde as sugestões da IA pelo mock; `area` também, simulando a IA fora do ar. Sem a variável, usa a API |
+| `VITE_AJUDA_IA_MOCK`  | Não         | `true` responde a conversa de ajuda da IA em Trilhas pelo mock. Sem a variável, usa a API                         |
 
 A URL nunca fica fixa no código: o cliente Axios (`src/services/api.ts`)
 sempre lê `import.meta.env.VITE_API_URL`.
@@ -172,6 +174,52 @@ e os erros chegam à tela como `TrilhaServiceError` (`message`, `status`,
   decide o status é a API — o frontend só apresenta o que ela devolve.
 
 ---
+
+### IA na tela de Trilhas (Task 12)
+
+O botão **IA**, ao lado do **PDI**, abre o painel **"Assistente de trilhas"**.
+O contador no botão mostra quantas sugestões há.
+
+- **Sugeridas para você:** as trilhas sugeridas, cada uma no `TrilhaCard`
+  com o motivo embaixo, como texto simples. Com `geradoPorIa: false` (a IA
+  não respondeu) o selo vira "Recomendação por área" e aparece o `aviso` da
+  API. Sem sugestões, ou com erro
+  na consulta, a seção não aparece (sem mensagem de erro).
+- **Peça ajuda à IA:** conversa com atalhos por perfil. Quem cria trilhas
+  (`PERFIS_CRIAR_TRILHA`) pode pedir para a IA montar uma trilha. A resposta
+  traz um rascunho, e "Criar com este rascunho" abre o cadastro já preenchido.
+- As sugestões carregam junto com a página (`useSugestoesTrilhas`), sem a
+  listagem esperar por elas.
+- Trilha já iniciada não entra. Ao iniciar uma trilha, o `trilhaService`
+  publica `trilha-iniciada` (`services/eventosTrilha.ts`, Observer) e as
+  sugestões, que assinam o evento, tiram a trilha da lista. A ação de iniciar
+  não conhece quem ouve.
+
+**Sugestões: dados reais.** Vêm de `GET /api/trilhas/sugestoes` (já na `dev`
+do backend), no formato
+`{ geradoPorIa, aviso, sugestoes: [{ id, nome, area, objetivos, motivo }] }`.
+A API tira só as trilhas **concluídas**; as **em andamento** o front tira
+cruzando com "minhas trilhas" (só quando há sugestões). Backend sem o
+endpoint responde erro, e a seção apenas não aparece.
+
+**Ajuda (conversa e rascunhos): dados reais.** O painel chama
+`POST /api/trilhas/sugestoes/ajuda` (PR `feat/trilhas-ajuda-ia` do backend),
+que devolve `{ texto, rascunho }`: o rascunho só vem quando o pedido é para
+criar uma trilha, e "Criar com este rascunho" abre o formulário preenchido —
+nada é gravado antes de quem cria salvar.
+
+Enquanto essa rota não estiver no backend (404), a pergunta vai para o
+**assistente da `dev`** (`POST /api/assistente/sessoes` e
+`.../{id}/mensagens`, contexto `CONHECIMENTO`): a resposta continua sendo da
+IA, com as fontes, só sem rascunho. A conversa do painel usa uma sessão só, e
+uma sessão apagada é recriada. Quando a rota entrar, os rascunhos aparecem sem
+mudar o front. IA fora do ar (5xx) mostra "A IA não está disponível agora" e
+não cai no plano B. Sem backend nenhum, `VITE_AJUDA_IA_MOCK=true` responde
+pelo mock.
+
+Para trabalhar sem o backend, `VITE_SUGESTOES_MOCK=true` responde as
+sugestões pelo mesmo mock (montadas a partir do catálogo), e `area` simula
+a IA fora do ar.
 
 ## Conteúdos, etapas e estudo (issue #39)
 

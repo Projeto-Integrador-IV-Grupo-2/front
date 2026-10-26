@@ -14,6 +14,8 @@ beforeAll(() => {
 // quem quiser testar o mock liga a flag no próprio teste.
 beforeEach(() => {
   vi.stubEnv('VITE_TRILHAS_MOCK', 'false')
+  vi.stubEnv('VITE_SUGESTOES_MOCK', 'false')
+  vi.stubEnv('VITE_AJUDA_IA_MOCK', 'false')
 })
 
 afterEach(() => {
