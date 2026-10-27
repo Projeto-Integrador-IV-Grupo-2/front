@@ -205,6 +205,39 @@ describe('UsuariosPage', () => {
     )
   })
 
+  it('cadastra escolhendo a área na lista e manda a senha sem regra no front', async () => {
+    let corpo: Record<string, unknown> | null = null
+    server.use(
+      http.post('*/api/usuarios', async ({ request }) => {
+        corpo = (await request.json()) as Record<string, unknown>
+        return HttpResponse.json(
+          criarUsuarioGestao({ id: 'id-novo', nomeCompleto: 'Carla Dias' }),
+          { status: 201 },
+        )
+      }),
+    )
+
+    renderizarGestao()
+    await screen.findByText('Ana Souza')
+    await userEvent.click(screen.getByRole('button', { name: 'Novo usuário' }))
+
+    const novo = painel('Novo usuário')
+    const area = novo.getByLabelText('Área')
+    // As opções vêm de GET /api/areas.
+    await within(area).findByRole('option', { name: 'Tecnologia' })
+    await userEvent.type(novo.getByLabelText('Nome completo'), 'Carla Dias')
+    await userEvent.type(novo.getByLabelText('E-mail'), 'carla@nexo.com')
+    await userEvent.type(novo.getByLabelText('Senha'), '123')
+    await userEvent.selectOptions(area, 'Tecnologia')
+    await userEvent.click(novo.getByRole('button', { name: 'Cadastrar' }))
+
+    expect(await screen.findByText('Usuário cadastrado.')).toBeInTheDocument()
+    expect(corpo).toMatchObject({
+      senha: '123',
+      areaId: '33333333-3333-3333-3333-333333333333',
+    })
+  })
+
   it('edita reaproveitando o formulário, sem pedir e-mail nem senha', async () => {
     let corpo: unknown = null
     server.use(

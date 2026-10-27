@@ -6,6 +6,7 @@ import {
   ROTULOS_PERFIL,
   type AtualizarUsuarioRequest,
   type CriarUsuarioRequest,
+  type RecursoResumo,
   type Usuario,
 } from '../../types/usuario.ts'
 import styles from './UsuarioFormulario.module.css'
@@ -13,6 +14,8 @@ import styles from './UsuarioFormulario.module.css'
 interface UsuarioFormularioProps {
   /** Usuário em edição, ou `null` para cadastro. Decide os campos e o título. */
   usuario: Usuario | null
+  /** Áreas ativas para o campo "Área"; a página é quem as busca. */
+  areas: RecursoResumo[]
   salvando: boolean
   erro: string | null
   fieldErrors: ApiFieldError[]
@@ -61,6 +64,7 @@ function ouNulo(valor: string): string | null {
  */
 export function UsuarioFormulario({
   usuario,
+  areas,
   salvando,
   erro,
   fieldErrors,
@@ -70,6 +74,13 @@ export function UsuarioFormulario({
 }: UsuarioFormularioProps) {
   const idBase = useId()
   const edicao = usuario !== null
+  // A área atual de quem está em edição pode estar inativa (fora da lista):
+  // entra como opção para o select não perder o valor.
+  const areaAtual = usuario?.area
+  const opcoesArea =
+    areaAtual && !areas.some((area) => area.id === areaAtual.id)
+      ? [areaAtual, ...areas]
+      : areas
   const [valores, setValores] = useState<EstadoFormulario>(() =>
     estadoInicial(usuario),
   )
@@ -185,20 +196,15 @@ export function UsuarioFormulario({
 
             <div className={styles.campo}>
               <label htmlFor={`${idBase}-senha`}>Senha</label>
+              {/* Sem regra no front: quem decide se a senha serve é a API,
+                  e a mensagem dela aparece logo abaixo. */}
               <input
                 id={`${idBase}-senha`}
                 type="password"
                 value={valores.senha}
                 onChange={(evento) => alterar('senha', evento.target.value)}
-                minLength={8}
-                maxLength={72}
-                required
                 autoComplete="new-password"
-                aria-describedby={`${idBase}-senha-dica`}
               />
-              <p id={`${idBase}-senha-dica`} className={styles.dica}>
-                Mínimo de 8 caracteres, com maiúscula, minúscula e número.
-              </p>
               {erroDoCampo('senha') && (
                 <p className={styles.erroCampo}>{erroDoCampo('senha')}</p>
               )}
@@ -238,21 +244,26 @@ export function UsuarioFormulario({
           </select>
         </div>
 
-        {/* Área e cargo entram como identificador enquanto os endpoints de
-            catálogo não existem; viram select assim que /api/areas existir. */}
         <div className={styles.campo}>
-          <label htmlFor={`${idBase}-area`}>Área (identificador)</label>
-          <input
+          <label htmlFor={`${idBase}-area`}>Área</label>
+          <select
             id={`${idBase}-area`}
             value={valores.areaId}
             onChange={(evento) => alterar('areaId', evento.target.value)}
-            placeholder="Opcional"
-          />
+          >
+            <option value="">Sem área</option>
+            {opcoesArea.map((area) => (
+              <option key={area.id} value={area.id}>
+                {area.nome}
+              </option>
+            ))}
+          </select>
           {erroDoCampo('areaId') && (
             <p className={styles.erroCampo}>{erroDoCampo('areaId')}</p>
           )}
         </div>
 
+        {/* Cargo segue como identificador: a API ainda não lista cargos. */}
         <div className={styles.campo}>
           <label htmlFor={`${idBase}-cargo`}>Cargo (identificador)</label>
           <input

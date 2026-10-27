@@ -4,6 +4,7 @@ import { Paginacao } from '../components/usuarios/Paginacao.tsx'
 import { UsuarioFormulario } from '../components/usuarios/UsuarioFormulario.tsx'
 import { UsuariosFiltros } from '../components/usuarios/UsuariosFiltros.tsx'
 import { UsuariosTabela } from '../components/usuarios/UsuariosTabela.tsx'
+import { listarAreas } from '../services/areaService.ts'
 import {
   atualizarSituacaoUsuario,
   atualizarUsuario,
@@ -16,6 +17,7 @@ import type {
   AtualizarUsuarioRequest,
   CriarUsuarioRequest,
   Pagina,
+  RecursoResumo,
   Usuario,
   UsuarioFiltro,
 } from '../types/usuario.ts'
@@ -30,6 +32,9 @@ const FILTRO_VAZIO: UsuarioFiltro = {
 }
 
 const TAMANHO_PAGINA = 10
+
+/** Áreas ativas listadas no formulário; o catálogo de uma empresa cabe nisso. */
+const TAMANHO_OPCOES_AREA = 100
 
 /**
  * Área administrativa de gestão de usuários: listagem com filtros e paginação,
@@ -75,6 +80,26 @@ export function UsuariosPage() {
   )
   const [aviso, setAviso] = useState<string | null>(null)
   const [erroOperacao, setErroOperacao] = useState<string | null>(null)
+
+  // Opções do campo "Área" do formulário. Sem elas o campo segue funcionando,
+  // só que vazio — por isso a falha não vira erro na tela.
+  const [opcoesAreas, setOpcoesAreas] = useState<RecursoResumo[]>([])
+
+  useEffect(() => {
+    const controlador = new AbortController()
+    listarAreas(
+      {},
+      { page: 0, size: TAMANHO_OPCOES_AREA },
+      { signal: controlador.signal },
+    )
+      .then((busca) => {
+        if (!controlador.signal.aborted) {
+          setOpcoesAreas(busca.content.map(({ id, nome }) => ({ id, nome })))
+        }
+      })
+      .catch(() => undefined)
+    return () => controlador.abort()
+  }, [])
 
   const chaveBusca = JSON.stringify([filtrosAplicados, pagina, recarga])
 
@@ -263,6 +288,7 @@ export function UsuariosPage() {
           // cadastro): é o reset de estado idiomático do React, sem efeito.
           key={usuarioEmEdicao?.id ?? 'novo'}
           usuario={usuarioEmEdicao}
+          areas={opcoesAreas}
           salvando={salvando}
           erro={erroFormulario}
           fieldErrors={fieldErrors}
