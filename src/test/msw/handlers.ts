@@ -8,6 +8,8 @@ import {
   criarConteudo,
   criarDashboardColaborador,
   criarDashboardGestao,
+  criarMensagemAssistente,
+  criarSessaoAssistente,
   criarPagina,
   criarPaginaTrilhas,
   criarPaginaUsuarios,
@@ -231,4 +233,47 @@ export const handlers = [
   http.post('*/api/competencias', () =>
     HttpResponse.json(criarCompetencia(), { status: 201 }),
   ),
+
+  http.get('*/api/assistente/sessoes', () =>
+    HttpResponse.json(criarPagina([criarSessaoAssistente()])),
+  ),
+
+  http.post('*/api/assistente/sessoes', () =>
+    HttpResponse.json(criarSessaoAssistente(), { status: 201 }),
+  ),
+
+  http.get('*/api/assistente/sessoes/:id/mensagens', () =>
+    HttpResponse.json([
+      criarMensagemAssistente({
+        id: 'm0000000-0000-4000-8000-000000000000',
+        papel: 'USUARIO',
+        conteudo: 'Onde fica a política de reembolso?',
+        fontes: [],
+      }),
+      criarMensagemAssistente(),
+    ]),
+  ),
+
+  http.post('*/api/assistente/sessoes/:id/mensagens', () =>
+    HttpResponse.json(
+      {
+        sessao: criarSessaoAssistente(),
+        pergunta: criarMensagemAssistente({ papel: 'USUARIO', fontes: [] }),
+        resposta: criarMensagemAssistente(),
+      },
+      { status: 201 },
+    ),
+  ),
+
+  http.patch('*/api/assistente/sessoes/:id', () =>
+    HttpResponse.json(criarSessaoAssistente()),
+  ),
+
+  http.delete(
+    '*/api/assistente/sessoes/:id',
+    () => new HttpResponse(null, { status: 204 }),
+  ),
+
+  // Histórico vazio por padrão: só os testes do Histórico tratam dele.
+  http.get('*/api/historico', () => HttpResponse.json(criarPagina([]))),
 ]

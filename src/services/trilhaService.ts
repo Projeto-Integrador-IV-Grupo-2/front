@@ -6,6 +6,12 @@ import {
   normalizarErro,
   type MensagensPorStatus,
 } from '../utils/errorHandler.ts'
+import {
+  AssistenteServiceError,
+  criarSessao,
+  enviarMensagem,
+  MENSAGEM_LIMITE_DE_PERGUNTAS,
+} from './assistenteService.ts'
 import { emitirEventoTrilha } from './eventosTrilha.ts'
 import { criarAdaptadorSugestoesMock } from './mocks/sugestoesMock.ts'
 import { adaptadorTrilhasMock } from './mocks/trilhasMock.ts'
@@ -400,55 +406,36 @@ export async function atualizarProgresso(
  */
 const MENSAGENS_DA_AJUDA: MensagensPorStatus = {
   [HTTP_STATUS.NOT_FOUND]: 'A IA não conseguiu responder agora.',
+  [HTTP_STATUS.TOO_MANY_REQUESTS]: MENSAGEM_LIMITE_DE_PERGUNTAS,
   [HTTP_STATUS.INTERNAL_SERVER_ERROR]:
     'A IA não está disponível agora. Tente de novo em instantes.',
 }
 
-/** Sessão do assistente usada como plano B (ver `pedirAjudaTrilhas`). */
-interface SessaoAssistente {
-  id: string
-}
-
-/** Resposta de `POST /api/assistente/sessoes/{id}/mensagens`. */
-interface RespostaAssistente {
-  resposta: { conteudo: string; fontes: string[] }
-}
-
 /**
- * Plano B: o assistente de IA que já está na `dev` do backend
- * (`/api/assistente/sessoes`), que responde com base nos documentos da
- * empresa. Não monta rascunho; reaproveita a mesma sessão durante a conversa
- * e cria outra se ela tiver sido apagada.
+ * Plano B: o assistente de IA (`assistenteService`, contexto padrão
+ * `CONHECIMENTO`), que responde com base nos documentos da empresa. Não monta
+ * rascunho; reaproveita a mesma sessão durante a conversa e cria outra se ela
+ * tiver sido apagada. A conversa aparece também no histórico do assistente.
  */
 async function perguntarAoAssistente(
   pergunta: string,
   sessaoId: string | null,
 ): Promise<RespostaAjudaTrilhas> {
-  let id = sessaoId
-  if (!id) {
-    const { data } = await api.post<SessaoAssistente>(
-      '/api/assistente/sessoes',
-      {
-        titulo: 'Ajuda com trilhas',
-        contexto: 'CONHECIMENTO',
-      },
-    )
-    id = data.id
-  }
+  const id = sessaoId ?? (await criarSessao('Ajuda com trilhas')).id
   try {
-    const { data } = await api.post<RespostaAssistente>(
-      `/api/assistente/sessoes/${encodeURIComponent(id)}/mensagens`,
-      { conteudo: pergunta },
-    )
+    const { resposta } = await enviarMensagem(id, pergunta)
     return {
-      texto: data.resposta.conteudo,
+      texto: resposta.conteudo,
       rascunho: null,
-      fontes: data.resposta.fontes,
+      fontes: resposta.fontes,
       sessaoId: id,
     }
   } catch (error) {
-    const { status } = normalizarErro(error, '')
-    if (sessaoId && status === HTTP_STATUS.NOT_FOUND) {
+    if (
+      sessaoId &&
+      error instanceof AssistenteServiceError &&
+      error.status === HTTP_STATUS.NOT_FOUND
+    ) {
       return perguntarAoAssistente(pergunta, null)
     }
     throw error
@@ -496,6 +483,10 @@ export async function pedirAjudaTrilhas(
   try {
     return await perguntarAoAssistente(pergunta, sessaoId)
   } catch (error) {
+    // O assistente já traduziu o erro (inclusive 429 e 503); só troca a classe.
+    if (error instanceof AssistenteServiceError) {
+      throw new TrilhaServiceError(error.message, error.status)
+    }
     throw toServiceError(
       error,
       'A IA não conseguiu responder agora.',

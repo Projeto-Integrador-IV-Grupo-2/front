@@ -41,6 +41,9 @@ export const ITENS_MENU: ItemMenu[] = [
     rotulo: 'Acompanhamento',
     perfis: PERFIS_ACOMPANHAMENTO,
   },
+  // O histórico vale para qualquer autenticado: cada um vê as próprias
+  // atividades.
+  { to: ROTAS.historico, rotulo: 'Histórico' },
 ]
 
 /**

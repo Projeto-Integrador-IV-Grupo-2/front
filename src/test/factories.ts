@@ -3,7 +3,12 @@ import type {
   ColaboradorAcompanhamento,
 } from '../types/atribuicao.ts'
 import type { Area } from '../types/area.ts'
+import type { InteracaoHistorico } from '../types/historico.ts'
 import type { Arquivo } from '../types/arquivo.ts'
+import type {
+  MensagemAssistente,
+  SessaoAssistente,
+} from '../types/assistente.ts'
 import type { Categoria, Conteudo } from '../types/conteudo.ts'
 import type { Etapa } from '../types/etapa.ts'
 import type { Competencia } from '../types/competencia.ts'
@@ -462,6 +467,54 @@ export function criarDashboardGestao(
         totalIniciadas: 18,
       },
     ],
+    ...overrides,
+  }
+}
+
+/** Conversa com o assistente, como vem de `GET /api/assistente/sessoes`. */
+export function criarSessaoAssistente(
+  overrides: Partial<SessaoAssistente> = {},
+): SessaoAssistente {
+  return {
+    id: 'c0000000-0000-4000-8000-000000000001',
+    titulo: 'Onde fica a política de reembolso?',
+    criadoEm: '2026-10-20T13:00:00Z',
+    atualizadoEm: '2026-10-20T13:00:04Z',
+    ...overrides,
+  }
+}
+
+export function criarMensagemAssistente(
+  overrides: Partial<MensagemAssistente> = {},
+): MensagemAssistente {
+  return {
+    id: 'm0000000-0000-4000-8000-000000000001',
+    papel: 'ASSISTENTE',
+    conteudo: 'Reembolsos seguem a Política de Reembolso v3.',
+    fontes: ['Política de Reembolso v3 · Atendimento'],
+    criadoEm: '2026-10-20T13:00:04Z',
+    ...overrides,
+  }
+}
+
+/** Interação do histórico, como vem de `GET /api/historico`. */
+export function criarInteracaoHistorico(
+  overrides: Partial<InteracaoHistorico> = {},
+): InteracaoHistorico {
+  return {
+    id: 'h0000000-0000-4000-8000-000000000001',
+    tipo: 'TRILHA_INICIADA',
+    detalhes: {
+      trilhaId: '44444444-4444-4444-4444-444444444444',
+      trilhaNome: 'Onboarding',
+      origem: 'progresso alterado para EM_ANDAMENTO',
+    },
+    usuario: {
+      id: '00000000-0000-0000-0000-000000000001',
+      nomeCompleto: 'Ana Souza',
+      email: 'ana@nexo.com',
+    },
+    criadoEm: new Date().toISOString(),
     ...overrides,
   }
 }

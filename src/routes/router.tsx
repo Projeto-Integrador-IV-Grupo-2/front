@@ -12,6 +12,7 @@ import { ConhecimentoPage } from '../pages/ConhecimentoPage.tsx'
 import { DocumentoDetalhePage } from '../pages/DocumentoDetalhePage.tsx'
 import { ConteudosPage } from '../pages/ConteudosPage.tsx'
 import { DashboardPage } from '../pages/DashboardPage.tsx'
+import { HistoricoPage } from '../pages/HistoricoPage.tsx'
 import { LoginPage } from '../pages/LoginPage.tsx'
 import { NotFoundPage } from '../pages/NotFoundPage.tsx'
 import { PdiEditorPage } from '../pages/PdiEditorPage.tsx'
@@ -50,6 +51,7 @@ export const routes: RouteObject[] = [
           { path: ROTAS.categorias, element: <CategoriasPage /> },
           { path: ROTAS.conhecimento, element: <ConhecimentoPage /> },
           { path: ROTAS.documentoDetalhe, element: <DocumentoDetalhePage /> },
+          { path: ROTAS.historico, element: <HistoricoPage /> },
           {
             // Área administrativa: o perfil exigido fica na rota, não na página.
             element: <ProtectedRoute perfis={['ADMIN']} />,

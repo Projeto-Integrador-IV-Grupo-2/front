@@ -61,12 +61,13 @@ Toda variável lida pelo Vite no código do cliente precisa começar com
 `VITE_`. O `.env` **não é versionado** (ver `.gitignore`) — cada
 integrante mantém o seu, a partir do `.env.example`.
 
-| Variável              | Obrigatória | Descrição                                                                                                         |
-| --------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------- |
-| `VITE_API_URL`        | Sim         | URL base da API (sem barra no final)                                                                              |
-| `VITE_TRILHAS_MOCK`   | Não         | `true` responde as rotas de trilhas com um mock em memória (ver abaixo)                                           |
-| `VITE_SUGESTOES_MOCK` | Não         | `true` responde as sugestões da IA pelo mock; `area` também, simulando a IA fora do ar. Sem a variável, usa a API |
-| `VITE_AJUDA_IA_MOCK`  | Não         | `true` responde a conversa de ajuda da IA em Trilhas pelo mock. Sem a variável, usa a API                         |
+| Variável               | Obrigatória | Descrição                                                                                                         |
+| ---------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------- |
+| `VITE_API_URL`         | Sim         | URL base da API (sem barra no final)                                                                              |
+| `VITE_TRILHAS_MOCK`    | Não         | `true` responde as rotas de trilhas com um mock em memória (ver abaixo)                                           |
+| `VITE_SUGESTOES_MOCK`  | Não         | `true` responde as sugestões da IA pelo mock; `area` também, simulando a IA fora do ar. Sem a variável, usa a API |
+| `VITE_AJUDA_IA_MOCK`   | Não         | `true` responde a conversa de ajuda da IA em Trilhas pelo mock. Sem a variável, usa a API                         |
+| `VITE_ASSISTENTE_MOCK` | Não         | `true` responde o assistente de IA pelo mock. Sem a variável, usa a API (ver "Assistente de IA")                  |
 
 A URL nunca fica fixa no código: o cliente Axios (`src/services/api.ts`)
 sempre lê `import.meta.env.VITE_API_URL`.
@@ -304,6 +305,44 @@ Axios, senão o token e o tratamento de 401 teriam de ser repetidos.
 
 ---
 
+## Histórico e assistente de IA
+
+| Tela         | O que faz                                                                             |
+| ------------ | ------------------------------------------------------------------------------------- |
+| `/historico` | Interações reais (`GET /api/historico`), agrupadas por dia, com busca e carregar mais |
+
+O Histórico lê o `historicoService` (`GET /api/historico`, do mais recente para
+o mais antigo): trilha acessada, iniciada e concluída — com link para a
+trilha — e as **perguntas feitas à IA**. Por privacidade, a API não guarda a
+pergunta nem a resposta, só se a IA encontrou fontes na base, e é isso que a
+linha mostra. O `ADMIN` recebe o histórico da empresa inteira e vê o nome de
+quem fez cada interação; os outros perfis veem só o próprio. A busca filtra o
+que já foi carregado.
+
+A IA não tem tela própria no menu: ela fica no botão **IA** da tela de Trilhas
+(ver "IA na tela de Trilhas").
+
+O `assistenteService` é o único ponto que fala com o assistente da API
+(back #71), sempre pelo cliente `api`: `GET/POST /api/assistente/sessoes`,
+`PATCH/DELETE .../{id}` e `GET/POST .../{id}/mensagens`, com o contrato dos
+tipos em `types/assistente.ts`. Hoje quem o usa é o painel de IA de Trilhas,
+quando a rota de ajuda das trilhas não existe no backend. A sessão traz um
+campo a mais, `contexto` (`CONHECIMENTO` ou `TRILHAS`), que o front ignora.
+
+Dois erros têm texto próprio, porque são os que mais aparecem num assistente:
+
+- **429** — mais de 10 perguntas por minuto: "Você fez muitas perguntas em
+  pouco tempo. Espere um minuto e tente de novo."
+- **503** — provedor de IA fora do ar: "O assistente de IA está indisponível
+  agora. Tente de novo em instantes."
+
+Sem o backend, `VITE_ASSISTENTE_MOCK=true` responde pelo mock
+(`src/services/mocks/assistenteMock.ts`), um _adapter_ do Axios com respostas
+fixas por palavra-chave, com os dados no `localStorage` (chave
+`nexo:assistente-mock`).
+
+---
+
 ## Rotas e permissões
 
 | Rota                   | Quem acessa                                               |
@@ -317,6 +356,7 @@ Axios, senão o token e o tratamento de 401 teriam de ser repetidos.
 | `/categorias`          | qualquer usuário autenticado (ações só `ADMIN`/`GESTOR`)  |
 | `/conhecimento`        | qualquer usuário autenticado (status só `ADMIN`/`GESTOR`) |
 | `/conhecimento/:id`    | qualquer usuário autenticado (ações só `ADMIN`/`GESTOR`)  |
+| `/historico`           | qualquer usuário autenticado                              |
 | `/usuarios`            | apenas `ADMIN`                                            |
 
 `/` leva ao dashboard, que por sua vez exige sessão.

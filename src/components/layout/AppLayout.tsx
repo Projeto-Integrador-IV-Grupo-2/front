@@ -24,18 +24,17 @@ const ICONE_POR_ROTA: Record<string, ReactNode> = {
   [ROTAS.areas]: <LayersIcon />,
   [ROTAS.acompanhamento]: <ChartIcon />,
   [ROTAS.conhecimento]: <BookIcon />,
+  [ROTAS.historico]: <ClockIcon />,
 }
 
 /**
  * Itens do menu do protótipo que ainda não têm tela própria — outros cards.
  * Aparecem no menu (pedido explícito), mas sem link: nada aqui simula uma
- * funcionalidade que ainda não existe. "Áreas" e "Conhecimento" saíram daqui —
- * já têm tela; "Pessoas" também, por ser a mesma coisa que "Usuários".
+ * funcionalidade que ainda não existe. "Áreas", "Conhecimento" e "Histórico"
+ * saíram daqui — já têm tela; "Pessoas" também, por ser a mesma coisa que
+ * "Usuários". A IA não tem tela própria: fica no botão IA da tela de Trilhas.
  */
-const ITENS_EM_BREVE: Array<{ rotulo: string; icone: ReactNode }> = [
-  { rotulo: 'IA', icone: <SparkleIcon /> },
-  { rotulo: 'Histórico', icone: <ClockIcon /> },
-]
+const ITENS_EM_BREVE: Array<{ rotulo: string; icone: ReactNode }> = []
 
 function iniciais(nomeCompleto: string): string {
   const partes = nomeCompleto.trim().split(/\s+/)
@@ -381,25 +380,6 @@ function ChartIcon() {
         stroke="currentColor"
         strokeWidth="1.4"
         strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  )
-}
-
-function SparkleIcon() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 20 20"
-      fill="none"
-      aria-hidden="true"
-    >
-      <path
-        d="M10 2.5l1.4 4.6 4.6 1.4-4.6 1.4L10 14.5l-1.4-4.6-4.6-1.4 4.6-1.4L10 2.5z"
-        stroke="currentColor"
-        strokeWidth="1.3"
         strokeLinejoin="round"
       />
     </svg>

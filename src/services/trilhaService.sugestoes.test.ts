@@ -1,5 +1,9 @@
 import { http, HttpResponse } from 'msw'
 import { describe, expect, it, vi } from 'vitest'
+import {
+  MENSAGEM_IA_INDISPONIVEL,
+  MENSAGEM_LIMITE_DE_PERGUNTAS,
+} from './assistenteService.ts'
 import { assinarEventosTrilha } from './eventosTrilha.ts'
 import {
   iniciarTrilha,
@@ -92,9 +96,8 @@ describe('trilhaService — sugestões da IA', () => {
         http.post('*/api/trilhas/sugestoes/ajuda', SEM_ROTA),
         http.post('*/api/assistente/sessoes', async ({ request }) => {
           sessoesCriadas += 1
-          expect(await request.json()).toMatchObject({
-            contexto: 'CONHECIMENTO',
-          })
+          // Sem contexto: o padrão da API já é CONHECIMENTO.
+          expect(await request.json()).toEqual({ titulo: 'Ajuda com trilhas' })
           return HttpResponse.json({ id: 'sessao-1' }, { status: 201 })
         }),
         http.post(
@@ -179,8 +182,25 @@ describe('trilhaService — sugestões da IA', () => {
         ),
       )
 
+      // A mensagem é a do assistente, que já traduz o 503.
       await expect(pedirAjudaTrilhas('Oi')).rejects.toThrow(
-        'A IA não está disponível agora. Tente de novo em instantes.',
+        MENSAGEM_IA_INDISPONIVEL,
+      )
+    })
+
+    it('limite de perguntas do assistente (429) no plano B tem texto próprio', async () => {
+      server.use(
+        http.post('*/api/trilhas/sugestoes/ajuda', SEM_ROTA),
+        http.post('*/api/assistente/sessoes', () =>
+          HttpResponse.json({ id: 'sessao-1' }, { status: 201 }),
+        ),
+        http.post('*/api/assistente/sessoes/:id/mensagens', () =>
+          HttpResponse.json({ message: 'Muitas perguntas' }, { status: 429 }),
+        ),
+      )
+
+      await expect(pedirAjudaTrilhas('Oi')).rejects.toThrow(
+        MENSAGEM_LIMITE_DE_PERGUNTAS,
       )
     })
   })

@@ -18,6 +18,7 @@ export const ROTAS = {
   categorias: '/categorias',
   conhecimento: '/conhecimento',
   documentoDetalhe: '/conhecimento/:id',
+  historico: '/historico',
 } as const
 
 /** Caminho do detalhe de uma trilha específica. */
