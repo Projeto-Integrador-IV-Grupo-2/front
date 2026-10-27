@@ -25,9 +25,11 @@ export function DashboardPage() {
   const podeVerPainelColaborador = usePermissao(['COLABORADOR'])
   const podeVerPainelGestao = usePermissao(['ADMIN', 'GESTOR'])
   const primeiroNome = user?.nomeCompleto.split(' ')[0] ?? ''
+  // Textos do protótipo: a gestão vê o que pede atenção; o colaborador, o
+  // que tem para fazer.
   const descricaoPainel = podeVerPainelGestao
-    ? 'Acompanhe os indicadores das trilhas da sua empresa.'
-    : 'Veja seu progresso e as próximas atividades de aprendizagem.'
+    ? `Aqui está o que precisa da sua atenção hoje, ${dataDeHoje()}.`
+    : 'Veja seu progresso e o que você precisa fazer agora.'
 
   return (
     <div className={styles.page}>
@@ -36,9 +38,7 @@ export function DashboardPage() {
         <h2 className={styles.greetingTitle}>
           {saudacaoPeloHorario()}, {primeiroNome}
         </h2>
-        <p className={styles.hint}>
-          {descricaoPainel} {dataDeHoje()}.
-        </p>
+        <p className={styles.hint}>{descricaoPainel}</p>
       </header>
 
       {podeVerPainelColaborador && <DashboardColaborador />}

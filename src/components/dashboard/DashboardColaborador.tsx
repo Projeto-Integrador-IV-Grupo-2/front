@@ -11,15 +11,16 @@ import {
   ROTULOS_STATUS_PROGRESSO,
   type StatusProgresso,
 } from '../../types/trilha.ts'
-import { caminhoTrilha } from '../../routes/paths.ts'
+import { ROTAS, caminhoTrilha } from '../../routes/paths.ts'
 import { PainelDashboard, type EstadoPainel } from './PainelDashboard.tsx'
+import lista from './ListaDashboard.module.css'
 import styles from './DashboardColaborador.module.css'
 
-const ESTILOS_STATUS: Record<StatusProgresso, string> = {
-  NAO_INICIADA: styles.statusNaoIniciada,
-  EM_ANDAMENTO: styles.statusEmAndamento,
-  CONCLUIDA: styles.statusConcluida,
-  ATRASADA: styles.statusAtrasada,
+const SELOS_STATUS: Record<StatusProgresso, string> = {
+  NAO_INICIADA: lista.seloNeutro,
+  EM_ANDAMENTO: lista.seloAndamento,
+  CONCLUIDA: lista.seloSucesso,
+  ATRASADA: lista.seloPerigo,
 }
 
 const ROTULOS_INTERACAO = {
@@ -27,6 +28,13 @@ const ROTULOS_INTERACAO = {
   TRILHA_INICIADA: 'iniciou',
   TRILHA_CONCLUIDA: 'concluiu',
 } as const
+
+/** Trilha do cartão "Continue de onde parou". */
+interface TrilhaParaContinuar {
+  trilhaId: string
+  trilhaNome: string
+  detalhe: string
+}
 
 export function DashboardColaborador() {
   const estado = useDashboardRequest<DashboardColaboradorResponse>(
@@ -42,10 +50,19 @@ export function DashboardColaborador() {
   const carregando = estado.status === 'carregando'
 
   const resumo = dados?.trilhasPorStatus
+  const resumoOk = resumoValido(resumo)
+  const percentualMedioValido =
+    typeof dados?.percentualMedio === 'number' &&
+    Number.isFinite(dados.percentualMedio) &&
+    dados.percentualMedio >= 0 &&
+    dados.percentualMedio <= 100
+  // O resumo e a média dividem o mesmo cartão, "Suas trilhas".
   const erroResumo =
-    dados && !resumoValido(resumo)
+    dados && !resumoOk
       ? 'A API retornou um resumo de trilhas inválido.'
-      : erro
+      : dados && !percentualMedioValido
+        ? 'A API retornou um percentual médio inválido.'
+        : erro
   const estadoResumo: EstadoPainel = carregando
     ? 'carregando'
     : erroResumo
@@ -80,134 +97,221 @@ export function DashboardColaborador() {
         ? 'pronto'
         : 'vazio'
 
-  const percentualMedioValido =
-    typeof dados?.percentualMedio === 'number' &&
-    Number.isFinite(dados.percentualMedio) &&
-    dados.percentualMedio >= 0 &&
-    dados.percentualMedio <= 100
-  const erroPercentual =
-    dados && !percentualMedioValido
-      ? 'A API retornou um percentual médio inválido.'
-      : erro
-  const estadoPercentual: EstadoPainel = carregando
-    ? 'carregando'
-    : erroPercentual
-      ? 'erro'
-      : 'pronto'
+  const continuar = trilhaParaContinuar(
+    prazosValidos ? prazos : [],
+    atividadesValidas ? atividades : [],
+  )
 
   return (
-    <div className={styles.grid}>
-      <PainelDashboard
-        titulo="Suas trilhas"
-        estado={estadoResumo}
-        mensagemErro={erroResumo}
-      >
-        {resumo && <ResumoTrilhas resumo={resumo} />}
-      </PainelDashboard>
+    <div className={lista.coluna}>
+      {continuar && <CartaoContinuar trilha={continuar} />}
 
-      <PainelDashboard
-        titulo="Progresso médio"
-        estado={estadoPercentual}
-        mensagemErro={erroPercentual}
-      >
-        <div className={styles.percentual}>
-          <strong>{formatarPercentual(dados?.percentualMedio ?? 0)}%</strong>
-          <span>de progresso médio nas suas trilhas</span>
-          {resumo?.total === 0 && (
-            <span className={styles.meta}>
-              Não há trilhas atribuídas para calcular a média.
-            </span>
-          )}
-          <div
-            className={styles.progressTrack}
-            role="progressbar"
-            aria-label="Percentual médio de progresso nas trilhas"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={limitarPercentual(dados?.percentualMedio ?? 0)}
+      <div className={lista.colunas}>
+        <div className={lista.coluna}>
+          <PainelDashboard
+            titulo="Próximos prazos"
+            estado={estadoPrazos}
+            mensagemErro={erroPrazos}
+            mensagemVazia="Você não tem prazos nos próximos sete dias."
           >
-            <span
-              className={styles.progressFill}
-              style={{
-                width: `${limitarPercentual(dados?.percentualMedio ?? 0)}%`,
-              }}
-              aria-hidden="true"
-            />
-          </div>
+            <ul className={lista.lista}>
+              {(prazosValidos ? prazos : []).map((prazo) => (
+                <PrazoItem key={prazo.atribuicaoId} prazo={prazo} />
+              ))}
+            </ul>
+          </PainelDashboard>
+
+          <PainelDashboard
+            titulo="Últimas atividades"
+            estado={estadoAtividades}
+            mensagemErro={erroAtividades}
+            mensagemVazia="Suas interações com as trilhas aparecerão aqui."
+          >
+            <ul className={lista.lista}>
+              {(atividadesValidas ? atividades : []).map((atividade) => (
+                <AtividadeItem key={atividade.id} atividade={atividade} />
+              ))}
+            </ul>
+          </PainelDashboard>
         </div>
-      </PainelDashboard>
 
-      <PainelDashboard
-        titulo="Próximos prazos"
-        estado={estadoPrazos}
-        mensagemErro={erroPrazos}
-        mensagemVazia="Você não tem prazos nos próximos sete dias."
-      >
-        <ul className={styles.list}>
-          {(prazosValidos ? prazos : []).map((prazo) => (
-            <PrazoItem key={prazo.atribuicaoId} prazo={prazo} />
-          ))}
-        </ul>
-      </PainelDashboard>
+        <div className={lista.coluna}>
+          <PainelDashboard
+            titulo="Suas trilhas"
+            estado={estadoResumo}
+            mensagemErro={erroResumo}
+          >
+            {resumoOk && (
+              <ResumoTrilhas
+                resumo={resumo}
+                percentualMedio={dados?.percentualMedio ?? 0}
+              />
+            )}
+          </PainelDashboard>
 
-      <PainelDashboard
-        titulo="Últimas atividades"
-        estado={estadoAtividades}
-        mensagemErro={erroAtividades}
-        mensagemVazia="Suas interações com as trilhas aparecerão aqui."
-      >
-        <ul className={styles.list}>
-          {(atividadesValidas ? atividades : []).map((atividade) => (
-            <AtividadeItem key={atividade.id} atividade={atividade} />
-          ))}
-        </ul>
-      </PainelDashboard>
+          <aside className={styles.ia} aria-label="Assistente de IA">
+            <span className={styles.iaIcone}>
+              <SparkleIcon />
+            </span>
+            <div>
+              <p className={styles.iaTexto}>
+                Dúvida sobre uma política, um processo ou um código interno?
+                Pergunte à IA — ela consulta toda a base de conhecimento da
+                empresa.
+              </p>
+              <Link to={ROTAS.assistente} className={styles.iaBotao}>
+                Abrir assistente
+              </Link>
+            </div>
+          </aside>
+        </div>
+      </div>
     </div>
   )
 }
 
-function ResumoTrilhas({ resumo }: { resumo: ResumoStatusDashboard }) {
-  const indicadores = [
-    { rotulo: 'Total', valor: resumo.total },
-    { rotulo: 'Não iniciadas', valor: resumo.naoIniciadas },
-    { rotulo: 'Em andamento', valor: resumo.emAndamento },
-    { rotulo: 'Concluídas', valor: resumo.concluidas },
-    { rotulo: 'Atrasadas', valor: resumo.atrasadas },
+/**
+ * A trilha para retomar: o prazo mais próximo ainda aberto ou, sem prazos,
+ * a última trilha acessada ou iniciada.
+ */
+function trilhaParaContinuar(
+  prazos: ProximoPrazoDashboard[],
+  atividades: HistoricoInteracaoDashboard[],
+): TrilhaParaContinuar | undefined {
+  const prazo = prazos.find((item) => item.status !== 'CONCLUIDA')
+  if (prazo) {
+    return {
+      trilhaId: prazo.trilhaId,
+      trilhaNome: prazo.trilhaNome,
+      detalhe: `${prazo.percentual}% concluído · prazo em ${formatarData(prazo.prazo)}`,
+    }
+  }
+  const atividade = atividades.find(
+    (item) =>
+      item.tipo !== 'TRILHA_CONCLUIDA' &&
+      texto(item.detalhes?.trilhaId) &&
+      texto(item.detalhes?.trilhaNome),
+  )
+  if (!atividade) return undefined
+  return {
+    trilhaId: texto(atividade.detalhes.trilhaId)!,
+    trilhaNome: texto(atividade.detalhes.trilhaNome)!,
+    detalhe: `Último acesso em ${formatarDataHora(atividade.criadoEm)}`,
+  }
+}
+
+function CartaoContinuar({ trilha }: { trilha: TrilhaParaContinuar }) {
+  return (
+    <section className={styles.continuar} aria-labelledby="continuar-titulo">
+      <span className={styles.continuarIcone}>
+        <PlayIcon />
+      </span>
+      <div className={styles.continuarCorpo}>
+        <span className={styles.continuarRotulo}>Continue de onde parou</span>
+        <h3 id="continuar-titulo" className={styles.continuarTitulo}>
+          {trilha.trilhaNome}
+        </h3>
+        <p className={styles.continuarDetalhe}>{trilha.detalhe}</p>
+      </div>
+      <Link
+        to={caminhoTrilha(trilha.trilhaId)}
+        className={styles.continuarBotao}
+        aria-label={`Continuar ${trilha.trilhaNome}`}
+      >
+        Continuar
+      </Link>
+    </section>
+  )
+}
+
+function ResumoTrilhas({
+  resumo,
+  percentualMedio,
+}: {
+  resumo: ResumoStatusDashboard
+  percentualMedio: number
+}) {
+  const indicadores: Array<{ status: StatusProgresso; valor: number }> = [
+    { status: 'EM_ANDAMENTO', valor: resumo.emAndamento },
+    { status: 'NAO_INICIADA', valor: resumo.naoIniciadas },
+    { status: 'CONCLUIDA', valor: resumo.concluidas },
+    { status: 'ATRASADA', valor: resumo.atrasadas },
   ]
+  const percentual = limitarPercentual(percentualMedio)
 
   return (
-    <>
-      <div className={styles.indicators}>
-        {indicadores.map((item) => (
-          <div key={item.rotulo} className={styles.indicator}>
-            <strong>{item.valor}</strong>
-            <span>{item.rotulo}</span>
-          </div>
-        ))}
+    <div className={styles.resumo}>
+      <div className={styles.progressoCabecalho}>
+        <span>Progresso médio</span>
+        <strong>{formatarPercentual(percentualMedio)}%</strong>
       </div>
-      {resumo.total === 0 && (
-        <p className={styles.emptyNote} role="status">
+      <div
+        className={lista.barra}
+        role="progressbar"
+        aria-label="Percentual médio de progresso nas trilhas"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={percentual}
+      >
+        <span
+          className={lista.barraPreenchida}
+          style={{ width: `${percentual}%` }}
+          aria-hidden="true"
+        />
+      </div>
+
+      {resumo.total === 0 ? (
+        <p className={lista.nota} role="status">
           Você ainda não tem trilhas atribuídas.
         </p>
+      ) : (
+        <ul className={lista.lista}>
+          {indicadores.map((item) => (
+            <li key={item.status} className={lista.linha}>
+              <span className={lista.linhaCorpo}>
+                <span className={lista.linhaTitulo}>
+                  {ROTULOS_PLURAIS[item.status]}
+                </span>
+              </span>
+              <span className={`${lista.selo} ${SELOS_STATUS[item.status]}`}>
+                {item.valor}
+              </span>
+            </li>
+          ))}
+        </ul>
       )}
-    </>
+
+      <Link to={ROTAS.trilhas} className={styles.verTodas}>
+        Ver minhas trilhas ({resumo.total})
+      </Link>
+    </div>
   )
+}
+
+const ROTULOS_PLURAIS: Record<StatusProgresso, string> = {
+  EM_ANDAMENTO: 'Em andamento',
+  NAO_INICIADA: 'Não iniciadas',
+  CONCLUIDA: 'Concluídas',
+  ATRASADA: 'Atrasadas',
 }
 
 function PrazoItem({ prazo }: { prazo: ProximoPrazoDashboard }) {
   return (
-    <li className={styles.listItem}>
-      <div className={styles.itemMain}>
-        <Link className={styles.itemLink} to={caminhoTrilha(prazo.trilhaId)}>
-          {prazo.trilhaNome}
-        </Link>
-        <span className={styles.meta}>
-          Prazo: {formatarData(prazo.prazo)} · {prazo.percentual}% concluído
+    <li>
+      <Link
+        to={caminhoTrilha(prazo.trilhaId)}
+        className={`${lista.linha} ${lista.linhaLink}`}
+      >
+        <span className={lista.linhaCorpo}>
+          <span className={lista.linhaTitulo}>{prazo.trilhaNome}</span>
+          <span className={lista.linhaMeta}>
+            Prazo: {formatarData(prazo.prazo)} · {prazo.percentual}% concluído
+          </span>
         </span>
-      </div>
-      <span className={`${styles.status} ${ESTILOS_STATUS[prazo.status]}`}>
-        {ROTULOS_STATUS_PROGRESSO[prazo.status]}
-      </span>
+        <span className={`${lista.selo} ${SELOS_STATUS[prazo.status]}`}>
+          {ROTULOS_STATUS_PROGRESSO[prazo.status]}
+        </span>
+      </Link>
     </li>
   )
 }
@@ -222,14 +326,52 @@ function AtividadeItem({
   const quando = formatarDataHora(atividade.criadoEm)
 
   return (
-    <li className={styles.listItem}>
-      <div className={styles.itemMain}>
-        <span className={styles.activityTitle}>
+    <li className={lista.linha}>
+      <span className={lista.linhaCorpo}>
+        <span className={lista.linhaTitulo}>
           Você {acao} <strong>{trilhaNome}</strong>
         </span>
-        <span className={styles.meta}>{quando}</span>
-      </div>
+        <span className={lista.linhaMeta}>{quando}</span>
+      </span>
     </li>
+  )
+}
+
+function PlayIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 20 20"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M7 5l8 5-8 5V5z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+function SparkleIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 20 20"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M10 2.5l1.4 4.6 4.6 1.4-4.6 1.4L10 14.5l-1.4-4.6-4.6-1.4 4.6-1.4L10 2.5z"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinejoin="round"
+      />
+    </svg>
   )
 }
 

@@ -37,6 +37,13 @@ describe('DashboardPage', () => {
     expect(screen.getAllByText('Onboarding').length).toBeGreaterThan(0)
     expect(screen.getByText(/Você iniciou/)).toBeInTheDocument()
     expect(screen.getByText('Não iniciadas')).toBeInTheDocument()
+    // O prazo aberto mais próximo vira o "Continue de onde parou".
+    expect(
+      screen.getByRole('link', { name: 'Continuar Onboarding' }),
+    ).toHaveAttribute('href', '/trilhas/44444444-4444-4444-4444-444444444444')
+    expect(
+      screen.getByRole('link', { name: 'Abrir assistente' }),
+    ).toHaveAttribute('href', '/assistente')
     expect(
       screen.queryByRole('heading', { name: 'Indicadores gerais' }),
     ).not.toBeInTheDocument()
@@ -73,6 +80,20 @@ describe('DashboardPage', () => {
       expect(
         screen.queryByRole('heading', { name: 'Suas trilhas' }),
       ).not.toBeInTheDocument()
+
+      // "Precisa de atenção" junta atrasos, áreas e o que não começou.
+      const atencao = screen.getByRole('region', {
+        name: 'Precisa de atenção',
+      })
+      expect(
+        within(atencao).getByText('6 atribuições estão atrasadas'),
+      ).toBeInTheDocument()
+      expect(
+        within(atencao).getByText('Tecnologia tem 4 atribuições atrasadas'),
+      ).toBeInTheDocument()
+      expect(
+        within(atencao).getByText('8 atribuições ainda não foram iniciadas'),
+      ).toBeInTheDocument()
 
       const grafico = screen.getByRole('group', {
         name: /Atribuições por status/,
@@ -117,7 +138,7 @@ describe('DashboardPage', () => {
     expect(
       screen.getByRole('heading', { name: 'Indicadores gerais' }),
     ).toBeInTheDocument()
-    expect(screen.getByText(/Acompanhe os indicadores/)).toBeInTheDocument()
+    expect(screen.getByText(/precisa da sua atenção hoje/)).toBeInTheDocument()
   })
 
   it('isola erro de um bloco de gestão e mantém os outros indicadores', async () => {
@@ -170,7 +191,7 @@ describe('DashboardPage', () => {
     })
 
     expect(
-      await screen.findByText('Nenhuma área possui atribuições atrasadas.'),
+      await screen.findByText('Nada precisa da sua atenção agora.'),
     ).toBeInTheDocument()
     expect(
       screen.getByText(

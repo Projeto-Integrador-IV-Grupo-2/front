@@ -1,24 +1,33 @@
 .panel {
+  display: flex;
   min-width: 0;
-  padding: var(--space-4);
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* Rótulo da seção, fora do cartão (protótipo: "Precisa de atenção"). */
+.title {
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.card {
+  min-width: 0;
+  padding: var(--space-1) 18px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-surface);
   box-shadow: var(--shadow-sm);
 }
 
-.title {
-  margin-bottom: var(--space-4);
-  color: var(--color-text);
-  font-size: 0.95rem;
-  font-weight: 700;
-}
-
 .state,
 .error {
-  padding: var(--space-3) 0;
+  padding: 14px 0;
   color: var(--color-text-muted);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
 }
 
 .error {
