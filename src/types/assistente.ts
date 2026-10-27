@@ -1,36 +1,39 @@
-/** Contexto persistido pela API (`ContextoChat`). */
-export type AssistenteContexto = 'CONHECIMENTO' | 'TRILHAS'
+/**
+ * Contratos do assistente de IA. Seguem os endpoints de sessões e mensagens
+ * combinados para o backend (Task 7): enquanto eles não existem, o
+ * `assistenteService` responde com o mock em `services/mocks/assistenteMock.ts`.
+ */
 
-/** Papel atribuído a cada mensagem (`PapelMensagem`). */
-export type PapelMensagemAssistente = 'USUARIO' | 'ASSISTENTE'
+/** Quem escreveu a mensagem. */
+export type PapelMensagem = 'USUARIO' | 'ASSISTENTE'
 
-/** DTO `SessaoResponse` da API. */
-export interface AssistenteSessaoResponse {
+/** Uma conversa com o assistente, como aparece no histórico. */
+export interface SessaoAssistente {
   id: string
-  contexto: AssistenteContexto
   titulo: string
   criadoEm: string
+  /** Muda a cada mensagem nova: é o que ordena o histórico. */
   atualizadoEm: string
 }
 
-/** DTO `MensagemResponse` retornado pelo backend. As fontes são títulos de documentos. */
-export interface AssistenteMensagemResponse {
+export interface MensagemAssistente {
   id: string
-  papel: PapelMensagemAssistente
+  papel: PapelMensagem
   conteudo: string
+  /** Conteúdos da base que embasaram a resposta (só nas do assistente). */
   fontes: string[]
   criadoEm: string
 }
 
-/** DTO `PerguntaRequest`; `conteudo` é o campo oficial da API. */
-// O backend também aceita `pergunta` como alias por compatibilidade.
-export interface AssistentePerguntaRequest {
-  conteudo: string
+/** Resposta de `POST /api/assistente/sessoes/{id}/mensagens`. */
+export interface RespostaPergunta {
+  /** A sessão já com `atualizadoEm` novo. */
+  sessao: SessaoAssistente
+  pergunta: MensagemAssistente
+  resposta: MensagemAssistente
 }
 
-/** DTO `RespostaAssistenteResponse`: sessão atualizada e a troca completa. */
-export interface AssistenteRespostaResponse {
-  sessao: AssistenteSessaoResponse
-  pergunta: AssistenteMensagemResponse
-  resposta: AssistenteMensagemResponse
+export interface PaginacaoSessoes {
+  page?: number
+  size?: number
 }

@@ -1,5 +1,3 @@
-
-
 interface MensagemBase {
   id: string
   criadaEm: string
@@ -25,9 +23,7 @@ export interface MensagemErro extends MensagemBase {
 }
 
 export type MensagemConversa =
-  | MensagemUsuario
-  | MensagemAssistente
-  | MensagemErro
+  MensagemUsuario | MensagemAssistente | MensagemErro
 
 let sequenciaMensagem = 0
 

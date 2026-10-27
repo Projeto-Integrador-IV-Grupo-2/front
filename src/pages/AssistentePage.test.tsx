@@ -5,6 +5,10 @@ import { describe, expect, it } from 'vitest'
 import { criarUsuario } from '../test/factories.ts'
 import { server } from '../test/msw/server.ts'
 import { renderizarComProvedores } from '../test/renderWithProviders.tsx'
+import {
+  MENSAGEM_IA_INDISPONIVEL,
+  MENSAGEM_LIMITE_DE_PERGUNTAS,
+} from '../services/assistenteService.ts'
 
 const ROTA_ASSISTENTE = '/assistente'
 const TITULO_FONTE = 'Política de Férias'
@@ -58,7 +62,9 @@ describe('AssistentePage', () => {
     const user = userEvent.setup()
     server.use(
       http.post('*/api/assistente/sessoes/:sessaoId/mensagens', () =>
-        HttpResponse.json(respostaDaApi('Como solicito férias?', [TITULO_FONTE])),
+        HttpResponse.json(
+          respostaDaApi('Como solicito férias?', [TITULO_FONTE]),
+        ),
       ),
       http.get('*/api/conteudos', ({ request }) => {
         const url = new URL(request.url)
@@ -97,7 +103,9 @@ describe('AssistentePage', () => {
 
     expect(await screen.findByText('Como solicito férias?')).toBeInTheDocument()
     expect(
-      await screen.findByText('Consulte a política interna para ver os detalhes.'),
+      await screen.findByText(
+        'Consulte a política interna para ver os detalhes.',
+      ),
     ).toBeInTheDocument()
 
     const linkFonte = screen.getByRole('link', { name: TITULO_FONTE })
@@ -151,7 +159,9 @@ describe('AssistentePage', () => {
     await waitFor(() => expect(liberarResposta).toBeDefined())
     liberarResposta?.()
     expect(
-      await screen.findByText('Consulte a política interna para ver os detalhes.'),
+      await screen.findByText(
+        'Consulte a política interna para ver os detalhes.',
+      ),
     ).toBeInTheDocument()
     expect(campo).toHaveFocus()
   })
@@ -159,13 +169,11 @@ describe('AssistentePage', () => {
   it.each([
     {
       status: 503,
-      mensagem:
-        'O assistente de IA está indisponível no momento. Tente novamente em instantes.',
+      mensagem: MENSAGEM_IA_INDISPONIVEL,
     },
     {
       status: 429,
-      mensagem:
-        'Você atingiu o limite de perguntas. Aguarde um pouco antes de tentar novamente.',
+      mensagem: MENSAGEM_LIMITE_DE_PERGUNTAS,
     },
   ])(
     'mostra mensagem amigável e permite nova tentativa no erro $status',
@@ -177,11 +185,16 @@ describe('AssistentePage', () => {
           if (falhar) {
             return HttpResponse.json({ message: 'Erro técnico' }, { status })
           }
-          return HttpResponse.json(respostaDaApi('Minha pergunta continua aqui'))
+          return HttpResponse.json(
+            respostaDaApi('Minha pergunta continua aqui'),
+          )
         }),
       )
 
-      renderizarComProvedores({ rota: ROTA_ASSISTENTE, usuario: criarUsuario() })
+      renderizarComProvedores({
+        rota: ROTA_ASSISTENTE,
+        usuario: criarUsuario(),
+      })
       const campo = await screen.findByRole('textbox', {
         name: 'Escreva sua pergunta',
       })
@@ -189,15 +202,21 @@ describe('AssistentePage', () => {
       await user.keyboard('{Enter}')
 
       expect(await screen.findByText(mensagem)).toBeInTheDocument()
-      expect(screen.getByText('Minha pergunta continua aqui')).toBeInTheDocument()
+      expect(
+        screen.getByText('Minha pergunta continua aqui'),
+      ).toBeInTheDocument()
       expect(screen.getByRole('alert')).toBeInTheDocument()
 
       falhar = false
       await user.click(screen.getByRole('button', { name: 'Tentar novamente' }))
       expect(
-        await screen.findByText('Consulte a política interna para ver os detalhes.'),
+        await screen.findByText(
+          'Consulte a política interna para ver os detalhes.',
+        ),
       ).toBeInTheDocument()
-      expect(screen.getByText('Minha pergunta continua aqui')).toBeInTheDocument()
+      expect(
+        screen.getByText('Minha pergunta continua aqui'),
+      ).toBeInTheDocument()
     },
   )
 

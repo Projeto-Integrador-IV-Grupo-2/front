@@ -25,12 +25,17 @@ const ICONE_POR_ROTA: Record<string, ReactNode> = {
   [ROTAS.acompanhamento]: <ChartIcon />,
   [ROTAS.conhecimento]: <BookIcon />,
   [ROTAS.assistente]: <SparkleIcon />,
+  [ROTAS.historico]: <ClockIcon />,
 }
 
-/** Itens ainda sem tela própria; permanecem apenas como indicação visual. */
-const ITENS_EM_BREVE: Array<{ rotulo: string; icone: ReactNode }> = [
-  { rotulo: 'Histórico', icone: <ClockIcon /> },
-]
+/**
+ * Itens do menu do protótipo que ainda não têm tela própria — outros cards.
+ * Aparecem no menu (pedido explícito), mas sem link: nada aqui simula uma
+ * funcionalidade que ainda não existe. "Áreas", "Conhecimento", "Assistente" e
+ * "Histórico" saíram daqui — já têm tela; "Pessoas" também, por ser a mesma
+ * coisa que "Usuários".
+ */
+const ITENS_EM_BREVE: Array<{ rotulo: string; icone: ReactNode }> = []
 
 function iniciais(nomeCompleto: string): string {
   const partes = nomeCompleto.trim().split(/\s+/)

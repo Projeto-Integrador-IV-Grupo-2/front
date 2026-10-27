@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useLocation, useParams } from 'react-router-dom'
 import { AtribuirTrilha } from '../components/trilhas/AtribuirTrilha.tsx'
 import { ColaboradoresAtribuidos } from '../components/trilhas/ColaboradoresAtribuidos.tsx'
 import { ConfirmacaoSituacaoTrilha } from '../components/trilhas/ConfirmacaoSituacaoTrilha.tsx'
@@ -161,7 +161,11 @@ export function TrilhaDetalhePage() {
   const [recarga, setRecarga] = useState(0)
   const [resultado, setResultado] = useState<ResultadoBusca | null>(null)
   const [salvando, setSalvando] = useState(false)
-  const [aviso, setAviso] = useState<string | null>(null)
+  // Quem chega de outra tela pode trazer um aviso (ex.: trilha criada pela IA).
+  const location = useLocation()
+  const [aviso, setAviso] = useState<string | null>(
+    () => (location.state as { aviso?: string } | null)?.aviso ?? null,
+  )
   const [erroAcao, setErroAcao] = useState<string | null>(null)
   const tituloRef = useRef<HTMLHeadingElement>(null)
   const podeAdicionarAoPdi = usePermissao(PERFIS_GESTAO_PDI)

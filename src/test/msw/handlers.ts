@@ -1,11 +1,15 @@
 import { http, HttpResponse } from 'msw'
 import {
   criarArea,
+  criarArquivo,
   criarAtribuicao,
   criarColaboradorAcompanhamento,
   criarCompetencia,
+  criarConteudo,
   criarDashboardColaborador,
   criarDashboardGestao,
+  criarMensagemAssistente,
+  criarSessaoAssistente,
   criarPagina,
   criarPaginaTrilhas,
   criarPaginaUsuarios,
@@ -46,53 +50,6 @@ export const handlers = [
     HttpResponse.json(criarDashboardGestao()),
   ),
 
-  // Assistente de IA (Task 9): contrato compatível com SessaoResponse e
-  // RespostaAssistenteResponse do backend.
-  http.post('*/api/assistente/sessoes', () =>
-    HttpResponse.json(
-      {
-        id: 'sessao-assistente-teste',
-        contexto: 'CONHECIMENTO',
-        titulo: 'Nova conversa',
-        criadoEm: '2026-10-26T12:00:00Z',
-        atualizadoEm: '2026-10-26T12:00:00Z',
-      },
-      { status: 201 },
-    ),
-  ),
-
-  http.post(
-    '*/api/assistente/sessoes/:sessaoId/mensagens',
-    async ({ request, params }) => {
-      const corpo = (await request.json()) as { conteudo?: string }
-      const conteudo = corpo.conteudo ?? ''
-      const criadoEm = '2026-10-26T12:00:01Z'
-      return HttpResponse.json({
-        sessao: {
-          id: String(params.sessaoId),
-          contexto: 'CONHECIMENTO',
-          titulo: conteudo.slice(0, 200) || 'Nova conversa',
-          criadoEm: '2026-10-26T12:00:00Z',
-          atualizadoEm: criadoEm,
-        },
-        pergunta: {
-          id: 'pergunta-assistente-teste',
-          papel: 'USUARIO',
-          conteudo,
-          fontes: [],
-          criadoEm,
-        },
-        resposta: {
-          id: 'resposta-assistente-teste',
-          papel: 'ASSISTENTE',
-          conteudo: `Resposta de teste para: ${conteudo}`,
-          fontes: [],
-          criadoEm,
-        },
-      })
-    },
-  ),
-
   http.get('*/api/usuarios', () => HttpResponse.json(criarPaginaUsuarios())),
 
   http.post('*/api/usuarios', () =>
@@ -107,6 +64,19 @@ export const handlers = [
 
   http.get('*/api/trilhas', () => HttpResponse.json(criarPaginaTrilhas())),
 
+  // Antes de /api/trilhas/:id, senão "sugestoes" seria lido como um id.
+  // Padrão sem sugestões: a seção não aparece nos testes que não tratam dela.
+  http.get('*/api/trilhas/sugestoes', () =>
+    HttpResponse.json({ geradoPorIa: true, aviso: null, sugestoes: [] }),
+  ),
+
+  http.post('*/api/trilhas/sugestoes/ajuda', () =>
+    HttpResponse.json({
+      texto: 'Posso ajudar com as trilhas.',
+      rascunho: null,
+    }),
+  ),
+
   http.get('*/api/trilhas/:id', () => HttpResponse.json(criarTrilhaDetalhe())),
 
   http.post('*/api/trilhas/:id/progresso', () =>
@@ -120,6 +90,35 @@ export const handlers = [
   http.get('*/api/trilhas/:id/etapas', () => HttpResponse.json([])),
 
   http.get('*/api/conteudos', () => HttpResponse.json(criarPagina([]))),
+
+  http.get('*/api/conteudos/:id', () => HttpResponse.json(criarConteudo())),
+
+  http.patch('*/api/conteudos/:id/publicar', () =>
+    HttpResponse.json(criarConteudo({ status: 'PUBLICADO' })),
+  ),
+
+  http.patch('*/api/conteudos/:id/despublicar', () =>
+    HttpResponse.json(criarConteudo({ status: 'RASCUNHO' })),
+  ),
+
+  // Arquivos dos documentos (issue #49).
+  http.get('*/api/conteudos/:id/arquivos', () => HttpResponse.json([])),
+
+  http.post('*/api/conteudos/:id/arquivos', () =>
+    HttpResponse.json(criarArquivo(), { status: 201 }),
+  ),
+
+  http.get(
+    '*/api/arquivos/:id/download',
+    () =>
+      new HttpResponse('conteudo-do-arquivo', {
+        headers: {
+          'Content-Type': 'application/pdf',
+          'Content-Disposition':
+            "attachment; filename*=UTF-8''politica-de-ferias.pdf",
+        },
+      }),
+  ),
 
   http.get('*/api/categorias', () => HttpResponse.json(criarPagina([]))),
 
@@ -234,4 +233,47 @@ export const handlers = [
   http.post('*/api/competencias', () =>
     HttpResponse.json(criarCompetencia(), { status: 201 }),
   ),
+
+  http.get('*/api/assistente/sessoes', () =>
+    HttpResponse.json(criarPagina([criarSessaoAssistente()])),
+  ),
+
+  http.post('*/api/assistente/sessoes', () =>
+    HttpResponse.json(criarSessaoAssistente(), { status: 201 }),
+  ),
+
+  http.get('*/api/assistente/sessoes/:id/mensagens', () =>
+    HttpResponse.json([
+      criarMensagemAssistente({
+        id: 'm0000000-0000-4000-8000-000000000000',
+        papel: 'USUARIO',
+        conteudo: 'Onde fica a política de reembolso?',
+        fontes: [],
+      }),
+      criarMensagemAssistente(),
+    ]),
+  ),
+
+  http.post('*/api/assistente/sessoes/:id/mensagens', () =>
+    HttpResponse.json(
+      {
+        sessao: criarSessaoAssistente(),
+        pergunta: criarMensagemAssistente({ papel: 'USUARIO', fontes: [] }),
+        resposta: criarMensagemAssistente(),
+      },
+      { status: 201 },
+    ),
+  ),
+
+  http.patch('*/api/assistente/sessoes/:id', () =>
+    HttpResponse.json(criarSessaoAssistente()),
+  ),
+
+  http.delete(
+    '*/api/assistente/sessoes/:id',
+    () => new HttpResponse(null, { status: 204 }),
+  ),
+
+  // Histórico vazio por padrão: só os testes do Histórico tratam dele.
+  http.get('*/api/historico', () => HttpResponse.json(criarPagina([]))),
 ]

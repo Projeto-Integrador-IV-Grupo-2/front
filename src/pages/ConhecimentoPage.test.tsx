@@ -274,4 +274,67 @@ describe('ConhecimentoPage', () => {
       ).toBeInTheDocument()
     },
   )
+
+  describe('cadastro de documento (issue #49)', () => {
+    it('colaborador não vê o botão de novo documento', async () => {
+      registrarBuscas()
+
+      renderizar(colaborador)
+
+      await screen.findByRole('heading', { level: 1, name: 'Conhecimento' })
+      expect(
+        screen.queryByRole('button', { name: '+ Novo documento' }),
+      ).not.toBeInTheDocument()
+    })
+
+    it('o título do documento leva ao detalhe dele', async () => {
+      registrarBuscas()
+
+      renderizar(colaborador)
+
+      expect(
+        await screen.findByRole('link', { name: 'Manual do colaborador' }),
+      ).toHaveAttribute('href', '/conhecimento/doc-1')
+    })
+
+    it('gestor cadastra um documento e o tipo já vem como DOCUMENTO', async () => {
+      registrarBuscas()
+      const usuario = userEvent.setup()
+      let corpo: Record<string, unknown> = {}
+      server.use(
+        http.post('*/api/conteudos', async ({ request }) => {
+          corpo = (await request.json()) as Record<string, unknown>
+          return HttpResponse.json(criarConteudo({ tipo: 'DOCUMENTO' }), {
+            status: 201,
+          })
+        }),
+      )
+
+      renderizar(gestor)
+
+      await usuario.click(
+        await screen.findByRole('button', { name: '+ Novo documento' }),
+      )
+      const dialogo = await screen.findByRole('dialog', {
+        name: 'Novo documento',
+      })
+      // O select abre no documento: é a tela de Conhecimento.
+      expect(within(dialogo).getByLabelText('Tipo')).toHaveValue('DOCUMENTO')
+      await usuario.type(
+        within(dialogo).getByLabelText('Título'),
+        'Política de reembolso',
+      )
+      await usuario.click(
+        within(dialogo).getByRole('button', { name: 'Cadastrar documento' }),
+      )
+
+      expect(
+        await screen.findByText(/Documento cadastrado como rascunho/),
+      ).toBeInTheDocument()
+      expect(corpo).toMatchObject({
+        titulo: 'Política de reembolso',
+        tipo: 'DOCUMENTO',
+      })
+    })
+  })
 })

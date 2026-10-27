@@ -18,6 +18,8 @@ export const ROTAS = {
   categorias: '/categorias',
   conhecimento: '/conhecimento',
   assistente: '/assistente',
+  documentoDetalhe: '/conhecimento/:id',
+  historico: '/historico',
 } as const
 
 /** Caminho do detalhe de uma trilha específica. */
@@ -28,6 +30,11 @@ export function caminhoTrilha(id: string): string {
 /** Tela de estudo de uma trilha: player do Vimeo e conclusão das etapas. */
 export function caminhoEstudo(id: string): string {
   return ROTAS.trilhaEstudo.replace(':id', encodeURIComponent(id))
+}
+
+/** Detalhe de um documento: arquivos, download e pré-visualização. */
+export function caminhoDocumento(id: string): string {
+  return ROTAS.documentoDetalhe.replace(':id', encodeURIComponent(id))
 }
 
 /** Caminho do editor de um PDI específico. */

@@ -8,8 +8,9 @@ import {
 import { Link } from 'react-router-dom'
 import {
   AssistenteServiceError,
-  consultarAssistente,
-  criarSessaoAssistente,
+  criarSessao,
+  enviarMensagem,
+  tituloDaPergunta,
 } from '../services/assistenteService.ts'
 import {
   criarMensagemAssistente,
@@ -76,12 +77,13 @@ export function AssistentePage() {
     try {
       let idSessao = sessaoId
       if (!idSessao) {
-        const sessao = await criarSessaoAssistente()
+        // O título da conversa é o começo da primeira pergunta.
+        const sessao = await criarSessao(tituloDaPergunta(pergunta))
         idSessao = sessao.id
         setSessaoId(sessao.id)
       }
 
-      const resultado = await consultarAssistente(idSessao, { conteudo: pergunta })
+      const resultado = await enviarMensagem(idSessao, pergunta)
       setMensagens((atuais) => [
         ...atuais,
         criarMensagemAssistente(
@@ -247,7 +249,7 @@ export function AssistentePage() {
                         ))}
                       </ul>
                     </section>
-                )}
+                  )}
 
                 {mensagem.tipo === 'erro' && (
                   <>

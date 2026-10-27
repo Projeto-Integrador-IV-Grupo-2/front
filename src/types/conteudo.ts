@@ -52,7 +52,8 @@ export interface Conteudo {
 /**
  * Corpo de `POST /api/conteudos` e `PUT /api/conteudos/{id}`. Só o campo do
  * tipo escolhido importa: `videoUrl` para VIDEO, `corpo` para TEXTO e
- * `linkUrl` para LINK.
+ * `linkUrl` para LINK. DOCUMENTO não tem campo próprio — o material dele são
+ * os arquivos anexados depois de salvar.
  */
 export interface ConteudoRequest {
   titulo: string

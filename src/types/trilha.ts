@@ -145,3 +145,59 @@ export const ROTULOS_STATUS_PROGRESSO: Record<StatusProgresso, string> = {
   CONCLUIDA: 'Concluída',
   ATRASADA: 'Atrasada',
 }
+
+/**
+ * Uma trilha sugerida (record `SugestaoTrilhaResponse` da API). Os dados vêm
+ * da trilha no banco; o modelo só escolhe o id e escreve o motivo.
+ */
+export interface SugestaoTrilha {
+  id: string
+  nome: string
+  area: RecursoResumo | null
+  objetivos: string | null
+  /** Por que a trilha foi sugerida. Texto simples — nunca renderizar como HTML. */
+  motivo: string
+}
+
+/** Resposta de `GET /api/trilhas/sugestoes` (record `SugestoesDeTrilhaResponse`). */
+export interface SugestoesTrilhas {
+  /** Falso quando a IA não respondeu e a lista veio da recomendação por área. */
+  geradoPorIa: boolean
+  /** Texto para o usuário quando `geradoPorIa` é falso; `null` no caminho normal. */
+  aviso: string | null
+  /** Até cinco trilhas. A API já tira as concluídas (as em andamento, não). */
+  sugestoes: SugestaoTrilha[]
+}
+
+/**
+ * Etapa montada pela IA (record `AjudaTrilhasResponse.Etapa`). O conteúdo é
+ * sempre um conteúdo publicado do tenant: vira `POST /api/trilhas/{id}/etapas`.
+ */
+export interface EtapaRascunho {
+  conteudoId: string
+  /** Título e tipo do conteúdo, lidos do banco — não escritos pela IA. */
+  conteudoTitulo: string
+  conteudoTipo: string | null
+  titulo: string
+  descricao: string | null
+}
+
+/** Trilha completa montada pela IA: o cadastro, as etapas e o que falta na base. */
+export interface RascunhoTrilha extends CriarTrilhaRequest {
+  /** Etapas em ordem de estudo. */
+  etapas: EtapaRascunho[]
+  /** Temas que ainda não têm conteúdo publicado para virar etapa. */
+  conteudosFaltando: string[]
+}
+
+/** Resposta de `POST /api/trilhas/sugestoes/ajuda`: a IA ajudando com trilhas. */
+export interface RespostaAjudaTrilhas {
+  /** Texto simples — nunca renderizar como HTML. */
+  texto: string
+  /** Quando a pergunta é para montar uma trilha: a trilha completa, não gravada. */
+  rascunho: RascunhoTrilha | null
+  /** Documentos que embasaram a resposta (só quando respondeu o assistente). */
+  fontes?: string[]
+  /** Sessão do assistente a reaproveitar na próxima pergunta, quando houver. */
+  sessaoId?: string
+}
