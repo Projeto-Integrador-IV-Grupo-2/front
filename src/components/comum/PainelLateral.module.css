@@ -4,7 +4,7 @@
   z-index: 20;
   display: flex;
   justify-content: flex-end;
-  background: rgb(10 14 24 / 50%);
+  background: var(--color-overlay);
 }
 
 .painel {

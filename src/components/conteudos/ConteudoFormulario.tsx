@@ -15,6 +15,7 @@ import {
 } from '../../types/conteudo.ts'
 import type { RecursoResumo } from '../../types/usuario.ts'
 import { CategoriaFormulario } from './CategoriaFormulario.tsx'
+import { EscolhaDeArquivos } from './EscolhaDeArquivos.tsx'
 import { erroDoCampo } from './erroDoCampo.ts'
 import { Modal } from './Modal.tsx'
 import { PreviaVimeo } from './PreviaVimeo.tsx'
@@ -28,7 +29,11 @@ interface ConteudoFormularioProps {
   salvando: boolean
   erro: string | null
   fieldErrors: ApiFieldError[]
-  onSalvar: (request: ConteudoRequest) => void
+  /**
+   * `arquivos` só vem no cadastro de um DOCUMENTO: são os escolhidos aqui,
+   * para a tela enviar assim que o documento existir na API.
+   */
+  onSalvar: (request: ConteudoRequest, arquivos: File[]) => void
   onFechar: () => void
   /**
    * Categoria cadastrada aqui dentro, pelo modal. Quem abriu o formulário
@@ -85,6 +90,7 @@ export function ConteudoFormulario({
   const [videoUrl, setVideoUrl] = useState(conteudo?.videoUrl ?? '')
   const [corpo, setCorpo] = useState(conteudo?.corpo ?? '')
   const [linkUrl, setLinkUrl] = useState(conteudo?.linkUrl ?? '')
+  const [arquivos, setArquivos] = useState<File[]>([])
   const [errosLocais, setErrosLocais] = useState<Record<string, string>>({})
   const [opcoesDeCategoria, setOpcoesDeCategoria] = useState(categorias)
   const [criandoCategoria, setCriandoCategoria] = useState(false)
@@ -108,8 +114,8 @@ export function ConteudoFormulario({
     if (tipo === 'LINK' && !linkUrl.trim()) {
       erros.linkUrl = 'Informe o link.'
     }
-    // DOCUMENTO não tem campo próprio: o material são os arquivos, enviados
-    // na tela de detalhe depois de salvar.
+    // DOCUMENTO pode nascer sem arquivo: eles também podem ser enviados
+    // depois, na tela de detalhe.
     return erros
   }
 
@@ -123,16 +129,19 @@ export function ConteudoFormulario({
     if (Object.keys(erros).length > 0) {
       return
     }
-    onSalvar({
-      titulo: titulo.trim(),
-      descricao: descricao.trim() || null,
-      tipo,
-      categoriaId: categoriaId || null,
-      areaId: areaId || null,
-      videoUrl: tipo === 'VIDEO' ? videoUrl.trim() : null,
-      corpo: tipo === 'TEXTO' ? corpo.trim() : null,
-      linkUrl: tipo === 'LINK' ? linkUrl.trim() : null,
-    })
+    onSalvar(
+      {
+        titulo: titulo.trim(),
+        descricao: descricao.trim() || null,
+        tipo,
+        categoriaId: categoriaId || null,
+        areaId: areaId || null,
+        videoUrl: tipo === 'VIDEO' ? videoUrl.trim() : null,
+        corpo: tipo === 'TEXTO' ? corpo.trim() : null,
+        linkUrl: tipo === 'LINK' ? linkUrl.trim() : null,
+      },
+      tipo === 'DOCUMENTO' && !conteudo ? arquivos : [],
+    )
   }
 
   async function salvarCategoria(request: CategoriaRequest) {
@@ -290,10 +299,22 @@ export function ConteudoFormulario({
               </div>
             )}
 
-            {tipo === 'DOCUMENTO' && (
+            {/* No cadastro, os arquivos vêm junto; na edição, a tela de
+                detalhe já tem o envio logo abaixo. */}
+            {tipo === 'DOCUMENTO' && !conteudo && (
+              <EscolhaDeArquivos
+                arquivos={arquivos}
+                onAlterar={setArquivos}
+                desabilitado={salvando}
+                onUsarLink={
+                  tipos.includes('LINK') ? () => setTipo('LINK') : undefined
+                }
+              />
+            )}
+            {tipo === 'DOCUMENTO' && conteudo && (
               <p className={styles.ajuda}>
-                Salve o documento primeiro; os arquivos (PDF, DOCX, TXT ou MD)
-                são enviados na tela de detalhe dele.
+                Os arquivos (PDF, DOCX, TXT ou MD) são enviados na tela de
+                detalhe do documento.
               </p>
             )}
 

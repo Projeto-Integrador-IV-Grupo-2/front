@@ -1,123 +1,21 @@
-.layout {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-4);
-  align-items: start;
-}
+/* Cores por status; o resto vem de ListaDashboard.module.css. */
 
-.metrics {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-3);
-}
-
-.metric {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-bg);
-}
-
-.metric span {
-  color: var(--color-text-muted);
-  font-size: 0.8rem;
-}
-
-.metric strong {
-  font-size: 1.65rem;
-  line-height: 1.2;
-  font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
-}
-
-.chart {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-
-.barRow {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.barLabel {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-3);
-  font-size: 0.875rem;
-}
-
-.barLabel span {
-  overflow-wrap: anywhere;
-}
-
-.barLabel strong {
-  flex-shrink: 0;
-  font-variant-numeric: tabular-nums;
-  font-size: 0.85rem;
-}
-
-.barTrack {
-  width: 100%;
-  height: 0.65rem;
-  overflow: hidden;
-  border-radius: 999px;
-  background: var(--color-bg);
-}
-
-.barFill {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  transition: width 180ms ease;
-}
-
-.barPrincipal {
+.pontoPrimario {
   background: var(--color-primary);
 }
 
-.barNaoIniciada {
-  background: var(--color-text-muted);
-}
-
-.barEmAndamento {
-  background: var(--color-primary);
-}
-
-.barConcluida {
+.pontoSucesso {
   background: var(--color-success);
 }
 
-.barAtrasada {
+.barraNeutra {
+  background: var(--color-text-faint);
+}
+
+.barraSucesso {
+  background: var(--color-success);
+}
+
+.barraPerigo {
   background: var(--color-danger);
-}
-
-.emptyNote {
-  color: var(--color-text-muted);
-  font-size: 0.85rem;
-}
-
-@media (max-width: 760px) {
-  .layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-@media (max-width: 560px) {
-  .metrics {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .barFill {
-    transition: none;
-  }
 }

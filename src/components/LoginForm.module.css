@@ -44,7 +44,7 @@
 
 .roleOptionSelected {
   border-color: var(--color-primary);
-  background: #eef2ff;
+  background: var(--color-primary-soft);
   color: var(--color-text);
 }
 

@@ -1,99 +1,30 @@
-.grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-4);
-  align-items: start;
-}
+/* Peças só do colaborador; listas e selos vêm de ListaDashboard.module.css. */
 
-.indicators {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-3);
-}
-
-.indicator {
+/* "Continue de onde parou", o destaque do topo no protótipo. */
+.continuar {
   display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: 2px;
-  padding: var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-bg);
+  align-items: center;
+  gap: 18px;
+  padding: 22px;
+  border: 1px solid var(--color-primary-soft-line);
+  border-radius: 14px;
+  background: var(--color-primary-soft);
 }
 
-.indicator strong {
-  font-size: 1.35rem;
-  line-height: 1.3;
-  font-variant-numeric: tabular-nums;
-}
-
-.indicator span,
-.meta {
-  color: var(--color-text-muted);
-  font-size: 0.78rem;
-}
-
-.emptyNote {
-  margin-top: var(--space-3);
-  color: var(--color-text-muted);
-  font-size: 0.85rem;
-}
-
-.percentual {
+.continuarIcone {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-primary-soft-line);
+  border-radius: 12px;
+  color: var(--color-primary);
+  background: var(--color-surface);
 }
 
-.percentual strong {
-  font-size: 2rem;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.2;
-}
-
-.percentual > span {
-  color: var(--color-text-muted);
-  font-size: 0.875rem;
-}
-
-.progressTrack {
-  width: 100%;
-  height: 0.65rem;
-  overflow: hidden;
-  border-radius: 999px;
-  background: var(--color-bg);
-}
-
-.progressFill {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: var(--color-primary);
-  transition: width 180ms ease;
-}
-
-.list {
-  display: flex;
-  flex-direction: column;
-}
-
-.listItem {
-  display: flex;
-  min-width: 0;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-3);
-  padding: var(--space-3) 0;
-  border-top: 1px solid var(--color-border);
-}
-
-.listItem:first-child {
-  padding-top: 0;
-  border-top: 0;
-}
-
-.itemMain {
+.continuarCorpo {
   display: flex;
   min-width: 0;
   flex: 1;
@@ -101,80 +32,134 @@
   gap: 3px;
 }
 
-.itemLink {
-  width: fit-content;
-  color: var(--color-text);
-  font-weight: 650;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 3px;
-  overflow-wrap: anywhere;
-}
-
-.itemLink:hover {
+.continuarRotulo {
   color: var(--color-primary);
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  opacity: 0.8;
+  text-transform: uppercase;
 }
 
-.activityTitle {
-  font-size: 0.9rem;
+.continuarTitulo {
+  color: var(--color-text);
+  font-family: 'Space Grotesk', var(--font-sans);
+  font-size: 1.05rem;
+  font-weight: 600;
   overflow-wrap: anywhere;
 }
 
-.activityTitle strong {
-  font-weight: 650;
+.continuarDetalhe {
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
 }
 
-.status {
+.continuarBotao {
   display: inline-flex;
   flex-shrink: 0;
   align-items: center;
-  border-radius: 999px;
-  padding: 0.2rem 0.55rem;
-  font-size: 0.72rem;
-  font-weight: 650;
+  padding: 8px 14px;
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  color: var(--color-primary-contrast);
+  background: var(--color-primary);
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-decoration: none;
 }
 
-.statusNaoIniciada {
+.continuarBotao:hover {
+  border-color: var(--color-primary-hover);
+  background: var(--color-primary-hover);
+}
+
+/* Cartão "Suas trilhas": média, contagens por status e atalho. */
+.resumo {
+  padding: 14px 0 var(--space-1);
+}
+
+.progressoCabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
   color: var(--color-text-muted);
-  background: var(--color-bg);
+  font-size: 0.8rem;
 }
 
-.statusEmAndamento {
+.progressoCabecalho strong {
+  color: var(--color-text);
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.resumo ul {
+  margin-top: var(--space-2);
+}
+
+.verTodas {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-1);
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.verTodas:hover {
+  background: var(--color-primary-soft);
+}
+
+/* Convite para o assistente de IA. */
+.ia {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--color-primary-soft-line);
+  border-radius: var(--radius-md);
+  background: var(--color-primary-soft);
+}
+
+.iaIcone {
+  flex-shrink: 0;
   color: var(--color-primary);
-  background: color-mix(
-    in srgb,
-    var(--color-primary) 12%,
-    var(--color-surface)
-  );
 }
 
-.statusConcluida {
-  color: var(--color-success);
-  background: var(--color-success-bg);
+.iaTexto {
+  color: var(--color-text);
+  font-size: 0.8rem;
+  line-height: 1.55;
 }
 
-.statusAtrasada {
-  color: var(--color-danger);
-  background: var(--color-danger-bg);
+.iaBotao {
+  display: inline-flex;
+  margin-top: 10px;
+  padding: 5px 10px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  background: var(--color-surface);
+  font-size: 0.78rem;
+  font-weight: 500;
+  text-decoration: none;
 }
 
-@media (max-width: 760px) {
-  .grid {
-    grid-template-columns: minmax(0, 1fr);
+.iaBotao:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+@media (max-width: 560px) {
+  .continuar {
+    flex-wrap: wrap;
   }
-}
 
-@media (max-width: 480px) {
-  .indicators {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .listItem {
-    flex-direction: column;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .progressFill {
-    transition: none;
+  .continuarBotao {
+    width: 100%;
+    justify-content: center;
   }
 }

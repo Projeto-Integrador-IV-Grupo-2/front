@@ -33,15 +33,15 @@
   font-size: 0.71875rem;
   font-weight: 600;
   color: var(--color-primary);
-  background: #eef2ff;
-  border: 1px solid #d7defb;
+  background: var(--color-primary-soft);
+  border: 1px solid var(--color-primary-soft-line);
   border-radius: 999px;
 }
 
 .seloArea {
   color: var(--color-warning);
   background: var(--color-warning-bg);
-  border-color: #f1dfb6;
+  border-color: color-mix(in srgb, var(--color-warning) 30%, transparent);
 }
 
 .nota {
@@ -149,7 +149,7 @@
   gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
   background: var(--color-surface);
-  border: 1px solid #d7defb;
+  border: 1px solid var(--color-primary-soft-line);
   border-left: 3px solid var(--color-primary);
   border-radius: var(--radius-sm);
 }

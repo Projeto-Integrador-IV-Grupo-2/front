@@ -11,7 +11,11 @@ interface PainelDashboardProps {
   children: ReactNode
 }
 
-/** Cada bloco cuida do próprio estado e não desmonta o restante do painel. */
+/**
+ * Bloco da visão geral, como no protótipo: rótulo em caixa alta fora do
+ * cartão e o conteúdo dentro. Cada bloco cuida do próprio estado e não
+ * desmonta o restante do painel.
+ */
 export function PainelDashboard({
   titulo,
   estado,
@@ -28,22 +32,24 @@ export function PainelDashboard({
       <h3 id={`painel-${slug(titulo)}`} className={styles.title}>
         {titulo}
       </h3>
-      {estado === 'carregando' && (
-        <p className={styles.state} role="status">
-          Carregando…
-        </p>
-      )}
-      {estado === 'erro' && (
-        <p className={styles.error} role="alert">
-          {mensagemErro ?? 'Não foi possível carregar este bloco.'}
-        </p>
-      )}
-      {estado === 'vazio' && (
-        <p className={styles.state} role="status">
-          {mensagemVazia}
-        </p>
-      )}
-      {estado === 'pronto' && children}
+      <div className={styles.card}>
+        {estado === 'carregando' && (
+          <p className={styles.state} role="status">
+            Carregando…
+          </p>
+        )}
+        {estado === 'erro' && (
+          <p className={styles.error} role="alert">
+            {mensagemErro ?? 'Não foi possível carregar este bloco.'}
+          </p>
+        )}
+        {estado === 'vazio' && (
+          <p className={styles.state} role="status">
+            {mensagemVazia}
+          </p>
+        )}
+        {estado === 'pronto' && children}
+      </div>
     </section>
   )
 }
@@ -51,7 +57,7 @@ export function PainelDashboard({
 function slug(valor: string): string {
   return valor
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[̀-ͯ]/g, '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '')

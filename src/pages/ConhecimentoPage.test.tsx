@@ -336,5 +336,145 @@ describe('ConhecimentoPage', () => {
         tipo: 'DOCUMENTO',
       })
     })
+
+    /** Abre o cadastro e devolve o diálogo, com o título já preenchido. */
+    async function abrirCadastro(usuario: ReturnType<typeof userEvent.setup>) {
+      renderizar(gestor)
+      await usuario.click(
+        await screen.findByRole('button', { name: '+ Novo documento' }),
+      )
+      const dialogo = await screen.findByRole('dialog', {
+        name: 'Novo documento',
+      })
+      await usuario.type(
+        within(dialogo).getByLabelText('Título'),
+        'Política de reembolso',
+      )
+      return dialogo
+    }
+
+    it('envia do computador os arquivos escolhidos no cadastro', async () => {
+      registrarBuscas()
+      const usuario = userEvent.setup()
+      const enviados: string[] = []
+      server.use(
+        http.post('*/api/conteudos', () =>
+          HttpResponse.json(criarConteudo({ id: 'doc-novo' }), {
+            status: 201,
+          }),
+        ),
+        http.post(
+          '*/api/conteudos/:id/arquivos',
+          async ({ params, request }) => {
+            const arquivo = (await request.formData()).get('arquivo') as File
+            // O jsdom perde o nome no FormData; o conteúdo identifica o arquivo.
+            enviados.push(`${String(params.id)}:${await arquivo.text()}`)
+            return HttpResponse.json({}, { status: 201 })
+          },
+        ),
+      )
+
+      const dialogo = await abrirCadastro(usuario)
+      await usuario.upload(
+        within(dialogo).getByLabelText('Arquivos do documento'),
+        [
+          new File(['%PDF'], 'politica.pdf', { type: 'application/pdf' }),
+          new File(['# Guia'], 'guia.md', { type: 'text/markdown' }),
+        ],
+      )
+      expect(within(dialogo).getByText('politica.pdf')).toBeInTheDocument()
+      await usuario.click(
+        within(dialogo).getByRole('button', { name: 'Cadastrar documento' }),
+      )
+
+      expect(
+        await screen.findByText(
+          'Documento cadastrado como rascunho com 2 arquivos.',
+        ),
+      ).toBeInTheDocument()
+      expect(enviados).toEqual(['doc-novo:%PDF', 'doc-novo:# Guia'])
+    })
+
+    it('recusa na escolha o arquivo de formato não aceito', async () => {
+      registrarBuscas()
+      const usuario = userEvent.setup({ applyAccept: false })
+
+      const dialogo = await abrirCadastro(usuario)
+      await usuario.upload(
+        within(dialogo).getByLabelText('Arquivos do documento'),
+        new File(['x'], 'planilha.xlsx'),
+      )
+
+      expect(within(dialogo).getByRole('alert')).toHaveTextContent(
+        /planilha\.xlsx: Formato não aceito/,
+      )
+      expect(within(dialogo).queryByText('planilha.xlsx')).toBeNull()
+    })
+
+    it('se um envio falha, o documento fica cadastrado e o aviso diz qual arquivo faltou', async () => {
+      registrarBuscas()
+      const usuario = userEvent.setup()
+      server.use(
+        http.post('*/api/conteudos', () =>
+          HttpResponse.json(criarConteudo({ id: 'doc-novo' }), {
+            status: 201,
+          }),
+        ),
+        http.post('*/api/conteudos/:id/arquivos', () =>
+          HttpResponse.json(
+            { message: 'Arquivo corrompido.' },
+            { status: 400 },
+          ),
+        ),
+      )
+
+      const dialogo = await abrirCadastro(usuario)
+      await usuario.upload(
+        within(dialogo).getByLabelText('Arquivos do documento'),
+        new File(['%PDF'], 'politica.pdf', { type: 'application/pdf' }),
+      )
+      await usuario.click(
+        within(dialogo).getByRole('button', { name: 'Cadastrar documento' }),
+      )
+
+      expect(
+        await screen.findByText(/"politica\.pdf" não foi enviado/),
+      ).toBeInTheDocument()
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
+
+    it('"Cadastrar um link" troca o cadastro para o tipo Link', async () => {
+      registrarBuscas()
+      const usuario = userEvent.setup()
+      let corpo: Record<string, unknown> = {}
+      server.use(
+        http.post('*/api/conteudos', async ({ request }) => {
+          corpo = (await request.json()) as Record<string, unknown>
+          return HttpResponse.json(criarConteudo({ tipo: 'LINK' }), {
+            status: 201,
+          })
+        }),
+      )
+
+      const dialogo = await abrirCadastro(usuario)
+      await usuario.click(
+        within(dialogo).getByRole('button', { name: 'Cadastrar um link' }),
+      )
+      expect(within(dialogo).getByLabelText('Tipo')).toHaveValue('LINK')
+      await usuario.type(
+        within(dialogo).getByLabelText('Link'),
+        'https://intranet.empresa.com/reembolso',
+      )
+      await usuario.click(
+        within(dialogo).getByRole('button', { name: 'Cadastrar documento' }),
+      )
+
+      await waitFor(() =>
+        expect(corpo).toMatchObject({
+          tipo: 'LINK',
+          linkUrl: 'https://intranet.empresa.com/reembolso',
+        }),
+      )
+    })
   })
 })

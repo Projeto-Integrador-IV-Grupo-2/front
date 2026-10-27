@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { LogoIcon } from '../Logo.tsx'
 import { useAuth } from '../../hooks/useAuth.ts'
 import { useMediaQuery } from '../../hooks/useMediaQuery.ts'
+import { useTema } from '../../hooks/useTema.ts'
 import { ROTAS } from '../../routes/paths.ts'
 import { itensMenuPara } from '../../routes/permissions.ts'
 import type { UserRole } from '../../types/user.ts'
@@ -51,6 +52,7 @@ function navLinkClassName({ isActive }: { isActive: boolean }): string {
 /** Layout base da área autenticada: menu lateral + barra superior + conteúdo da rota. */
 export function AppLayout() {
   const { user, logout } = useAuth()
+  const { tema, alternar: alternarTema } = useTema()
   const navigate = useNavigate()
   const location = useLocation()
   const isMobile = useMediaQuery(MOBILE_QUERY)
@@ -136,8 +138,20 @@ export function AppLayout() {
 
         <div className={styles.sidebarFooter}>
           <div className={styles.temaRow}>
-            <SunIcon />
             <span>Tema</span>
+            <button
+              type="button"
+              className={styles.botaoTema}
+              onClick={alternarTema}
+              aria-label={
+                tema === 'escuro'
+                  ? 'Mudar para o tema claro'
+                  : 'Mudar para o tema escuro'
+              }
+              title="Alternar tema"
+            >
+              {tema === 'escuro' ? <MoonIcon /> : <SunIcon />}
+            </button>
           </div>
 
           {user && (
@@ -442,6 +456,25 @@ function SunIcon() {
         stroke="currentColor"
         strokeWidth="1.4"
         strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
+function MoonIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M20 14.5A8.5 8.5 0 1110 3.2 7 7 0 0020 14.5z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
       />
     </svg>
   )

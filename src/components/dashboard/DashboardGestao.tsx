@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { useDashboardRequest } from '../../hooks/useDashboardRequest.ts'
 import { carregarDashboardGestao } from '../../services/dashboardService.ts'
 import type {
@@ -6,7 +7,9 @@ import type {
 } from '../../types/dashboard.ts'
 import type { StatusProgresso } from '../../types/trilha.ts'
 import { ROTULOS_STATUS_PROGRESSO } from '../../types/trilha.ts'
+import { ROTAS, caminhoTrilha } from '../../routes/paths.ts'
 import { PainelDashboard, type EstadoPainel } from './PainelDashboard.tsx'
+import lista from './ListaDashboard.module.css'
 import styles from './DashboardGestao.module.css'
 
 const MENSAGEM_VAZIA_TRILHAS =
@@ -18,20 +21,33 @@ const STATUS: Array<{
     'naoIniciadas' | 'emAndamento' | 'concluidas' | 'atrasadas'
   >
   status: StatusProgresso
-  classe: string
+  ponto: string
+  barra: string
 }> = [
   {
     chave: 'naoIniciadas',
     status: 'NAO_INICIADA',
-    classe: styles.barNaoIniciada,
+    ponto: '',
+    barra: styles.barraNeutra,
   },
   {
     chave: 'emAndamento',
     status: 'EM_ANDAMENTO',
-    classe: styles.barEmAndamento,
+    ponto: styles.pontoPrimario,
+    barra: '',
   },
-  { chave: 'concluidas', status: 'CONCLUIDA', classe: styles.barConcluida },
-  { chave: 'atrasadas', status: 'ATRASADA', classe: styles.barAtrasada },
+  {
+    chave: 'concluidas',
+    status: 'CONCLUIDA',
+    ponto: styles.pontoSucesso,
+    barra: styles.barraSucesso,
+  },
+  {
+    chave: 'atrasadas',
+    status: 'ATRASADA',
+    ponto: lista.pontoPerigo,
+    barra: styles.barraPerigo,
+  },
 ]
 
 export function DashboardGestao() {
@@ -71,23 +87,24 @@ export function DashboardGestao() {
     dados && (!trilhasAtivasValido || !taxaValida || !resumoValido)
       ? 'A API retornou indicadores inválidos.'
       : erro
-  const estadoIndicadores: EstadoPainel = carregando
-    ? 'carregando'
-    : erroIndicadores
-      ? 'erro'
-      : 'pronto'
+  const resumo = resumoValido ? dados!.atribuicoesPorStatus : undefined
 
+  // "Precisa de atenção" junta os atrasos, as áreas que mais atrasam e o que
+  // ainda não começou: tudo vem da mesma resposta da API.
   const areas = dados?.areasComMaisAtraso
   const areasValidas = listaDeAreasValida(areas)
   const erroAreas =
     dados && !areasValidas
       ? 'A API retornou uma lista de áreas inválida.'
       : erro
+  const temAtencao =
+    (areasValidas && areas.length > 0) ||
+    (resumo !== undefined && resumo.atrasadas + resumo.naoIniciadas > 0)
   const estadoAreas: EstadoPainel = carregando
     ? 'carregando'
     : erroAreas
       ? 'erro'
-      : areasValidas && areas.length > 0
+      : temAtencao
         ? 'pronto'
         : 'vazio'
 
@@ -106,85 +123,185 @@ export function DashboardGestao() {
         : 'vazio'
 
   return (
-    <div className={styles.layout}>
-      <PainelDashboard
-        titulo="Indicadores gerais"
-        estado={estadoIndicadores}
-        mensagemErro={erroIndicadores}
+    <div className={lista.coluna}>
+      <section
+        aria-labelledby="painel-indicadores-gerais"
+        aria-busy={carregando}
       >
-        {dados && (
-          <>
-            <div className={styles.metrics}>
-              <div className={styles.metric}>
-                <span>Trilhas ativas</span>
-                <strong>{dados.trilhasAtivas}</strong>
-              </div>
-              <div className={styles.metric}>
-                <span>Atribuições</span>
-                <strong>{dados.atribuicoesPorStatus?.total ?? '—'}</strong>
-              </div>
-              <div className={styles.metric}>
-                <span>Taxa de conclusão</span>
-                <strong>{formatarPercentual(dados.taxaConclusao)}%</strong>
-              </div>
-            </div>
-            {dados.atribuicoesPorStatus?.total === 0 && (
-              <p className={styles.emptyNote} role="status">
-                Ainda não há atribuições para calcular os indicadores de
-                conclusão.
-              </p>
-            )}
-          </>
-        )}
-      </PainelDashboard>
+        <h3 id="painel-indicadores-gerais" className="visually-hidden">
+          Indicadores gerais
+        </h3>
+        <div className={lista.faixa}>
+          {carregando && (
+            <p className={lista.faixaEstado} role="status">
+              Carregando…
+            </p>
+          )}
+          {!carregando && erroIndicadores && (
+            <p
+              className={`${lista.faixaEstado} ${lista.faixaErro}`}
+              role="alert"
+            >
+              {erroIndicadores}
+            </p>
+          )}
+          {!carregando && !erroIndicadores && dados && resumo && (
+            <>
+              <Indicador valor={dados.trilhasAtivas} rotulo="Trilhas ativas" />
+              <Indicador valor={resumo.total} rotulo="Atribuições" />
+              <Indicador valor={resumo.emAndamento} rotulo="Em andamento" />
+              <Indicador
+                valor={`${formatarPercentual(dados.taxaConclusao)}%`}
+                rotulo="Taxa de conclusão"
+              />
+            </>
+          )}
+        </div>
+      </section>
 
-      <PainelDashboard
-        titulo="Atribuições por status"
-        estado={estadoResumo}
-        mensagemErro={erroResumo}
-      >
-        {resumoValido && <GraficoStatus resumo={dados!.atribuicoesPorStatus} />}
-      </PainelDashboard>
+      <div className={lista.colunas}>
+        <div className={lista.coluna}>
+          <PainelDashboard
+            titulo="Precisa de atenção"
+            estado={estadoAreas}
+            mensagemErro={erroAreas}
+            mensagemVazia="Nada precisa da sua atenção agora."
+          >
+            <ul className={lista.lista}>
+              {resumo && resumo.atrasadas > 0 && (
+                <LinhaAtencao
+                  ponto={lista.pontoPerigo}
+                  texto={`${resumo.atrasadas} ${plural(resumo.atrasadas, 'atribuição está atrasada', 'atribuições estão atrasadas')}`}
+                  etiqueta="Atraso · todas as áreas"
+                />
+              )}
+              {(areasValidas ? areas : []).map((area) => (
+                <LinhaAtencao
+                  key={area.areaId}
+                  ponto={lista.pontoAlerta}
+                  texto={`${area.areaNome} tem ${area.atribuicoesAtrasadas} ${plural(area.atribuicoesAtrasadas, 'atribuição atrasada', 'atribuições atrasadas')}`}
+                  etiqueta="Áreas com mais atraso"
+                />
+              ))}
+              {resumo && resumo.naoIniciadas > 0 && (
+                <LinhaAtencao
+                  ponto=""
+                  texto={`${resumo.naoIniciadas} ${plural(resumo.naoIniciadas, 'atribuição ainda não foi iniciada', 'atribuições ainda não foram iniciadas')}`}
+                  etiqueta="Não iniciadas"
+                />
+              )}
+            </ul>
+          </PainelDashboard>
 
-      <PainelDashboard
-        titulo="Áreas com mais atraso"
-        estado={estadoAreas}
-        mensagemErro={erroAreas}
-        mensagemVazia="Nenhuma área possui atribuições atrasadas."
-      >
-        <GraficoLista
-          itens={(areasValidas ? areas : []).map((area) => ({
-            id: area.areaId,
-            rotulo: area.areaNome,
-            valor: area.atribuicoesAtrasadas,
-          }))}
-          descricaoValor={(valor) => `${valor} atribuições atrasadas`}
-        />
-      </PainelDashboard>
+          <PainelDashboard
+            titulo="Trilhas mais iniciadas"
+            estado={estadoTrilhas}
+            mensagemErro={erroTrilhas}
+            mensagemVazia={MENSAGEM_VAZIA_TRILHAS}
+          >
+            <TrilhasIniciadas itens={trilhasValidas ? trilhas : []} />
+          </PainelDashboard>
+        </div>
 
-      <PainelDashboard
-        titulo="Trilhas mais iniciadas"
-        estado={estadoTrilhas}
-        mensagemErro={erroTrilhas}
-        mensagemVazia={MENSAGEM_VAZIA_TRILHAS}
-      >
-        <GraficoLista
-          itens={(trilhasValidas ? trilhas : []).map((trilha) => ({
-            id: trilha.trilhaId,
-            rotulo: trilha.trilhaNome,
-            valor: trilha.totalIniciadas,
-          }))}
-          descricaoValor={(valor) => `${valor} inícios`}
-        />
-      </PainelDashboard>
+        <div className={lista.coluna}>
+          <PainelDashboard
+            titulo="Atribuições por status"
+            estado={estadoResumo}
+            mensagemErro={erroResumo}
+          >
+            {resumo && <GraficoStatus resumo={resumo} />}
+          </PainelDashboard>
+        </div>
+      </div>
     </div>
+  )
+}
+
+function Indicador({
+  valor,
+  rotulo,
+}: {
+  valor: number | string
+  rotulo: string
+}) {
+  return (
+    <div className={lista.faixaItem}>
+      <strong className={lista.faixaValor}>{valor}</strong>
+      <span className={lista.faixaRotulo}>{rotulo}</span>
+    </div>
+  )
+}
+
+/** Linha de "Precisa de atenção": leva ao acompanhamento das atribuições. */
+function LinhaAtencao({
+  ponto,
+  texto,
+  etiqueta,
+}: {
+  ponto: string
+  texto: string
+  etiqueta: string
+}) {
+  return (
+    <li>
+      <Link
+        to={ROTAS.acompanhamento}
+        className={`${lista.linha} ${lista.linhaLink}`}
+      >
+        <span className={`${lista.ponto} ${ponto}`} aria-hidden="true" />
+        <span className={lista.linhaCorpo}>
+          <span className={lista.linhaTitulo}>{texto}</span>
+          <span className={lista.etiqueta}>{etiqueta}</span>
+        </span>
+        <ChevronIcon />
+      </Link>
+    </li>
+  )
+}
+
+function TrilhasIniciadas({
+  itens,
+}: {
+  itens: DashboardGestaoResponse['trilhasMaisIniciadas']
+}) {
+  const maior = Math.max(
+    0,
+    ...itens.map((item) => numeroSeguro(item.totalIniciadas)),
+  )
+  return (
+    <ul className={lista.lista}>
+      {itens.map((trilha) => {
+        const valor = numeroSeguro(trilha.totalIniciadas)
+        const percentual = maior > 0 ? (valor / maior) * 100 : 0
+        return (
+          <li key={trilha.trilhaId}>
+            <Link
+              to={caminhoTrilha(trilha.trilhaId)}
+              className={`${lista.linha} ${lista.linhaLink}`}
+            >
+              <span className={lista.linhaCorpo}>
+                <span className={lista.linhaTitulo}>{trilha.trilhaNome}</span>
+                <span className={lista.linhaMeta}>
+                  {valor} {plural(valor, 'início', 'inícios')}
+                </span>
+              </span>
+              <span className={lista.miniBarra} aria-hidden="true">
+                <span
+                  className={lista.barraPreenchida}
+                  style={{ width: `${percentual}%` }}
+                />
+              </span>
+            </Link>
+          </li>
+        )
+      })}
+    </ul>
   )
 }
 
 function GraficoStatus({ resumo }: { resumo: ResumoStatusDashboard }) {
   return (
     <div
-      className={styles.chart}
       role="group"
       aria-label={
         `Atribuições por status: ` +
@@ -195,70 +312,63 @@ function GraficoStatus({ resumo }: { resumo: ResumoStatusDashboard }) {
         `Total: ${resumo.total}.`
       }
     >
-      {STATUS.map((item) => {
-        const valor = resumo[item.chave]
-        const percentual =
-          resumo.total > 0 ? Math.min(100, (valor / resumo.total) * 100) : 0
-        return (
-          <div key={item.chave} className={styles.barRow}>
-            <div className={styles.barLabel}>
-              <span>{ROTULOS_STATUS_PROGRESSO[item.status]}</span>
-              <strong>{valor}</strong>
-            </div>
-            <div className={styles.barTrack} aria-hidden="true">
+      <ul className={lista.lista}>
+        {STATUS.map((item) => {
+          const valor = resumo[item.chave]
+          const percentual =
+            resumo.total > 0 ? Math.min(100, (valor / resumo.total) * 100) : 0
+          return (
+            <li key={item.chave} className={lista.linha}>
               <span
-                className={`${styles.barFill} ${item.classe}`}
-                style={{ width: `${percentual}%` }}
+                className={`${lista.ponto} ${item.ponto}`}
+                aria-hidden="true"
               />
-            </div>
-          </div>
-        )
-      })}
+              <span className={lista.linhaCorpo}>
+                <span className={lista.linhaTitulo}>
+                  {ROTULOS_STATUS_PROGRESSO[item.status]}
+                </span>
+              </span>
+              <span className={lista.miniBarra} aria-hidden="true">
+                <span
+                  className={`${lista.barraPreenchida} ${item.barra}`}
+                  style={{ width: `${percentual}%` }}
+                />
+              </span>
+              <strong className={lista.valor}>{valor}</strong>
+            </li>
+          )
+        })}
+      </ul>
       {resumo.total === 0 && (
-        <p className={styles.emptyNote}>
-          Ainda não há atribuições para resumir.
-        </p>
+        <p className={lista.nota}>Ainda não há atribuições para resumir.</p>
       )}
     </div>
   )
 }
 
-interface ItemGraficoLista {
-  id: string
-  rotulo: string
-  valor: number
+function ChevronIcon() {
+  return (
+    <svg
+      className={lista.chevron}
+      width="16"
+      height="16"
+      viewBox="0 0 20 20"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M8 5l5 5-5 5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
 }
 
-function GraficoLista({
-  itens,
-  descricaoValor,
-}: {
-  itens: ItemGraficoLista[]
-  descricaoValor: (valor: number) => string
-}) {
-  const maior = Math.max(0, ...itens.map((item) => numeroSeguro(item.valor)))
-  return (
-    <div className={styles.chart}>
-      {itens.map((item) => {
-        const valor = numeroSeguro(item.valor)
-        const percentual = maior > 0 ? (valor / maior) * 100 : 0
-        return (
-          <div key={item.id} className={styles.barRow}>
-            <div className={styles.barLabel}>
-              <span>{item.rotulo}</span>
-              <strong>{descricaoValor(valor)}</strong>
-            </div>
-            <div className={styles.barTrack} aria-hidden="true">
-              <span
-                className={`${styles.barFill} ${styles.barPrincipal}`}
-                style={{ width: `${percentual}%` }}
-              />
-            </div>
-          </div>
-        )
-      })}
-    </div>
-  )
+function plural(valor: number, singular: string, varios: string): string {
+  return valor === 1 ? singular : varios
 }
 
 function resumoDeStatusValido(valor: unknown): valor is ResumoStatusDashboard {

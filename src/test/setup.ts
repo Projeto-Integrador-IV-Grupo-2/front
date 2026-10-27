@@ -24,6 +24,8 @@ afterEach(() => {
   cleanup()
   server.resetHandlers()
   localStorage.clear()
+  // O tema fica no <html>, que é o mesmo entre os testes de um arquivo.
+  document.documentElement.removeAttribute('data-theme')
 })
 
 afterAll(() => {
