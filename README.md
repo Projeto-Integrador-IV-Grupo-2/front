@@ -305,6 +305,31 @@ Axios, senão o token e o tratamento de 401 teriam de ser repetidos.
 
 ---
 
+## Assistente de IA (Task 9)
+
+`/assistente` (item **Assistente** do menu) está disponível para todos os
+perfis autenticados. A tela mantém a conversa em um único estado local e cria a
+sessão no primeiro envio, com o começo da pergunta como título.
+
+- Usa o `assistenteService` (seção abaixo): `criarSessao` e `enviarMensagem`.
+  `POST /api/assistente/sessoes/{sessaoId}/mensagens` recebe `{ conteudo }` e
+  devolve `{ sessao, pergunta, resposta }`; cada mensagem tem `id`, `papel`,
+  `conteudo`, `fontes` e `criadoEm`.
+- A API fornece `fontes` como uma lista de títulos (`string[]`), sem ID, trecho
+  ou página. Cada fonte leva a `/conhecimento?titulo=...`, que abre a busca pelo
+  título do documento; o frontend não inventa identificadores que não existam
+  no DTO. O campo de pergunta respeita o limite de 2.000 caracteres do backend.
+- `503` e `429` mostram os textos próprios do `assistenteService` (abaixo). A
+  pergunta original permanece na conversa e pode ser reenviada.
+- A resposta é exibida como texto renderizado pelo React, sem interpretar HTML
+  vindo da API. Enter envia e Shift+Enter insere quebra de linha. Enquanto a
+  resposta está pendente, o envio fica bloqueado; novas mensagens são anunciadas
+  por uma região `role="log"` e o foco retorna ao campo de pergunta.
+- Os testes da página usam MSW para cobrir o contrato real da API, fontes,
+  bloqueio de envio, erros `503`/`429` e nova tentativa.
+
+---
+
 ## Histórico e assistente de IA
 
 | Tela         | O que faz                                                                             |
@@ -319,15 +344,13 @@ linha mostra. O `ADMIN` recebe o histórico da empresa inteira e vê o nome de
 quem fez cada interação; os outros perfis veem só o próprio. A busca filtra o
 que já foi carregado.
 
-A IA não tem tela própria no menu: ela fica no botão **IA** da tela de Trilhas
-(ver "IA na tela de Trilhas").
-
 O `assistenteService` é o único ponto que fala com o assistente da API
 (back #71), sempre pelo cliente `api`: `GET/POST /api/assistente/sessoes`,
 `PATCH/DELETE .../{id}` e `GET/POST .../{id}/mensagens`, com o contrato dos
-tipos em `types/assistente.ts`. Hoje quem o usa é o painel de IA de Trilhas,
-quando a rota de ajuda das trilhas não existe no backend. A sessão traz um
-campo a mais, `contexto` (`CONHECIMENTO` ou `TRILHAS`), que o front ignora.
+tipos em `types/assistente.ts`. Quem o usa: a tela `/assistente` (abaixo) e o
+painel de IA de Trilhas, quando a rota de ajuda das trilhas não existe no
+backend. A sessão traz um campo a mais, `contexto` (`CONHECIMENTO` ou
+`TRILHAS`), que o front ignora.
 
 Dois erros têm texto próprio, porque são os que mais aparecem num assistente:
 
@@ -355,6 +378,7 @@ fixas por palavra-chave, com os dados no `localStorage` (chave
 | `/conteudos`           | qualquer usuário autenticado (ações só `ADMIN`/`GESTOR`)  |
 | `/categorias`          | qualquer usuário autenticado (ações só `ADMIN`/`GESTOR`)  |
 | `/conhecimento`        | qualquer usuário autenticado (status só `ADMIN`/`GESTOR`) |
+| `/assistente`          | qualquer usuário autenticado                              |
 | `/conhecimento/:id`    | qualquer usuário autenticado (ações só `ADMIN`/`GESTOR`)  |
 | `/historico`           | qualquer usuário autenticado                              |
 | `/usuarios`            | apenas `ADMIN`                                            |

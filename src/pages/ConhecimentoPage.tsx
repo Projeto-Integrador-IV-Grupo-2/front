@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Paginacao } from '../components/areas/Paginacao.tsx'
 import { ConhecimentoFiltros } from '../components/conhecimento/ConhecimentoFiltros.tsx'
 import { DocumentosLista } from '../components/conhecimento/DocumentosLista.tsx'
@@ -51,7 +52,12 @@ export function ConhecimentoPage() {
   const podeGerenciar = usePermissao(PERFIS_GESTAO_CONTEUDO)
   const podeFiltrarStatus = podeGerenciar
 
-  const [tituloDigitado, setTituloDigitado] = useState('')
+  // `?titulo=` abre a tela já buscando um documento — é como as fontes do
+  // assistente de IA trazem a pessoa até aqui.
+  const [searchParams] = useSearchParams()
+  const [tituloDigitado, setTituloDigitado] = useState(
+    () => searchParams.get('titulo') ?? '',
+  )
   const tituloBuscado = useValorAdiado(tituloDigitado.trim())
   const [selecoes, setSelecoes] =
     useState<FiltroConhecimento>(criarFiltroInicial)

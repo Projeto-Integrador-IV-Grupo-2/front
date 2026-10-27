@@ -17,6 +17,7 @@ export const ROTAS = {
   conteudos: '/conteudos',
   categorias: '/categorias',
   conhecimento: '/conhecimento',
+  assistente: '/assistente',
   documentoDetalhe: '/conhecimento/:id',
   historico: '/historico',
 } as const

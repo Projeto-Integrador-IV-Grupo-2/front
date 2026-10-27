@@ -36,6 +36,7 @@ export const ITENS_MENU: ItemMenu[] = [
   // Base de documentos da empresa: todos os perfis entram (colaborador vê só
   // os publicados — a API filtra).
   { to: ROTAS.conhecimento, rotulo: 'Conhecimento' },
+  { to: ROTAS.assistente, rotulo: 'Assistente' },
   {
     to: ROTAS.acompanhamento,
     rotulo: 'Acompanhamento',
