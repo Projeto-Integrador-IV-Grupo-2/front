@@ -1,0 +1,131 @@
+.escolha {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.rotulo {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+/* Área de soltar: tracejada, como um alvo. */
+.area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-5) var(--space-4);
+  border: 1.5px dashed var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-2);
+  text-align: center;
+  transition:
+    border-color 120ms ease,
+    background 120ms ease;
+}
+
+.areaAtiva {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+}
+
+.icone {
+  color: var(--color-primary);
+}
+
+.chamada {
+  font-size: 0.875rem;
+}
+
+.formatos {
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+}
+
+.escolher {
+  padding: 0;
+  border: 0;
+  color: var(--color-primary);
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.escolher:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.lista {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.85rem;
+}
+
+.item:last-child {
+  border-bottom: 0;
+}
+
+.nome {
+  min-width: 0;
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+
+.tamanho {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 0.75rem;
+}
+
+.remover {
+  flex-shrink: 0;
+  padding: 0 var(--space-1);
+  border: 0;
+  color: var(--color-text-muted);
+  background: none;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.remover:hover:not(:disabled) {
+  color: var(--color-danger);
+}
+
+.recusados {
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-6);
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-sm);
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
+  font-size: 0.85rem;
+  list-style: disc;
+  overflow-wrap: anywhere;
+}
+
+.alternativa {
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .area {
+    transition: none;
+  }
+}

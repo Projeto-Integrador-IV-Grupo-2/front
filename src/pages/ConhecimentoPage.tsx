@@ -15,6 +15,10 @@ import { usePermissao } from '../hooks/usePermissao.ts'
 import { useValorAdiado } from '../hooks/useValorAdiado.ts'
 import { PERFIS_GESTAO_CONTEUDO } from '../routes/permissions.ts'
 import { listarAreas } from '../services/areaService.ts'
+import {
+  ArquivoServiceError,
+  enviarArquivo,
+} from '../services/arquivoService.ts'
 import { listarCategorias } from '../services/categoriaService.ts'
 import { aoMudarConteudos } from '../services/conteudoEvents.ts'
 import {
@@ -141,16 +145,13 @@ export function ConhecimentoPage() {
   // recarrega mesmo quando quem salvou ou publicou foi a tela de detalhe.
   useEffect(() => aoMudarConteudos(() => setRecarga((n) => n + 1)), [])
 
-  async function salvar(request: ConteudoRequest) {
+  async function salvar(request: ConteudoRequest, arquivos: File[]) {
     setSalvando(true)
     setErroFormulario(null)
     setFieldErrors([])
+    let documento: Conteudo
     try {
-      await criarConteudo(request)
-      setFormularioAberto(false)
-      setAviso(
-        'Documento cadastrado como rascunho. Envie os arquivos dele no detalhe.',
-      )
+      documento = await criarConteudo(request)
     } catch (causa) {
       const erro =
         causa instanceof ConteudoServiceError
@@ -160,9 +161,39 @@ export function ConhecimentoPage() {
       // quando não há campo para apontar.
       setFieldErrors(erro.fieldErrors)
       setErroFormulario(erro.fieldErrors.length > 0 ? null : erro.message)
-    } finally {
       setSalvando(false)
+      return
     }
+
+    // O documento já existe: daqui em diante uma falha não pode reabrir o
+    // cadastro (salvar de novo duplicaria). Envia um arquivo por vez e, se
+    // algum falhar, avisa qual foi: o envio pode ser refeito no detalhe.
+    for (const arquivo of arquivos) {
+      try {
+        await enviarArquivo(documento.id, arquivo)
+      } catch (causa) {
+        const motivo =
+          causa instanceof ArquivoServiceError
+            ? causa.message
+            : 'Não foi possível enviar o arquivo.'
+        setSalvando(false)
+        setFormularioAberto(false)
+        setAviso(
+          `Documento cadastrado, mas "${arquivo.name}" não foi enviado: ${motivo} Envie de novo no detalhe do documento.`,
+        )
+        return
+      }
+    }
+
+    setSalvando(false)
+    setFormularioAberto(false)
+    setAviso(
+      arquivos.length > 0
+        ? `Documento cadastrado como rascunho com ${arquivos.length} ${arquivos.length === 1 ? 'arquivo' : 'arquivos'}.`
+        : request.tipo === 'DOCUMENTO'
+          ? 'Documento cadastrado como rascunho. Envie os arquivos dele no detalhe.'
+          : 'Documento cadastrado como rascunho.',
+    )
   }
 
   function limpar() {
@@ -274,7 +305,7 @@ export function ConhecimentoPage() {
           salvando={salvando}
           erro={erroFormulario}
           fieldErrors={fieldErrors}
-          onSalvar={(request) => void salvar(request)}
+          onSalvar={(request, arquivos) => void salvar(request, arquivos)}
           onFechar={() => setFormularioAberto(false)}
           onCategoriaCriada={(categoria) =>
             setCategorias((atuais) => [...atuais, categoria])
