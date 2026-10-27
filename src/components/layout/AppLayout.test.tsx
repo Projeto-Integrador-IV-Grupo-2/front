@@ -167,4 +167,24 @@ describe('AppLayout', () => {
     await user.click(alternar)
     expect(alternar).toHaveTextContent('Fechar menu')
   })
+
+  it('começa no tema claro e o botão Tema alterna para o escuro e de volta, lembrando a escolha', async () => {
+    const user = userEvent.setup()
+    renderizarComProvedores({ rota: '/dashboard', usuario: criarUsuario() })
+
+    const botao = await screen.findByRole('button', {
+      name: 'Mudar para o tema escuro',
+    })
+    expect(document.documentElement).not.toHaveAttribute('data-theme')
+
+    await user.click(botao)
+    expect(document.documentElement).toHaveAttribute('data-theme', 'dark')
+    expect(localStorage.getItem('nexo:tema')).toBe('escuro')
+
+    await user.click(
+      screen.getByRole('button', { name: 'Mudar para o tema claro' }),
+    )
+    expect(document.documentElement).not.toHaveAttribute('data-theme')
+    expect(localStorage.getItem('nexo:tema')).toBe('claro')
+  })
 })

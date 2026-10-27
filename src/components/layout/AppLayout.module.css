@@ -63,7 +63,7 @@
 
 .navLinkActive {
   color: var(--color-primary);
-  background: #eef2ff;
+  background: var(--color-primary-soft);
 }
 
 .navItemFuturo {
@@ -101,9 +101,28 @@
 .temaRow {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: var(--space-2);
   color: var(--color-text-muted);
   font-size: 0.875rem;
+}
+
+.botaoTema {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.botaoTema:hover {
+  color: var(--color-text);
+  background: var(--color-bg);
 }
 
 .userCard {
@@ -119,7 +138,7 @@
   justify-content: center;
   flex-shrink: 0;
   border-radius: 999px;
-  background: #eef2ff;
+  background: var(--color-primary-soft);
   color: var(--color-primary);
   font-weight: 700;
 }
@@ -279,7 +298,7 @@
     position: fixed;
     inset: 0;
     z-index: 20;
-    background: rgb(15 23 42 / 40%);
+    background: var(--color-overlay);
     border: none;
     padding: 0;
     cursor: default;

@@ -6,7 +6,7 @@
   align-items: center;
   justify-content: center;
   padding: var(--space-5);
-  background: rgb(15 23 42 / 50%);
+  background: var(--color-overlay);
 }
 
 .modal {

@@ -59,8 +59,8 @@
   font-size: 0.875rem;
   font-weight: 500;
   color: var(--color-primary);
-  background: #eef2ff;
-  border: 1px solid #d7defb;
+  background: var(--color-primary-soft);
+  border: 1px solid var(--color-primary-soft-line);
   border-radius: var(--radius-sm);
 }
 

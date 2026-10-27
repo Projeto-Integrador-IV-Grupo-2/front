@@ -1,24 +1,36 @@
 :root {
   color-scheme: light;
 
-  /* Cores */
-  --color-primary: #4f46e5;
-  --color-primary-hover: #4338ca;
-  --color-primary-contrast: #ffffff;
+  /*
+   * Cores do protótipo (tema claro, o padrão). Os nomes do protótipo estão ao
+   * lado: --accent, --bg, --surface, --ink etc. O tema escuro fica no fim do
+   * arquivo e só entra pelo botão "Tema" (html[data-theme='dark']).
+   */
+  --color-primary: #2547d0; /* --accent */
+  --color-primary-hover: #1d3aad;
+  --color-primary-contrast: #ffffff; /* --accent-ink */
+  --color-primary-soft: #eef1fc; /* --accent-soft */
+  --color-primary-soft-line: #d7def8; /* --accent-soft-line */
 
-  --color-bg: #f8fafc;
-  --color-surface: #ffffff;
-  --color-border: #e2e8f0;
+  --color-bg: #f6f7fa; /* --bg */
+  --color-surface: #ffffff; /* --surface */
+  --color-surface-2: #fbfbfd; /* --surface-2 */
+  --color-border: #e4e7ee; /* --line */
+  --color-border-strong: #d3d7e3; /* --line-strong */
 
-  --color-text: #0f172a;
-  --color-text-muted: #64748b;
+  --color-text: #0e1526; /* --ink */
+  --color-text-muted: #5b6478; /* --ink-muted */
+  --color-text-faint: #9ba2b4; /* --ink-faint */
 
-  --color-danger: #dc2626;
-  --color-danger-bg: #fef2f2;
-  --color-success: #16a34a;
-  --color-success-bg: #f0fdf4;
-  --color-warning: #9a6300;
-  --color-warning-bg: #fbf1dd;
+  --color-danger: #b03636; /* --danger */
+  --color-danger-bg: #fbebeb; /* --danger-soft */
+  --color-success: #187a52; /* --success */
+  --color-success-bg: #e7f5ee; /* --success-soft */
+  --color-warning: #9a6300; /* --warning */
+  --color-warning-bg: #fbf1dd; /* --warning-soft */
+
+  /* Fundo atrás de diálogos e painéis. */
+  --color-overlay: rgb(14 21 38 / 45%);
 
   /* Tipografia */
   --font-sans:
@@ -37,8 +49,8 @@
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 16px;
-  --shadow-sm: 0 1px 2px rgb(15 23 42 / 6%);
-  --shadow-md: 0 8px 24px rgb(15 23 42 / 10%);
+  --shadow-sm: 0 1px 2px rgb(14 21 38 / 4%); /* --shadow-1 */
+  --shadow-md: 0 8px 24px rgb(14 21 38 / 10%); /* --shadow-2 */
 
   /* Layout */
   --header-height: 64px;
@@ -129,30 +141,37 @@ ul {
   border: 0;
 }
 
-/* Tema escuro automático: os módulos da interface usam estes tokens. */
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
+/*
+ * Tema escuro do protótipo. Não é automático: só entra quando a pessoa escolhe
+ * no botão "Tema" da barra lateral, que grava a escolha (ver useTema).
+ */
+:root[data-theme='dark'] {
+  color-scheme: dark;
 
-    --color-primary: #a5b4fc;
-    --color-primary-hover: #c7d2fe;
-    --color-primary-contrast: #111827;
+  --color-primary: #4c7dff;
+  --color-primary-hover: #6f95ff;
+  --color-primary-contrast: #ffffff;
+  --color-primary-soft: #101f3f;
+  --color-primary-soft-line: #25396a;
 
-    --color-bg: #0b1220;
-    --color-surface: #111c2e;
-    --color-border: #334155;
+  --color-bg: #050608;
+  --color-surface: #0f1b33;
+  --color-surface-2: #0a1526;
+  --color-border: #1c2a48;
+  --color-border-strong: #293c63;
 
-    --color-text: #e2e8f0;
-    --color-text-muted: #a0aec0;
+  --color-text: #eef1f8;
+  --color-text-muted: #8d96ac;
+  --color-text-faint: #576079;
 
-    --color-danger: #f87171;
-    --color-danger-bg: #451a1a;
-    --color-success: #4ade80;
-    --color-success-bg: #052e16;
-    --color-warning: #fbbf24;
-    --color-warning-bg: #422006;
+  --color-danger: #e28080;
+  --color-danger-bg: #2a1414;
+  --color-success: #4fbf8e;
+  --color-success-bg: #0f2620;
+  --color-warning: #e0aa3e;
+  --color-warning-bg: #2a2110;
 
-    --shadow-sm: 0 1px 2px rgb(0 0 0 / 24%);
-    --shadow-md: 0 8px 24px rgb(0 0 0 / 32%);
-  }
+  --color-overlay: rgb(0 0 0 / 60%);
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 50%);
+  --shadow-md: 0 16px 40px rgb(0 0 0 / 60%);
 }
