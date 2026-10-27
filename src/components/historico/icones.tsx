@@ -50,14 +50,6 @@ export function IconeFaisca({ tamanho }: IconeProps) {
   )
 }
 
-export function IconeCodigo({ tamanho }: IconeProps) {
-  return (
-    <Icone tamanho={tamanho}>
-      <path d="M9 18l-5-6 5-6M15 6l5 6-5 6" />
-    </Icone>
-  )
-}
-
 export function IconePlay({ tamanho }: IconeProps) {
   return (
     <Icone tamanho={tamanho}>

@@ -273,4 +273,7 @@ export const handlers = [
     '*/api/assistente/sessoes/:id',
     () => new HttpResponse(null, { status: 204 }),
   ),
+
+  // Histórico vazio por padrão: só os testes do Histórico tratam dele.
+  http.get('*/api/historico', () => HttpResponse.json(criarPagina([]))),
 ]

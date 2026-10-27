@@ -307,9 +307,17 @@ Axios, senão o token e o tratamento de 401 teriam de ser repetidos.
 
 ## Histórico e assistente de IA
 
-| Tela         | O que faz                                                                                        |
-| ------------ | ------------------------------------------------------------------------------------------------ |
-| `/historico` | Atividades do usuário agrupadas por dia, com busca (**estático**, ainda sem endpoint no backend) |
+| Tela         | O que faz                                                                             |
+| ------------ | ------------------------------------------------------------------------------------- |
+| `/historico` | Interações reais (`GET /api/historico`), agrupadas por dia, com busca e carregar mais |
+
+O Histórico lê o `historicoService` (`GET /api/historico`, do mais recente para
+o mais antigo): trilha acessada, iniciada e concluída — com link para a
+trilha — e as **perguntas feitas à IA**. Por privacidade, a API não guarda a
+pergunta nem a resposta, só se a IA encontrou fontes na base, e é isso que a
+linha mostra. O `ADMIN` recebe o histórico da empresa inteira e vê o nome de
+quem fez cada interação; os outros perfis veem só o próprio. A busca filtra o
+que já foi carregado.
 
 A IA não tem tela própria no menu: ela fica no botão **IA** da tela de Trilhas
 (ver "IA na tela de Trilhas").
