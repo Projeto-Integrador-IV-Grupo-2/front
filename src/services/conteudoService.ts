@@ -1,4 +1,5 @@
 import { api } from './api.ts'
+import { avisarConteudosMudaram } from './conteudoEvents.ts'
 import { normalizarErro } from '../utils/errorHandler.ts'
 import type { ApiFieldError } from '../types/api.ts'
 import type { Pagina } from '../types/area.ts'
@@ -64,11 +65,26 @@ export async function listarConteudos(
   }
 }
 
+export async function buscarConteudo(
+  id: string,
+  config?: { signal?: AbortSignal },
+): Promise<Conteudo> {
+  try {
+    const { data } = await api.get<Conteudo>(`/api/conteudos/${id}`, {
+      signal: config?.signal,
+    })
+    return data
+  } catch (error) {
+    throw toServiceError(error, 'Não foi possível carregar o conteúdo.')
+  }
+}
+
 export async function criarConteudo(
   request: ConteudoRequest,
 ): Promise<Conteudo> {
   try {
     const { data } = await api.post<Conteudo>('/api/conteudos', request)
+    avisarConteudosMudaram()
     return data
   } catch (error) {
     throw toServiceError(error, 'Não foi possível cadastrar o conteúdo.')
@@ -81,6 +97,7 @@ export async function atualizarConteudo(
 ): Promise<Conteudo> {
   try {
     const { data } = await api.put<Conteudo>(`/api/conteudos/${id}`, request)
+    avisarConteudosMudaram()
     return data
   } catch (error) {
     throw toServiceError(error, 'Não foi possível salvar o conteúdo.')
@@ -90,8 +107,25 @@ export async function atualizarConteudo(
 export async function publicarConteudo(id: string): Promise<Conteudo> {
   try {
     const { data } = await api.patch<Conteudo>(`/api/conteudos/${id}/publicar`)
+    avisarConteudosMudaram()
     return data
   } catch (error) {
     throw toServiceError(error, 'Não foi possível publicar o conteúdo.')
+  }
+}
+
+/**
+ * Volta o conteúdo para rascunho. Conteúdo usado em etapa de trilha responde
+ * 409, e a mensagem da API é a que a tela mostra.
+ */
+export async function despublicarConteudo(id: string): Promise<Conteudo> {
+  try {
+    const { data } = await api.patch<Conteudo>(
+      `/api/conteudos/${id}/despublicar`,
+    )
+    avisarConteudosMudaram()
+    return data
+  } catch (error) {
+    throw toServiceError(error, 'Não foi possível despublicar o conteúdo.')
   }
 }

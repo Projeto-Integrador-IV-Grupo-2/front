@@ -1,9 +1,11 @@
 import { http, HttpResponse } from 'msw'
 import {
   criarArea,
+  criarArquivo,
   criarAtribuicao,
   criarColaboradorAcompanhamento,
   criarCompetencia,
+  criarConteudo,
   criarDashboardColaborador,
   criarDashboardGestao,
   criarMensagemAssistente,
@@ -62,6 +64,19 @@ export const handlers = [
 
   http.get('*/api/trilhas', () => HttpResponse.json(criarPaginaTrilhas())),
 
+  // Antes de /api/trilhas/:id, senão "sugestoes" seria lido como um id.
+  // Padrão sem sugestões: a seção não aparece nos testes que não tratam dela.
+  http.get('*/api/trilhas/sugestoes', () =>
+    HttpResponse.json({ geradoPorIa: true, aviso: null, sugestoes: [] }),
+  ),
+
+  http.post('*/api/trilhas/sugestoes/ajuda', () =>
+    HttpResponse.json({
+      texto: 'Posso ajudar com as trilhas.',
+      rascunho: null,
+    }),
+  ),
+
   http.get('*/api/trilhas/:id', () => HttpResponse.json(criarTrilhaDetalhe())),
 
   http.post('*/api/trilhas/:id/progresso', () =>
@@ -75,6 +90,35 @@ export const handlers = [
   http.get('*/api/trilhas/:id/etapas', () => HttpResponse.json([])),
 
   http.get('*/api/conteudos', () => HttpResponse.json(criarPagina([]))),
+
+  http.get('*/api/conteudos/:id', () => HttpResponse.json(criarConteudo())),
+
+  http.patch('*/api/conteudos/:id/publicar', () =>
+    HttpResponse.json(criarConteudo({ status: 'PUBLICADO' })),
+  ),
+
+  http.patch('*/api/conteudos/:id/despublicar', () =>
+    HttpResponse.json(criarConteudo({ status: 'RASCUNHO' })),
+  ),
+
+  // Arquivos dos documentos (issue #49).
+  http.get('*/api/conteudos/:id/arquivos', () => HttpResponse.json([])),
+
+  http.post('*/api/conteudos/:id/arquivos', () =>
+    HttpResponse.json(criarArquivo(), { status: 201 }),
+  ),
+
+  http.get(
+    '*/api/arquivos/:id/download',
+    () =>
+      new HttpResponse('conteudo-do-arquivo', {
+        headers: {
+          'Content-Type': 'application/pdf',
+          'Content-Disposition':
+            "attachment; filename*=UTF-8''politica-de-ferias.pdf",
+        },
+      }),
+  ),
 
   http.get('*/api/categorias', () => HttpResponse.json(criarPagina([]))),
 

@@ -7,9 +7,7 @@ import {
   IconeFaisca,
   IconeLivro,
   IconePlay,
-} from '../components/assistente/icones.tsx'
-import { caminhoAssistente } from '../routes/paths.ts'
-import { ID_CONVERSA_REEMBOLSO } from '../services/mocks/assistenteMock.ts'
+} from '../components/historico/icones.tsx'
 import styles from './HistoricoPage.module.css'
 
 interface Atividade {
@@ -37,7 +35,6 @@ const GRUPOS: GrupoAtividades[] = [
         texto: 'Perguntou à IA sobre a política de reembolso',
         hora: '14:22',
         icone: <IconeFaisca tamanho={14} />,
-        para: caminhoAssistente(ID_CONVERSA_REEMBOLSO),
       },
       {
         texto: 'Consultou "Padrões de código e nomenclatura"',

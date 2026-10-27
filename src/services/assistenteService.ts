@@ -42,6 +42,17 @@ export class AssistenteServiceError extends Error {
  */
 export const MENSAGEM_CONVERSA_NAO_ENCONTRADA = 'Conversa não encontrada.'
 
+/**
+ * 429: a API aceita até 10 perguntas por minuto por usuário e responde com
+ * `Retry-After: 60` acima disso.
+ */
+export const MENSAGEM_LIMITE_DE_PERGUNTAS =
+  'Você fez muitas perguntas em pouco tempo. Espere um minuto e tente de novo.'
+
+/** 503: o provedor de IA está fora do ar (sem chave, limite de uso, timeout). */
+export const MENSAGEM_IA_INDISPONIVEL =
+  'O assistente de IA está indisponível agora. Tente de novo em instantes.'
+
 function toServiceError(
   error: unknown,
   fallbackMessage: string,
@@ -50,6 +61,9 @@ function toServiceError(
     mensagens: {
       [HTTP_STATUS.NOT_FOUND]: MENSAGEM_CONVERSA_NAO_ENCONTRADA,
       [HTTP_STATUS.FORBIDDEN]: MENSAGENS_DE_ERRO.SEM_PERMISSAO,
+      [HTTP_STATUS.TOO_MANY_REQUESTS]: MENSAGEM_LIMITE_DE_PERGUNTAS,
+      // O 503 vence o texto genérico de 5xx: é o provedor de IA fora do ar.
+      [HTTP_STATUS.SERVICE_UNAVAILABLE]: MENSAGEM_IA_INDISPONIVEL,
       [HTTP_STATUS.INTERNAL_SERVER_ERROR]: MENSAGENS_DE_ERRO.ERRO_DO_SERVIDOR,
     },
   })
@@ -57,15 +71,15 @@ function toServiceError(
 }
 
 /**
- * O backend do assistente ainda não existe, então o mock fica ligado por
- * padrão; `VITE_ASSISTENTE_MOCK=false` passa a falar com a API de verdade.
- * Só o *adapter* do Axios muda: caminhos, corpos e interceptors de sessão são
- * os mesmos. Lido a cada chamada para os testes desligarem com `vi.stubEnv`.
+ * O assistente fala com a API (back #71). `VITE_ASSISTENTE_MOCK=true` troca só
+ * o *adapter* do Axios pelo mock, para trabalhar sem o backend: caminhos,
+ * corpos e interceptors de sessão são os mesmos. Lido a cada chamada para os
+ * testes ligarem com `vi.stubEnv`.
  */
 function configMock(): AxiosRequestConfig {
-  return import.meta.env.VITE_ASSISTENTE_MOCK === 'false'
-    ? {}
-    : { adapter: adaptadorAssistenteMock }
+  return import.meta.env.VITE_ASSISTENTE_MOCK === 'true'
+    ? { adapter: adaptadorAssistenteMock }
+    : {}
 }
 
 /** Título de uma conversa nova: o começo da primeira pergunta. */

@@ -1,0 +1,304 @@
+.conteudo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.bloco {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.bloco + .bloco {
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--color-border);
+}
+
+.cabecalhoBloco {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.tituloBloco {
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.selo {
+  flex: 0 0 auto;
+  padding: 3px 9px;
+  font-size: 0.71875rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  background: #eef2ff;
+  border: 1px solid #d7defb;
+  border-radius: 999px;
+}
+
+.seloArea {
+  color: var(--color-warning);
+  background: var(--color-warning-bg);
+  border-color: #f1dfb6;
+}
+
+.nota {
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: var(--color-text-muted);
+}
+
+.sugestoes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.sugestao {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* Lista de um item só, para o <li> do TrilhaCard ter um pai válido. */
+.cartao {
+  display: grid;
+}
+
+.motivo {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.porque {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.atalhos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.atalho {
+  padding: 9px 12px;
+  font-size: 0.8125rem;
+  text-align: left;
+  color: var(--color-text-muted);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.atalho:hover:not(:disabled) {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.conversa {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.conversa:empty {
+  display: none;
+}
+
+.mensagem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-width: 92%;
+}
+
+.minha {
+  align-self: flex-end;
+}
+
+.balao {
+  padding: 9px 12px;
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.minha .balao {
+  color: var(--color-primary-contrast);
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.digitando {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+
+.rascunho {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid #d7defb;
+  border-left: 3px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+}
+
+.rascunhoRotulo {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.rascunhoNome {
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.rascunhoCampos {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+  font-size: 0.8125rem;
+}
+
+.rascunhoCampos dt {
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.rascunhoCampos dd {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.usar {
+  align-self: flex-start;
+  margin-top: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-primary-contrast);
+  background: var(--color-primary);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+}
+
+.usar:hover {
+  background: var(--color-primary-hover);
+}
+
+.erro {
+  padding: var(--space-2) var(--space-3);
+  font-size: 0.8125rem;
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
+  border-radius: var(--radius-sm);
+}
+
+.entrada {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.entrada input {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 12px;
+  font-size: 0.875rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.enviar {
+  padding: 8px 14px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-primary-contrast);
+  background: var(--color-primary);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+}
+
+.enviar:disabled {
+  opacity: 0.6;
+}
+
+.fontes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.fonte {
+  padding: 3px 9px;
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 0.6875rem;
+  color: var(--color-text-muted);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+}
+
+.rascunhoSecao {
+  margin-top: var(--space-1);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.etapas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding-left: var(--space-5);
+}
+
+.etapa {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.etapaTitulo {
+  font-weight: 600;
+}
+
+.etapaConteudo {
+  font-size: 0.75rem;
+  color: var(--color-primary);
+}
+
+.etapaDescricao {
+  color: var(--color-text-muted);
+}
+
+.faltando {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding-left: var(--space-5);
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+  list-style: disc;
+}

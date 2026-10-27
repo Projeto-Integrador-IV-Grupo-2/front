@@ -27,7 +27,7 @@ export default tseslint.config(
           // Contexts exportam o objeto Context junto do Provider por design
           // (o consumo é sempre via hook próprio, ex.: useAuth) — ver
           // src/contexts/AuthContext.tsx.
-          allowExportNames: ['AuthContext', 'AssistenteContext'],
+          allowExportNames: ['AuthContext'],
         },
       ],
       '@typescript-eslint/no-unused-vars': [

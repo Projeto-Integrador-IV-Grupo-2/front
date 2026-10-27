@@ -1,7 +1,11 @@
 import type { RecursoResumo } from './usuario.ts'
 
-/** Tipo do conteúdo — espelha o enum `TipoConteudo` da API. */
-export type TipoConteudo = 'VIDEO' | 'TEXTO' | 'LINK'
+/**
+ * Tipo do conteúdo — espelha o enum `TipoConteudo` da API. `DOCUMENTO` é o
+ * documento da tela de Conhecimento, com o material em arquivos anexados
+ * (back #54).
+ */
+export type TipoConteudo = 'VIDEO' | 'TEXTO' | 'LINK' | 'DOCUMENTO'
 
 /** Situação editorial — espelha o enum `StatusConteudo` da API. */
 export type StatusConteudo = 'RASCUNHO' | 'PUBLICADO'
@@ -48,7 +52,8 @@ export interface Conteudo {
 /**
  * Corpo de `POST /api/conteudos` e `PUT /api/conteudos/{id}`. Só o campo do
  * tipo escolhido importa: `videoUrl` para VIDEO, `corpo` para TEXTO e
- * `linkUrl` para LINK.
+ * `linkUrl` para LINK. DOCUMENTO não tem campo próprio — o material dele são
+ * os arquivos anexados depois de salvar.
  */
 export interface ConteudoRequest {
   titulo: string
@@ -71,12 +76,17 @@ export interface ConteudoFiltro {
   status?: StatusConteudo | ''
 }
 
+/**
+ * Tipos oferecidos no cadastro de conteúdos de estudo. `DOCUMENTO` fica fora:
+ * ele é cadastrado pela tela de Conhecimento, com upload de arquivo.
+ */
 export const TIPOS_CONTEUDO: TipoConteudo[] = ['VIDEO', 'TEXTO', 'LINK']
 
 export const ROTULOS_TIPO_CONTEUDO: Record<TipoConteudo, string> = {
   VIDEO: 'Vídeo',
   TEXTO: 'Texto',
   LINK: 'Link',
+  DOCUMENTO: 'Documento',
 }
 
 export const ROTULOS_STATUS_CONTEUDO: Record<StatusConteudo, string> = {

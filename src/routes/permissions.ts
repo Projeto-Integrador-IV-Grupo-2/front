@@ -33,14 +33,16 @@ export const ITENS_MENU: ItemMenu[] = [
   // editar e publicar são ações internas restritas (ver PERFIS_GESTAO_CONTEUDO).
   { to: ROTAS.conteudos, rotulo: 'Conteúdos' },
   { to: ROTAS.categorias, rotulo: 'Categorias' },
+  // Base de documentos da empresa: todos os perfis entram (colaborador vê só
+  // os publicados — a API filtra).
+  { to: ROTAS.conhecimento, rotulo: 'Conhecimento' },
   {
     to: ROTAS.acompanhamento,
     rotulo: 'Acompanhamento',
     perfis: PERFIS_ACOMPANHAMENTO,
   },
-  // O assistente e o histórico valem para qualquer autenticado: cada um vê
-  // só as próprias conversas e atividades.
-  { to: ROTAS.assistente, rotulo: 'IA' },
+  // O histórico vale para qualquer autenticado: cada um vê as próprias
+  // atividades.
   { to: ROTAS.historico, rotulo: 'Histórico' },
 ]
 

@@ -16,19 +16,10 @@ export const ROTAS = {
   acompanhamento: '/acompanhamento',
   conteudos: '/conteudos',
   categorias: '/categorias',
-  assistente: '/assistente',
-  // Segmento opcional: abrir outra conversa troca só o parâmetro, e a tela
-  // (com o histórico já carregado) continua montada.
-  assistenteSessao: '/assistente/:sessaoId?',
+  conhecimento: '/conhecimento',
+  documentoDetalhe: '/conhecimento/:id',
   historico: '/historico',
 } as const
-
-/** Conversa com o assistente; sem id, uma conversa nova. */
-export function caminhoAssistente(sessaoId?: string | null): string {
-  return sessaoId
-    ? `${ROTAS.assistente}/${encodeURIComponent(sessaoId)}`
-    : ROTAS.assistente
-}
 
 /** Caminho do detalhe de uma trilha específica. */
 export function caminhoTrilha(id: string): string {
@@ -38,6 +29,11 @@ export function caminhoTrilha(id: string): string {
 /** Tela de estudo de uma trilha: player do Vimeo e conclusão das etapas. */
 export function caminhoEstudo(id: string): string {
   return ROTAS.trilhaEstudo.replace(':id', encodeURIComponent(id))
+}
+
+/** Detalhe de um documento: arquivos, download e pré-visualização. */
+export function caminhoDocumento(id: string): string {
+  return ROTAS.documentoDetalhe.replace(':id', encodeURIComponent(id))
 }
 
 /** Caminho do editor de um PDI específico. */

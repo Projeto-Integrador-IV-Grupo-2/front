@@ -61,11 +61,13 @@ Toda variável lida pelo Vite no código do cliente precisa começar com
 `VITE_`. O `.env` **não é versionado** (ver `.gitignore`) — cada
 integrante mantém o seu, a partir do `.env.example`.
 
-| Variável               | Obrigatória | Descrição                                                                                   |
-| ---------------------- | ----------- | ------------------------------------------------------------------------------------------- |
-| `VITE_API_URL`         | Sim         | URL base da API (sem barra no final)                                                        |
-| `VITE_TRILHAS_MOCK`    | Não         | `true` responde as rotas de trilhas com um mock em memória (ver abaixo)                     |
-| `VITE_ASSISTENTE_MOCK` | Não         | Mock do assistente de IA, **ligado por padrão**; `false` usa a API (ver "Assistente de IA") |
+| Variável               | Obrigatória | Descrição                                                                                                         |
+| ---------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------- |
+| `VITE_API_URL`         | Sim         | URL base da API (sem barra no final)                                                                              |
+| `VITE_TRILHAS_MOCK`    | Não         | `true` responde as rotas de trilhas com um mock em memória (ver abaixo)                                           |
+| `VITE_SUGESTOES_MOCK`  | Não         | `true` responde as sugestões da IA pelo mock; `area` também, simulando a IA fora do ar. Sem a variável, usa a API |
+| `VITE_AJUDA_IA_MOCK`   | Não         | `true` responde a conversa de ajuda da IA em Trilhas pelo mock. Sem a variável, usa a API                         |
+| `VITE_ASSISTENTE_MOCK` | Não         | `true` responde o assistente de IA pelo mock. Sem a variável, usa a API (ver "Assistente de IA")                  |
 
 A URL nunca fica fixa no código: o cliente Axios (`src/services/api.ts`)
 sempre lê `import.meta.env.VITE_API_URL`.
@@ -174,6 +176,52 @@ e os erros chegam à tela como `TrilhaServiceError` (`message`, `status`,
 
 ---
 
+### IA na tela de Trilhas (Task 12)
+
+O botão **IA**, ao lado do **PDI**, abre o painel **"Assistente de trilhas"**.
+O contador no botão mostra quantas sugestões há.
+
+- **Sugeridas para você:** as trilhas sugeridas, cada uma no `TrilhaCard`
+  com o motivo embaixo, como texto simples. Com `geradoPorIa: false` (a IA
+  não respondeu) o selo vira "Recomendação por área" e aparece o `aviso` da
+  API. Sem sugestões, ou com erro
+  na consulta, a seção não aparece (sem mensagem de erro).
+- **Peça ajuda à IA:** conversa com atalhos por perfil. Quem cria trilhas
+  (`PERFIS_CRIAR_TRILHA`) pode pedir para a IA montar uma trilha. A resposta
+  traz um rascunho, e "Criar com este rascunho" abre o cadastro já preenchido.
+- As sugestões carregam junto com a página (`useSugestoesTrilhas`), sem a
+  listagem esperar por elas.
+- Trilha já iniciada não entra. Ao iniciar uma trilha, o `trilhaService`
+  publica `trilha-iniciada` (`services/eventosTrilha.ts`, Observer) e as
+  sugestões, que assinam o evento, tiram a trilha da lista. A ação de iniciar
+  não conhece quem ouve.
+
+**Sugestões: dados reais.** Vêm de `GET /api/trilhas/sugestoes` (já na `dev`
+do backend), no formato
+`{ geradoPorIa, aviso, sugestoes: [{ id, nome, area, objetivos, motivo }] }`.
+A API tira só as trilhas **concluídas**; as **em andamento** o front tira
+cruzando com "minhas trilhas" (só quando há sugestões). Backend sem o
+endpoint responde erro, e a seção apenas não aparece.
+
+**Ajuda (conversa e rascunhos): dados reais.** O painel chama
+`POST /api/trilhas/sugestoes/ajuda` (PR `feat/trilhas-ajuda-ia` do backend),
+que devolve `{ texto, rascunho }`: o rascunho só vem quando o pedido é para
+criar uma trilha, e "Criar com este rascunho" abre o formulário preenchido —
+nada é gravado antes de quem cria salvar.
+
+Enquanto essa rota não estiver no backend (404), a pergunta vai para o
+**assistente da `dev`** (`POST /api/assistente/sessoes` e
+`.../{id}/mensagens`, contexto `CONHECIMENTO`): a resposta continua sendo da
+IA, com as fontes, só sem rascunho. A conversa do painel usa uma sessão só, e
+uma sessão apagada é recriada. Quando a rota entrar, os rascunhos aparecem sem
+mudar o front. IA fora do ar (5xx) mostra "A IA não está disponível agora" e
+não cai no plano B. Sem backend nenhum, `VITE_AJUDA_IA_MOCK=true` responde
+pelo mock.
+
+Para trabalhar sem o backend, `VITE_SUGESTOES_MOCK=true` responde as
+sugestões pelo mesmo mock (montadas a partir do catálogo), e `area` simula
+a IA fora do ar.
+
 ## Conteúdos, etapas e estudo (issue #39)
 
 Os vídeos ficam hospedados no **Vimeo**. O front nunca valida o link por
@@ -198,59 +246,110 @@ erro normalizado (`message`, `status`, `fieldErrors`).
 
 ---
 
-## Assistente de IA e histórico (Task 10)
+## Conhecimento (issue #48)
 
-| Tela                    | O que faz                                                                                        |
-| ----------------------- | ------------------------------------------------------------------------------------------------ |
-| `/assistente`           | Conversa nova: atalhos por tema, sugestões e campo de pergunta                                   |
-| `/assistente/:sessaoId` | Conversa aberta. Fica na URL, então o link e o F5 funcionam                                      |
-| `/historico`            | Atividades do usuário agrupadas por dia, com busca (**estático**, ainda sem endpoint no backend) |
+`/conhecimento` é a base de documentos da empresa, com item próprio no menu
+para todos os perfis. Usa os mesmos `conteudoService` e `categoriaService`; o
+documento é um conteúdo do tipo `DOCUMENTO` (back #54).
 
-O painel "Conversas" (ao lado da conversa; no celular, uma gaveta) lista as
-conversas da mais recente para a mais antiga, carrega mais ao rolar ou pelo
-botão, e permite abrir, renomear e apagar (com confirmação). Apagar a conversa
-aberta leva a uma conversa nova; link de conversa de outro usuário (a API
-responde 404) mostra "Conversa não encontrada".
+- A tela abre nos documentos: `criarFiltroInicial()` já vem com o tipo
+  `DOCUMENTO`, e "Limpar filtros" volta para ele.
+- Busca por título (sai só quando a pessoa para de digitar, com
+  `useValorAdiado`) e filtros de categoria, área e tipo, combinados entre si.
+  `ADMIN` e `GESTOR` também filtram por status; o colaborador não vê esse
+  filtro e a tela nem envia status (a API já devolve só os publicados).
+- Qualquer mudança de filtro volta para a página 1.
+- Lista com título, categoria, área, tipo e data de atualização: tabela no
+  desktop, cartões no celular.
+- Lista vazia tem mensagem própria (diferente quando há filtro), separada do
+  erro, que oferece "Tentar novamente".
 
-Como as peças conversam:
+### Cadastro, arquivos e visualização (issue #49)
 
-- `assistenteService` é o único que chama a API (`/api/assistente/sessoes`,
-  `.../{id}`, `.../{id}/mensagens`), sempre pelo cliente `api`.
-- `AssistenteContext` é a fonte única do estado da conversa (mensagens,
-  envio, conversa aberta).
-- O contexto expõe um canal de eventos (`contexts/eventosAssistente.ts`,
-  Observer): ao enviar uma pergunta, a conversa publica `sessao-atualizada` e
-  o painel, que assina o canal, leva aquela conversa para o topo. A área de
-  conversa não conhece o painel.
+A issue #49 completa esta tela. `ADMIN` e `GESTOR` veem "+ Novo documento" no
+cabeçalho; o título de cada linha leva a `/conhecimento/:id`, onde ficam os
+arquivos.
 
-### Mock do assistente
+- **Formulário de documento** (título, descrição, categoria, área, tipo) para
+  criar e editar. É o mesmo `ConteudoFormulario` do catálogo de estudo, com a
+  lista de tipos começando em `DOCUMENTO` (`TIPOS_NO_FORMULARIO`) — por isso
+  `TIPOS_CONTEUDO` segue sem documento: lá o material é vídeo, texto ou link;
+  aqui são arquivos.
+- **Cadastro de categoria em modal**, a partir do próprio formulário; a
+  categoria nova já fica selecionada.
+- **Envio com barra de progresso.** `EnvioDeArquivos` aceita vários arquivos
+  de uma vez e envia um por um, em ordem, e se inscreve no `onUploadProgress`
+  do Axios que o `arquivoService` repassa — a barra é um observador do próprio
+  envio. Com mais de um, ela mostra "2 de 3".
+- **Validação antes de enviar.** Tipo (PDF, DOCX, TXT, MD) e tamanho (até
+  **10 MB**, o mesmo `DOCUMENTOS_TAMANHO_MAXIMO` da API) são conferidos no
+  front, para o usuário não esperar um upload que vai falhar. A API confere de
+  novo.
+- **Falha no meio do upload** para a fila naquele arquivo e mostra o erro. O
+  botão vira "Tentar novamente": o que já subiu não sobe de novo, e ninguém
+  precisa reescolher o que faltou. Na escolha múltipla, um arquivo recusado
+  sai da fila com o motivo ao lado e os demais seguem.
+- **Download com o nome original**: o service lê o `Content-Disposition` da
+  API, e o navegador salva com esse nome — nunca com o id.
+- **Pré-visualização por Factory Method**: `PreviaDeArquivo` escolhe a prévia
+  pelo tipo (PDF no visualizador do navegador, TXT/MD como texto, DOCX sem
+  prévia). Um formato novo é só mais uma entrada no mapa. O texto é
+  renderizado dentro de `pre`, nunca como HTML.
+- **Publicar e despublicar pedem confirmação**, no detalhe do documento.
+- **Observer da listagem**: `conteudoEvents` avisa quem mostra listas sempre
+  que um documento é salvo, publicado, despublicado ou recebe um arquivo —
+  então a listagem recarrega mesmo quando quem mexeu foi a tela de detalhe.
 
-O backend ainda não tem os endpoints de sessões e mensagens, então o
-`assistenteService` responde pelo mock (`src/services/mocks/assistenteMock.ts`)
-enquanto `VITE_ASSISTENTE_MOCK` não for `false`. Ele segue o mesmo molde
-do mock das trilhas (um _adapter_ do Axios), com respostas fixas por
-palavra-chave copiadas do protótipo. Os dados ficam no `localStorage`
-(chave `nexo:assistente-mock`), para o F5 manter a conversa; apague essa
-chave para voltar às conversas iniciais. Para ver o "conversa não encontrada",
-abra `/assistente/c9000000-0000-4000-8000-000000000001` (uma conversa "de
-outro usuário" no mock).
+O upload usa o cliente HTTP único (`api`): não existe outra instância do
+Axios, senão o token e o tratamento de 401 teriam de ser repetidos.
+
+---
+
+## Histórico e assistente de IA
+
+| Tela         | O que faz                                                                                        |
+| ------------ | ------------------------------------------------------------------------------------------------ |
+| `/historico` | Atividades do usuário agrupadas por dia, com busca (**estático**, ainda sem endpoint no backend) |
+
+A IA não tem tela própria no menu: ela fica no botão **IA** da tela de Trilhas
+(ver "IA na tela de Trilhas").
+
+O `assistenteService` é o único ponto que fala com o assistente da API
+(back #71), sempre pelo cliente `api`: `GET/POST /api/assistente/sessoes`,
+`PATCH/DELETE .../{id}` e `GET/POST .../{id}/mensagens`, com o contrato dos
+tipos em `types/assistente.ts`. Hoje quem o usa é o painel de IA de Trilhas,
+quando a rota de ajuda das trilhas não existe no backend. A sessão traz um
+campo a mais, `contexto` (`CONHECIMENTO` ou `TRILHAS`), que o front ignora.
+
+Dois erros têm texto próprio, porque são os que mais aparecem num assistente:
+
+- **429** — mais de 10 perguntas por minuto: "Você fez muitas perguntas em
+  pouco tempo. Espere um minuto e tente de novo."
+- **503** — provedor de IA fora do ar: "O assistente de IA está indisponível
+  agora. Tente de novo em instantes."
+
+Sem o backend, `VITE_ASSISTENTE_MOCK=true` responde pelo mock
+(`src/services/mocks/assistenteMock.ts`), um _adapter_ do Axios com respostas
+fixas por palavra-chave, com os dados no `localStorage` (chave
+`nexo:assistente-mock`).
 
 ---
 
 ## Rotas e permissões
 
-| Rota                   | Quem acessa                                              |
-| ---------------------- | -------------------------------------------------------- |
-| `/login`               | qualquer visitante                                       |
-| `/dashboard`           | qualquer usuário autenticado                             |
-| `/trilhas`             | qualquer usuário autenticado                             |
-| `/trilhas/:id`         | qualquer usuário autenticado                             |
-| `/trilhas/:id/estudar` | qualquer usuário autenticado                             |
-| `/conteudos`           | qualquer usuário autenticado (ações só `ADMIN`/`GESTOR`) |
-| `/categorias`          | qualquer usuário autenticado (ações só `ADMIN`/`GESTOR`) |
-| `/assistente[/:id]`    | qualquer usuário autenticado (só as próprias conversas)  |
-| `/historico`           | qualquer usuário autenticado                             |
-| `/usuarios`            | apenas `ADMIN`                                           |
+| Rota                   | Quem acessa                                               |
+| ---------------------- | --------------------------------------------------------- |
+| `/login`               | qualquer visitante                                        |
+| `/dashboard`           | qualquer usuário autenticado                              |
+| `/trilhas`             | qualquer usuário autenticado                              |
+| `/trilhas/:id`         | qualquer usuário autenticado                              |
+| `/trilhas/:id/estudar` | qualquer usuário autenticado                              |
+| `/conteudos`           | qualquer usuário autenticado (ações só `ADMIN`/`GESTOR`)  |
+| `/categorias`          | qualquer usuário autenticado (ações só `ADMIN`/`GESTOR`)  |
+| `/conhecimento`        | qualquer usuário autenticado (status só `ADMIN`/`GESTOR`) |
+| `/conhecimento/:id`    | qualquer usuário autenticado (ações só `ADMIN`/`GESTOR`)  |
+| `/historico`           | qualquer usuário autenticado                              |
+| `/usuarios`            | apenas `ADMIN`                                            |
 
 `/` leva ao dashboard, que por sua vez exige sessão.
 

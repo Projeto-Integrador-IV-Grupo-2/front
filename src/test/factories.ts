@@ -3,6 +3,7 @@ import type {
   ColaboradorAcompanhamento,
 } from '../types/atribuicao.ts'
 import type { Area } from '../types/area.ts'
+import type { Arquivo } from '../types/arquivo.ts'
 import type {
   MensagemAssistente,
   SessaoAssistente,
@@ -281,6 +282,20 @@ export function criarConteudo(overrides: Partial<Conteudo> = {}): Conteudo {
     criadoEm: '2026-09-01T12:00:00Z',
     atualizadoEm: '2026-09-01T12:00:00Z',
     publicadoEm: '2026-09-02T12:00:00Z',
+    ...overrides,
+  }
+}
+
+/** Arquivo PDF anexado ao conteúdo "Boas-vindas". */
+export function criarArquivo(overrides: Partial<Arquivo> = {}): Arquivo {
+  return {
+    id: '88888888-8888-8888-8888-888888888888',
+    conteudoId: '77777777-7777-7777-7777-777777777777',
+    nomeOriginal: 'politica-de-ferias.pdf',
+    tipo: 'PDF',
+    mimeType: 'application/pdf',
+    tamanhoBytes: 2048,
+    criadoEm: '2026-09-01T12:00:00Z',
     ...overrides,
   }
 }

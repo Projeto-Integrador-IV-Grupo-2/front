@@ -27,14 +27,4 @@ describe('HistoricoPage', () => {
       screen.queryByRole('heading', { name: 'Hoje' }),
     ).not.toBeInTheDocument()
   })
-
-  it('a pergunta à IA leva à conversa no assistente', async () => {
-    renderizarComProvedores({ rota: '/historico', usuario: criarUsuario() })
-
-    expect(
-      await screen.findByRole('link', {
-        name: /Perguntou à IA sobre a política de reembolso/,
-      }),
-    ).toHaveAttribute('href', expect.stringMatching(/^\/assistente\/.+/))
-  })
 })

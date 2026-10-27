@@ -8,6 +8,8 @@ import {
   listarMensagens,
   listarSessoes,
   MENSAGEM_CONVERSA_NAO_ENCONTRADA,
+  MENSAGEM_IA_INDISPONIVEL,
+  MENSAGEM_LIMITE_DE_PERGUNTAS,
   renomearSessao,
   tituloDaPergunta,
 } from './assistenteService.ts'
@@ -121,6 +123,35 @@ describe('assistenteService', () => {
     const erro = await erroDe(apagarSessao(ID))
 
     expect(erro.message).not.toContain('NullPointer')
+  })
+
+  it('limite de perguntas por minuto (429) tem texto próprio', async () => {
+    server.use(
+      http.post('*/api/assistente/sessoes/:id/mensagens', () =>
+        HttpResponse.json(
+          { message: 'Too Many Requests' },
+          { status: 429, headers: { 'Retry-After': '60' } },
+        ),
+      ),
+    )
+
+    const erro = await erroDe(enviarMensagem(ID, 'Oi'))
+
+    expect(erro.status).toBe(429)
+    expect(erro.message).toBe(MENSAGEM_LIMITE_DE_PERGUNTAS)
+  })
+
+  it('IA fora do ar (503) tem texto próprio, diferente do erro genérico de servidor', async () => {
+    server.use(
+      http.post('*/api/assistente/sessoes/:id/mensagens', () =>
+        HttpResponse.json({ message: 'IA indisponível' }, { status: 503 }),
+      ),
+    )
+
+    const erro = await erroDe(enviarMensagem(ID, 'Oi'))
+
+    expect(erro.status).toBe(503)
+    expect(erro.message).toBe(MENSAGEM_IA_INDISPONIVEL)
   })
 
   it('cria a conversa e envia a pergunta', async () => {
