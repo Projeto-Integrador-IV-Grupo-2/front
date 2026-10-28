@@ -8,6 +8,13 @@ interface PainelDashboardProps {
   estado: EstadoPainel
   mensagemErro?: string
   mensagemVazia?: string
+  /**
+   * Sem o cartão em volta do conteúdo pronto: para listas em que cada item
+   * já é um cartão ("Precisa de atenção"). Os estados seguem no cartão.
+   */
+  semCartao?: boolean
+  /** O cartão cresce até o fim da coluna (acompanha a altura da vizinha). */
+  esticar?: boolean
   children: ReactNode
 }
 
@@ -21,18 +28,22 @@ export function PainelDashboard({
   estado,
   mensagemErro,
   mensagemVazia = 'Ainda não há dados para exibir.',
+  semCartao = false,
+  esticar = false,
   children,
 }: PainelDashboardProps) {
   return (
     <section
-      className={styles.panel}
+      className={`${styles.panel} ${esticar ? styles.panelEsticado : ''}`}
       aria-busy={estado === 'carregando'}
       aria-labelledby={`painel-${slug(titulo)}`}
     >
       <h3 id={`painel-${slug(titulo)}`} className={styles.title}>
         {titulo}
       </h3>
-      <div className={styles.card}>
+      <div
+        className={semCartao && estado === 'pronto' ? undefined : styles.card}
+      >
         {estado === 'carregando' && (
           <p className={styles.state} role="status">
             Carregando…

@@ -92,7 +92,16 @@ export function ConteudoFormulario({
   const [linkUrl, setLinkUrl] = useState(conteudo?.linkUrl ?? '')
   const [arquivos, setArquivos] = useState<File[]>([])
   const [errosLocais, setErrosLocais] = useState<Record<string, string>>({})
-  const [opcoesDeCategoria, setOpcoesDeCategoria] = useState(categorias)
+  // As categorias vêm da tela e podem chegar depois de o formulário abrir:
+  // por isso a lista é derivada da prop a cada render, e o estado guarda só
+  // as cadastradas aqui dentro, até a tela recebê-las.
+  const [criadasAqui, setCriadasAqui] = useState<Categoria[]>([])
+  const opcoesDeCategoria = [
+    ...categorias,
+    ...criadasAqui.filter(
+      (criada) => !categorias.some((categoria) => categoria.id === criada.id),
+    ),
+  ]
   const [criandoCategoria, setCriandoCategoria] = useState(false)
   const [salvandoCategoria, setSalvandoCategoria] = useState(false)
   const [erroCategoria, setErroCategoria] = useState<string | null>(null)
@@ -150,7 +159,7 @@ export function ConteudoFormulario({
     setFieldErrorsCategoria([])
     try {
       const nova = await criarCategoria(request)
-      setOpcoesDeCategoria((atuais) => [...atuais, nova])
+      setCriadasAqui((atuais) => [...atuais, nova])
       setCategoriaId(nova.id)
       setCriandoCategoria(false)
       onCategoriaCriada?.(nova)

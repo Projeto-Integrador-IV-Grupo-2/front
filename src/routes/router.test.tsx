@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, it } from 'vitest'
@@ -86,6 +86,50 @@ describe('router', () => {
     expect(
       screen.getByRole('link', { name: 'Visão geral' }),
     ).toBeInTheDocument()
+  })
+
+  it('nega Categorias (dentro de Áreas) ao colaborador aberta pela URL', async () => {
+    renderizarComProvedores({
+      rota: '/areas/categorias',
+      usuario: criarUsuario({ papel: 'COLABORADOR' }),
+    })
+
+    expect(
+      await screen.findByRole('heading', { name: 'Acesso negado' }),
+    ).toBeInTheDocument()
+    // Conteúdos continua: é onde ele usa as categorias, como filtro.
+    expect(screen.getByRole('link', { name: 'Conteúdos' })).toBeInTheDocument()
+  })
+
+  it('Categorias fica numa aba de Áreas, não no menu, e marca Áreas no menu', async () => {
+    const user = userEvent.setup()
+    renderizarComProvedores({
+      rota: '/areas',
+      usuario: criarUsuario({ papel: 'ADMIN' }),
+    })
+
+    const abas = await screen.findByRole('navigation', {
+      name: 'Cadastros de apoio',
+    })
+    await user.click(within(abas).getByRole('link', { name: 'Categorias' }))
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Categorias' }),
+    ).toBeInTheDocument()
+    // A tela trocou: as abas são outras. O menu lateral só tem "Áreas",
+    // que continua marcado.
+    const abasCategorias = screen.getByRole('navigation', {
+      name: 'Cadastros de apoio',
+    })
+    const itemAreas = screen
+      .getAllByRole('link', { name: 'Áreas' })
+      .find((link) => !abasCategorias.contains(link))
+    expect(itemAreas).toHaveAttribute('aria-current', 'page')
+    expect(
+      screen
+        .getAllByRole('link', { name: 'Categorias' })
+        .every((link) => abasCategorias.contains(link)),
+    ).toBe(true)
   })
 
   it('leva o usuário ao destino que ele tentou abrir antes do login', async () => {

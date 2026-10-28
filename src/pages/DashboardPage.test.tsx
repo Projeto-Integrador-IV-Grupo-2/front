@@ -4,6 +4,9 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   criarDashboardColaborador,
   criarDashboardGestao,
+  criarPaginaTrilhas,
+  criarProgressoTrilha,
+  criarTrilhaResumo,
   criarUsuario,
 } from '../test/factories.ts'
 import { server } from '../test/msw/server.ts'
@@ -259,5 +262,46 @@ describe('DashboardPage', () => {
     expect(
       screen.getByText('Suas interações com as trilhas aparecerão aqui.'),
     ).toBeInTheDocument()
+  })
+
+  it('sem prazo na semana, o "Continue de onde parou" usa a trilha em andamento', async () => {
+    let filtroMinhas: string | null = null
+    server.use(
+      http.get('*/api/dashboard/colaborador', () =>
+        HttpResponse.json(
+          criarDashboardColaborador({
+            proximosPrazos: [],
+            ultimasAtividades: [],
+          }),
+        ),
+      ),
+      http.get('*/api/trilhas', ({ request }) => {
+        filtroMinhas = new URL(request.url).searchParams.get('minhas')
+        return HttpResponse.json(
+          criarPaginaTrilhas([
+            criarTrilhaResumo({
+              id: 'trilha-longa',
+              nome: 'Liderança',
+              progresso: criarProgressoTrilha({
+                status: 'EM_ANDAMENTO',
+                percentual: 30,
+                prazo: '2026-12-20',
+              }),
+            }),
+          ]),
+        )
+      }),
+    )
+
+    renderizarComProvedores({
+      rota: rotaDashboard,
+      usuario: criarUsuario({ papel: 'COLABORADOR' }),
+    })
+
+    expect(
+      await screen.findByRole('link', { name: 'Continuar Liderança' }),
+    ).toHaveAttribute('href', '/trilhas/trilha-longa')
+    expect(screen.getByText(/30% concluído · prazo em/)).toBeInTheDocument()
+    expect(filtroMinhas).toBe('true')
   })
 })

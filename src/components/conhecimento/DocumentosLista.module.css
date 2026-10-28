@@ -30,11 +30,19 @@
   border-bottom: 0;
 }
 
+/* Sem flex no <th>: ele deixaria de ser célula e a linha desalinharia.
+   O link e a descrição viram blocos para empilhar. */
 .titulo {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
   font-weight: 500;
+}
+
+.titulo .link {
+  display: block;
+  width: fit-content;
+}
+
+.titulo .descricao {
+  margin-top: 2px;
 }
 
 .link {

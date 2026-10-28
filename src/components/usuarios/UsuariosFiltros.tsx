@@ -66,7 +66,7 @@ export function UsuariosFiltros({
       </div>
 
       <div className={styles.campo}>
-        <label htmlFor={`${idBase}-departamento`}>Departamento</label>
+        <label htmlFor={`${idBase}-departamento`}>Área</label>
         <input
           id={`${idBase}-departamento`}
           type="search"
