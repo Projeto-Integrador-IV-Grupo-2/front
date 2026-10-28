@@ -399,9 +399,14 @@ export function TrilhasPage() {
         })
         return
       }
-      fecharFormulario()
-      setAviso(`Trilha “${request.nome}” criada.`)
-      recarregar()
+      // Trilha manual nasce vazia: o próximo passo é montar as etapas e
+      // atribuir, e os dois ficam no detalhe — então a tela vai para lá.
+      setFormularioAberto(false)
+      navigate(caminhoTrilha(criada.id), {
+        state: {
+          aviso: `Trilha “${request.nome}” criada. Agora adicione as etapas e atribua aos colaboradores.`,
+        },
+      })
     } catch (causa) {
       if (causa instanceof TrilhaServiceError) {
         setErroFormulario(causa.message)

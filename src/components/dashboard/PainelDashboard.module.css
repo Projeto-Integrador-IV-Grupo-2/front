@@ -5,6 +5,17 @@
   gap: var(--space-3);
 }
 
+/* Ocupa a altura que sobrar na coluna; o cartão vai junto. */
+.panelEsticado {
+  flex: 1;
+}
+
+.panelEsticado > .card {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
 /* Rótulo da seção, fora do cartão (protótipo: "Precisa de atenção"). */
 .title {
   color: var(--color-text-muted);
@@ -16,7 +27,7 @@
 
 .card {
   min-width: 0;
-  padding: var(--space-1) 18px;
+  padding: 6px 18px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-surface);

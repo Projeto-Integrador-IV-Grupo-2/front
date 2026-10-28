@@ -5,6 +5,7 @@ import { ConteudoFormulario } from '../components/conteudos/ConteudoFormulario.t
 import { EnvioDeArquivos } from '../components/conteudos/EnvioDeArquivos.tsx'
 import { ListaDeArquivos } from '../components/conteudos/ListaDeArquivos.tsx'
 import { PreviaDeArquivo } from '../components/conteudos/previa/PreviaDeArquivo.tsx'
+import { PreviaVimeo } from '../components/conteudos/PreviaVimeo.tsx'
 import { formatarDuracao } from '../components/conteudos/vimeo.ts'
 import { usePermissao } from '../hooks/usePermissao.ts'
 import { ROTAS } from '../routes/paths.ts'
@@ -28,6 +29,7 @@ import { TIPOS_NO_FORMULARIO } from '../components/conhecimento/tiposDoDocumento
 import {
   ROTULOS_STATUS_CONTEUDO,
   ROTULOS_TIPO_CONTEUDO,
+  TIPOS_CONTEUDO,
   type Categoria,
   type Conteudo,
   type ConteudoRequest,
@@ -231,11 +233,17 @@ export function DocumentoDetalhePage() {
   }
 
   const publicado = conteudo.status === 'PUBLICADO'
+  // A mesma tela abre qualquer conteúdo: o documento volta para o
+  // Conhecimento; vídeo, texto e link, para o catálogo de Conteúdos.
+  const ehDocumento = conteudo.tipo === 'DOCUMENTO'
 
   return (
     <div className={styles.page}>
-      <Link to={ROTAS.conhecimento} className={styles.voltar}>
-        ← Voltar para Conhecimento
+      <Link
+        to={ehDocumento ? ROTAS.conhecimento : ROTAS.conteudos}
+        className={styles.voltar}
+      >
+        ← Voltar para {ehDocumento ? 'Conhecimento' : 'Conteúdos'}
       </Link>
 
       <header className={styles.cabecalho}>
@@ -298,6 +306,16 @@ export function DocumentoDetalhePage() {
         </section>
       )}
 
+      {conteudo.tipo === 'VIDEO' && conteudo.videoUrl && (
+        <section className={styles.secao}>
+          <h2>Vídeo</h2>
+          <PreviaVimeo link={conteudo.videoUrl} titulo={conteudo.titulo} />
+          <a href={conteudo.videoUrl} target="_blank" rel="noreferrer noopener">
+            Abrir no Vimeo
+          </a>
+        </section>
+      )}
+
       {conteudo.tipo === 'LINK' && conteudo.linkUrl && (
         <section className={styles.secao}>
           <h2>Link</h2>
@@ -307,17 +325,20 @@ export function DocumentoDetalhePage() {
         </section>
       )}
 
-      <section className={styles.secao}>
-        <h2>Arquivos</h2>
-        {podeGerenciar && (
-          <EnvioDeArquivos conteudoId={id} onEnviado={aoEnviarArquivo} />
-        )}
-        <ListaDeArquivos
-          arquivos={arquivos}
-          selecionadoId={selecionado?.id ?? null}
-          onSelecionar={setSelecionado}
-        />
-      </section>
+      {/* Arquivo é o material do documento; os outros tipos não têm. */}
+      {(ehDocumento || arquivos.length > 0) && (
+        <section className={styles.secao}>
+          <h2>Arquivos</h2>
+          {podeGerenciar && (
+            <EnvioDeArquivos conteudoId={id} onEnviado={aoEnviarArquivo} />
+          )}
+          <ListaDeArquivos
+            arquivos={arquivos}
+            selecionadoId={selecionado?.id ?? null}
+            onSelecionar={setSelecionado}
+          />
+        </section>
+      )}
 
       {selecionado && (
         <section className={styles.secao}>
@@ -339,8 +360,8 @@ export function DocumentoDetalhePage() {
           onCategoriaCriada={(categoria) =>
             setCategorias((atuais) => [...atuais, categoria])
           }
-          tipos={TIPOS_NO_FORMULARIO}
-          substantivo="documento"
+          tipos={ehDocumento ? TIPOS_NO_FORMULARIO : TIPOS_CONTEUDO}
+          substantivo={ehDocumento ? 'documento' : 'conteúdo'}
         />
       )}
 

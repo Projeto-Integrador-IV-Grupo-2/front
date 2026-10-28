@@ -1,8 +1,10 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { ConteudoFormulario } from '../components/conteudos/ConteudoFormulario.tsx'
 import { formatarDuracao } from '../components/conteudos/vimeo.ts'
 import { Paginacao } from '../components/areas/Paginacao.tsx'
 import { usePermissao } from '../hooks/usePermissao.ts'
+import { caminhoDocumento } from '../routes/paths.ts'
 import { PERFIS_GESTAO_CONTEUDO } from '../routes/permissions.ts'
 import { listarAreas } from '../services/areaService.ts'
 import { listarCategorias } from '../services/categoriaService.ts'
@@ -335,7 +337,16 @@ export function ConteudosPage() {
                     alt=""
                   />
                 )}
-                <h2>{conteudo.titulo}</h2>
+                <h2>
+                  {/* O detalhe abre qualquer tipo: texto, vídeo, link ou
+                      documento com os arquivos. */}
+                  <Link
+                    className={styles.tituloLink}
+                    to={caminhoDocumento(conteudo.id)}
+                  >
+                    {conteudo.titulo}
+                  </Link>
+                </h2>
                 <div className={styles.meta}>
                   <span className={styles.selo}>
                     {ROTULOS_TIPO_CONTEUDO[conteudo.tipo]}
@@ -393,6 +404,8 @@ export function ConteudosPage() {
             totalElementos={dados?.page.totalElements ?? 0}
             onIrPara={setPagina}
             desabilitado={carregando}
+            item="conteúdo"
+            itens="conteúdos"
           />
         </>
       )}

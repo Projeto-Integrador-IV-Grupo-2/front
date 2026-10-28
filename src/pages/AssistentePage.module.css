@@ -1,7 +1,8 @@
 .page {
   width: 100%;
   max-width: 1040px;
-  height: calc(100dvh - var(--header-height) - 4rem);
+  /* No desktop não há barra superior: só o respiro do conteúdo. */
+  height: calc(100dvh - 4rem);
   min-height: 480px;
   max-height: 1000px;
   margin: 0 auto;
@@ -40,8 +41,8 @@
 }
 
 .titulo {
-  font-size: 1.4375rem;
-  font-weight: 650;
+  font-size: 1.5rem;
+  font-weight: 700;
   letter-spacing: -0.02em;
 }
 
@@ -389,9 +390,14 @@
   opacity: 0.5;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 900px) {
   .page {
     height: calc(100dvh - var(--header-height) - 2rem);
+  }
+}
+
+@media (max-width: 640px) {
+  .page {
     min-height: 420px;
     gap: var(--space-3);
   }

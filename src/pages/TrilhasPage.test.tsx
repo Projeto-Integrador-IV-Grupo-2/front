@@ -513,17 +513,13 @@ describe('TrilhasPage', () => {
       prazoDias: 30,
       objetivos: 'Vender com método.',
     })
-    // A listagem recarrega logo após criar, e o "Carregando trilhas…" também
-    // é um role="status" — por isso o aviso é localizado pelo texto.
+    // Trilha nova vai direto para o detalhe: é lá que se montam as etapas e
+    // se atribui.
     expect(
-      screen
-        .getByText('Trilha “Excelência em Vendas” criada.')
-        .closest('[role="status"]'),
-    ).not.toBeNull()
-    expect(
-      await screen.findByRole('link', { name: /Excelência em Vendas/ }),
+      await screen.findByText(
+        'Trilha “Excelência em Vendas” criada. Agora adicione as etapas e atribua aos colaboradores.',
+      ),
     ).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Nova trilha' })).toHaveFocus()
   })
 
   it('mantém o formulário aberto e mostra o erro da API', async () => {

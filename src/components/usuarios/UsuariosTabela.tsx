@@ -39,7 +39,7 @@ export function UsuariosTabela({
         <tr>
           <th scope="col">Nome</th>
           <th scope="col">E-mail</th>
-          <th scope="col">Departamento</th>
+          <th scope="col">Área</th>
           <th scope="col">Perfil</th>
           <th scope="col">Situação</th>
           <th scope="col">Entrada</th>
@@ -57,7 +57,7 @@ export function UsuariosTabela({
             <tr key={usuario.id}>
               <td data-rotulo="Nome">{usuario.nomeCompleto}</td>
               <td data-rotulo="E-mail">{usuario.email}</td>
-              <td data-rotulo="Departamento">{usuario.area?.nome ?? '—'}</td>
+              <td data-rotulo="Área">{usuario.area?.nome ?? '—'}</td>
               <td data-rotulo="Perfil">{ROTULOS_PERFIL[usuario.papel]}</td>
               <td data-rotulo="Situação">
                 <span className={ativo ? styles.seloAtivo : styles.seloInativo}>

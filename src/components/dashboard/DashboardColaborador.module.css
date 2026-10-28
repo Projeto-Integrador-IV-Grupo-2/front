@@ -73,31 +73,7 @@
   background: var(--color-primary-hover);
 }
 
-/* Cartão "Suas trilhas": média, contagens por status e atalho. */
-.resumo {
-  padding: 14px 0 var(--space-1);
-}
-
-.progressoCabecalho {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--space-2);
-  color: var(--color-text-muted);
-  font-size: 0.8rem;
-}
-
-.progressoCabecalho strong {
-  color: var(--color-text);
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
-  font-size: 0.8rem;
-  font-weight: 500;
-}
-
-.resumo ul {
-  margin-top: var(--space-2);
-}
-
+/* Atalho para a lista completa, no pé do cartão "Suas trilhas". */
 .verTodas {
   display: flex;
   justify-content: center;

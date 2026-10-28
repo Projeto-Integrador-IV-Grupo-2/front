@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useDashboardRequest } from '../../hooks/useDashboardRequest.ts'
 import { carregarDashboardGestao } from '../../services/dashboardService.ts'
@@ -5,52 +6,38 @@ import type {
   DashboardGestaoResponse,
   ResumoStatusDashboard,
 } from '../../types/dashboard.ts'
-import type { StatusProgresso } from '../../types/trilha.ts'
 import { ROTULOS_STATUS_PROGRESSO } from '../../types/trilha.ts'
 import { ROTAS, caminhoTrilha } from '../../routes/paths.ts'
 import { PainelDashboard, type EstadoPainel } from './PainelDashboard.tsx'
+import {
+  AlertaIcon,
+  AreaIcon,
+  CartaoIndicador,
+  CheckIcon,
+  GradeIndicadores,
+  ItemAtencao,
+  ListaIcon,
+  PlayIcon,
+  RelogioIcon,
+  ResumoStatus,
+  TopoDashboard,
+  TrilhaIcon,
+} from './PecasDashboard.tsx'
 import lista from './ListaDashboard.module.css'
-import styles from './DashboardGestao.module.css'
 
 const MENSAGEM_VAZIA_TRILHAS =
   'Ainda não há eventos de início de trilhas registrados.'
 
-const STATUS: Array<{
-  chave: keyof Pick<
-    ResumoStatusDashboard,
-    'naoIniciadas' | 'emAndamento' | 'concluidas' | 'atrasadas'
-  >
-  status: StatusProgresso
-  ponto: string
-  barra: string
-}> = [
-  {
-    chave: 'naoIniciadas',
-    status: 'NAO_INICIADA',
-    ponto: '',
-    barra: styles.barraNeutra,
-  },
-  {
-    chave: 'emAndamento',
-    status: 'EM_ANDAMENTO',
-    ponto: styles.pontoPrimario,
-    barra: '',
-  },
-  {
-    chave: 'concluidas',
-    status: 'CONCLUIDA',
-    ponto: styles.pontoSucesso,
-    barra: styles.barraSucesso,
-  },
-  {
-    chave: 'atrasadas',
-    status: 'ATRASADA',
-    ponto: lista.pontoPerigo,
-    barra: styles.barraPerigo,
-  },
-]
+/** Item de "Precisa de atenção" já montado a partir da resposta da API. */
+interface Atencao {
+  chave: string
+  tom: 'perigo' | 'alerta'
+  icone: ReactNode
+  texto: string
+  etiqueta: string
+}
 
-export function DashboardGestao() {
+export function DashboardGestao({ saudacao }: { saudacao: ReactNode }) {
   const estado = useDashboardRequest<DashboardGestaoResponse>(
     carregarDashboardGestao,
   )
@@ -97,14 +84,12 @@ export function DashboardGestao() {
     dados && !areasValidas
       ? 'A API retornou uma lista de áreas inválida.'
       : erro
-  const temAtencao =
-    (areasValidas && areas.length > 0) ||
-    (resumo !== undefined && resumo.atrasadas + resumo.naoIniciadas > 0)
+  const atencoes = montarAtencoes(resumo, areasValidas ? areas : [])
   const estadoAreas: EstadoPainel = carregando
     ? 'carregando'
     : erroAreas
       ? 'erro'
-      : temAtencao
+      : atencoes.length > 0
         ? 'pronto'
         : 'vazio'
 
@@ -122,74 +107,73 @@ export function DashboardGestao() {
         ? 'pronto'
         : 'vazio'
 
+  const selo =
+    atencoes.length > 0
+      ? `${atencoes.length} ${plural(atencoes.length, 'item precisa', 'itens precisam')} de atenção`
+      : null
+
   return (
     <div className={lista.coluna}>
-      <section
-        aria-labelledby="painel-indicadores-gerais"
-        aria-busy={carregando}
-      >
-        <h3 id="painel-indicadores-gerais" className="visually-hidden">
-          Indicadores gerais
-        </h3>
-        <div className={lista.faixa}>
-          {carregando && (
-            <p className={lista.faixaEstado} role="status">
-              Carregando…
-            </p>
-          )}
-          {!carregando && erroIndicadores && (
-            <p
-              className={`${lista.faixaEstado} ${lista.faixaErro}`}
-              role="alert"
-            >
-              {erroIndicadores}
-            </p>
-          )}
-          {!carregando && !erroIndicadores && dados && resumo && (
-            <>
-              <Indicador valor={dados.trilhasAtivas} rotulo="Trilhas ativas" />
-              <Indicador valor={resumo.total} rotulo="Atribuições" />
-              <Indicador valor={resumo.emAndamento} rotulo="Em andamento" />
-              <Indicador
-                valor={`${formatarPercentual(dados.taxaConclusao)}%`}
-                rotulo="Taxa de conclusão"
-              />
-            </>
-          )}
-        </div>
-      </section>
+      <TopoDashboard saudacao={saudacao} selo={selo} />
 
-      <div className={lista.colunas}>
+      <GradeIndicadores
+        titulo="Indicadores gerais"
+        carregando={carregando}
+        erro={erroIndicadores}
+      >
+        {dados && resumo && (
+          <>
+            <CartaoIndicador
+              tom="azul"
+              icone={<TrilhaIcon />}
+              valor={dados.trilhasAtivas}
+              rotulo="Trilhas ativas"
+            />
+            <CartaoIndicador
+              tom="roxo"
+              icone={<ListaIcon />}
+              valor={resumo.total}
+              rotulo="Atribuições"
+            />
+            <CartaoIndicador
+              tom="ciano"
+              icone={<PlayIcon />}
+              valor={resumo.emAndamento}
+              rotulo="Em andamento"
+            />
+            <CartaoIndicador
+              tom="verde"
+              icone={<CheckIcon />}
+              valor={`${formatarPercentual(dados.taxaConclusao)}%`}
+              rotulo="Taxa de conclusão"
+              progresso={dados.taxaConclusao}
+            />
+          </>
+        )}
+      </GradeIndicadores>
+
+      {/* Colunas da mesma altura: o cartão de status acompanha as duas
+          seções da esquerda juntas. */}
+      <div className={`${lista.colunas} ${lista.colunasIguais}`}>
         <div className={lista.coluna}>
           <PainelDashboard
             titulo="Precisa de atenção"
             estado={estadoAreas}
             mensagemErro={erroAreas}
             mensagemVazia="Nada precisa da sua atenção agora."
+            semCartao
           >
-            <ul className={lista.lista}>
-              {resumo && resumo.atrasadas > 0 && (
-                <LinhaAtencao
-                  ponto={lista.pontoPerigo}
-                  texto={`${resumo.atrasadas} ${plural(resumo.atrasadas, 'atribuição está atrasada', 'atribuições estão atrasadas')}`}
-                  etiqueta="Atraso · todas as áreas"
-                />
-              )}
-              {(areasValidas ? areas : []).map((area) => (
-                <LinhaAtencao
-                  key={area.areaId}
-                  ponto={lista.pontoAlerta}
-                  texto={`${area.areaNome} tem ${area.atribuicoesAtrasadas} ${plural(area.atribuicoesAtrasadas, 'atribuição atrasada', 'atribuições atrasadas')}`}
-                  etiqueta="Áreas com mais atraso"
+            <ul className={lista.atencoes}>
+              {atencoes.map((item) => (
+                <ItemAtencao
+                  key={item.chave}
+                  tom={item.tom}
+                  icone={item.icone}
+                  texto={item.texto}
+                  etiqueta={item.etiqueta}
+                  para={ROTAS.acompanhamento}
                 />
               ))}
-              {resumo && resumo.naoIniciadas > 0 && (
-                <LinhaAtencao
-                  ponto=""
-                  texto={`${resumo.naoIniciadas} ${plural(resumo.naoIniciadas, 'atribuição ainda não foi iniciada', 'atribuições ainda não foram iniciadas')}`}
-                  etiqueta="Não iniciadas"
-                />
-              )}
             </ul>
           </PainelDashboard>
 
@@ -208,8 +192,22 @@ export function DashboardGestao() {
             titulo="Atribuições por status"
             estado={estadoResumo}
             mensagemErro={erroResumo}
+            esticar
           >
-            {resumo && <GraficoStatus resumo={resumo} />}
+            {resumo && (
+              <>
+                <ResumoStatus
+                  resumo={resumo}
+                  rotulos={ROTULOS_STATUS_PROGRESSO}
+                  descricao="Atribuições por status"
+                />
+                {resumo.total === 0 && (
+                  <p className={lista.nota}>
+                    Ainda não há atribuições para resumir.
+                  </p>
+                )}
+              </>
+            )}
           </PainelDashboard>
         </div>
       </div>
@@ -217,46 +215,40 @@ export function DashboardGestao() {
   )
 }
 
-function Indicador({
-  valor,
-  rotulo,
-}: {
-  valor: number | string
-  rotulo: string
-}) {
-  return (
-    <div className={lista.faixaItem}>
-      <strong className={lista.faixaValor}>{valor}</strong>
-      <span className={lista.faixaRotulo}>{rotulo}</span>
-    </div>
-  )
-}
-
-/** Linha de "Precisa de atenção": leva ao acompanhamento das atribuições. */
-function LinhaAtencao({
-  ponto,
-  texto,
-  etiqueta,
-}: {
-  ponto: string
-  texto: string
-  etiqueta: string
-}) {
-  return (
-    <li>
-      <Link
-        to={ROTAS.acompanhamento}
-        className={`${lista.linha} ${lista.linhaLink}`}
-      >
-        <span className={`${lista.ponto} ${ponto}`} aria-hidden="true" />
-        <span className={lista.linhaCorpo}>
-          <span className={lista.linhaTitulo}>{texto}</span>
-          <span className={lista.etiqueta}>{etiqueta}</span>
-        </span>
-        <ChevronIcon />
-      </Link>
-    </li>
-  )
+/** Atrasos no geral, depois as áreas que mais atrasam, depois o que não começou. */
+function montarAtencoes(
+  resumo: ResumoStatusDashboard | undefined,
+  areas: DashboardGestaoResponse['areasComMaisAtraso'],
+): Atencao[] {
+  const itens: Atencao[] = []
+  if (resumo && resumo.atrasadas > 0) {
+    itens.push({
+      chave: 'atrasadas',
+      tom: 'perigo',
+      icone: <AlertaIcon />,
+      texto: `${resumo.atrasadas} ${plural(resumo.atrasadas, 'atribuição está atrasada', 'atribuições estão atrasadas')}`,
+      etiqueta: 'Atraso · todas as áreas',
+    })
+  }
+  for (const area of areas) {
+    itens.push({
+      chave: `area-${area.areaId}`,
+      tom: 'alerta',
+      icone: <AreaIcon />,
+      texto: `${area.areaNome} tem ${area.atribuicoesAtrasadas} ${plural(area.atribuicoesAtrasadas, 'atribuição atrasada', 'atribuições atrasadas')}`,
+      etiqueta: 'Áreas com mais atraso',
+    })
+  }
+  if (resumo && resumo.naoIniciadas > 0) {
+    itens.push({
+      chave: 'nao-iniciadas',
+      tom: 'alerta',
+      icone: <RelogioIcon />,
+      texto: `${resumo.naoIniciadas} ${plural(resumo.naoIniciadas, 'atribuição ainda não foi iniciada', 'atribuições ainda não foram iniciadas')}`,
+      etiqueta: 'Não iniciadas',
+    })
+  }
+  return itens
 }
 
 function TrilhasIniciadas({
@@ -269,8 +261,8 @@ function TrilhasIniciadas({
     ...itens.map((item) => numeroSeguro(item.totalIniciadas)),
   )
   return (
-    <ul className={lista.lista}>
-      {itens.map((trilha) => {
+    <ol className={lista.lista}>
+      {itens.map((trilha, posicao) => {
         const valor = numeroSeguro(trilha.totalIniciadas)
         const percentual = maior > 0 ? (valor / maior) * 100 : 0
         return (
@@ -279,6 +271,9 @@ function TrilhasIniciadas({
               to={caminhoTrilha(trilha.trilhaId)}
               className={`${lista.linha} ${lista.linhaLink}`}
             >
+              <span className={lista.rankNumero} aria-hidden="true">
+                {posicao + 1}
+              </span>
               <span className={lista.linhaCorpo}>
                 <span className={lista.linhaTitulo}>{trilha.trilhaNome}</span>
                 <span className={lista.linhaMeta}>
@@ -295,75 +290,7 @@ function TrilhasIniciadas({
           </li>
         )
       })}
-    </ul>
-  )
-}
-
-function GraficoStatus({ resumo }: { resumo: ResumoStatusDashboard }) {
-  return (
-    <div
-      role="group"
-      aria-label={
-        `Atribuições por status: ` +
-        `${ROTULOS_STATUS_PROGRESSO.NAO_INICIADA}: ${resumo.naoIniciadas}; ` +
-        `${ROTULOS_STATUS_PROGRESSO.EM_ANDAMENTO}: ${resumo.emAndamento}; ` +
-        `${ROTULOS_STATUS_PROGRESSO.CONCLUIDA}: ${resumo.concluidas}; ` +
-        `${ROTULOS_STATUS_PROGRESSO.ATRASADA}: ${resumo.atrasadas}. ` +
-        `Total: ${resumo.total}.`
-      }
-    >
-      <ul className={lista.lista}>
-        {STATUS.map((item) => {
-          const valor = resumo[item.chave]
-          const percentual =
-            resumo.total > 0 ? Math.min(100, (valor / resumo.total) * 100) : 0
-          return (
-            <li key={item.chave} className={lista.linha}>
-              <span
-                className={`${lista.ponto} ${item.ponto}`}
-                aria-hidden="true"
-              />
-              <span className={lista.linhaCorpo}>
-                <span className={lista.linhaTitulo}>
-                  {ROTULOS_STATUS_PROGRESSO[item.status]}
-                </span>
-              </span>
-              <span className={lista.miniBarra} aria-hidden="true">
-                <span
-                  className={`${lista.barraPreenchida} ${item.barra}`}
-                  style={{ width: `${percentual}%` }}
-                />
-              </span>
-              <strong className={lista.valor}>{valor}</strong>
-            </li>
-          )
-        })}
-      </ul>
-      {resumo.total === 0 && (
-        <p className={lista.nota}>Ainda não há atribuições para resumir.</p>
-      )}
-    </div>
-  )
-}
-
-function ChevronIcon() {
-  return (
-    <svg
-      className={lista.chevron}
-      width="16"
-      height="16"
-      viewBox="0 0 20 20"
-      fill="none"
-      aria-hidden="true"
-    >
-      <path
-        d="M8 5l5 5-5 5"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
+    </ol>
   )
 }
 

@@ -1,5 +1,11 @@
 import { useRef, useState, type ReactNode } from 'react'
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import {
+  Link,
+  NavLink,
+  Outlet,
+  useLocation,
+  useNavigate,
+} from 'react-router-dom'
 import { LogoIcon } from '../Logo.tsx'
 import { useAuth } from '../../hooks/useAuth.ts'
 import { useMediaQuery } from '../../hooks/useMediaQuery.ts'
@@ -23,6 +29,7 @@ const ICONE_POR_ROTA: Record<string, ReactNode> = {
   [ROTAS.trilhas]: <TrilhasIcon />,
   [ROTAS.usuarios]: <PeopleIcon />,
   [ROTAS.areas]: <LayersIcon />,
+  [ROTAS.conteudos]: <PlayIcon />,
   [ROTAS.acompanhamento]: <ChartIcon />,
   [ROTAS.conhecimento]: <BookIcon />,
   [ROTAS.assistente]: <SparkleIcon />,
@@ -202,14 +209,16 @@ export function AppLayout() {
           <p className={styles.pageTitle}>{itemAtual?.rotulo ?? 'Nexo'}</p>
 
           <div className={styles.topbarActions}>
-            <button
-              type="button"
+            {/* A API ainda não tem notificações: o sino leva às atividades
+                recentes (Histórico), sem um "não lido" que não existe. */}
+            <Link
+              to={ROTAS.historico}
               className={styles.bellButton}
-              aria-label="Notificações"
+              aria-label="Atividades recentes"
+              title="Atividades recentes"
             >
               <BellIcon />
-              <span className={styles.bellDot} aria-hidden="true" />
-            </button>
+            </Link>
             {user && (
               <span className={styles.avatarChip} aria-hidden="true">
                 {iniciais(user.nomeCompleto)}
@@ -338,6 +347,34 @@ function PeopleIcon() {
         stroke="currentColor"
         strokeWidth="1.4"
         strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
+function PlayIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 20 20"
+      fill="none"
+      aria-hidden="true"
+    >
+      <rect
+        x="2.75"
+        y="3.75"
+        width="14.5"
+        height="12.5"
+        rx="2"
+        stroke="currentColor"
+        strokeWidth="1.4"
+      />
+      <path
+        d="M8.5 7.5v5l4-2.5-4-2.5z"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinejoin="round"
       />
     </svg>
   )

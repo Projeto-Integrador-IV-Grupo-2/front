@@ -1,3 +1,4 @@
+import { AbasAreas } from '../components/areas/AbasAreas.tsx'
 import { useEffect, useState, type FormEvent } from 'react'
 import { AreaFormulario } from '../components/areas/AreaFormulario.tsx'
 import { AreaTrilhasPainel } from '../components/areas/AreaTrilhasPainel.tsx'
@@ -277,6 +278,8 @@ export function AreasPage() {
           </button>
         )}
       </header>
+
+      <AbasAreas />
 
       {/* Live region só da página: avisos de sucesso chegam a quem usa leitor
           de tela sem mover o foco. */}

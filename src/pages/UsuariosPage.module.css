@@ -12,6 +12,18 @@
   flex-wrap: wrap;
 }
 
+/* Mesmo título das outras telas (Trilhas, Conhecimento, Histórico). */
+.cabecalho h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.cabecalho .hint {
+  margin-top: var(--space-1);
+  font-size: 0.875rem;
+}
+
 .hint {
   color: var(--color-text-muted);
 }

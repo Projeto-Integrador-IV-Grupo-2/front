@@ -15,7 +15,8 @@ export const ROTAS = {
   areas: '/areas',
   acompanhamento: '/acompanhamento',
   conteudos: '/conteudos',
-  categorias: '/categorias',
+  // Dentro de Áreas: o item do menu fica marcado nas duas telas.
+  categorias: '/areas/categorias',
   conhecimento: '/conhecimento',
   assistente: '/assistente',
   documentoDetalhe: '/conhecimento/:id',

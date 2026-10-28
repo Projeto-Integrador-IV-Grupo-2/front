@@ -23,7 +23,11 @@ import { TrilhaEstudoPage } from '../pages/TrilhaEstudoPage.tsx'
 import { TrilhasPage } from '../pages/TrilhasPage.tsx'
 import { UsuariosPage } from '../pages/UsuariosPage.tsx'
 import { ROTAS } from './paths.ts'
-import { PERFIS_ACOMPANHAMENTO, PERFIS_GESTAO_PDI } from './permissions.ts'
+import {
+  PERFIS_ACOMPANHAMENTO,
+  PERFIS_GESTAO_CONTEUDO,
+  PERFIS_GESTAO_PDI,
+} from './permissions.ts'
 
 // Exportada à parte do router para poder ser reutilizada em testes com
 // createMemoryRouter (ver router.test.tsx), sem depender do histórico real
@@ -49,7 +53,6 @@ export const routes: RouteObject[] = [
           },
           { path: ROTAS.areas, element: <AreasPage /> },
           { path: ROTAS.conteudos, element: <ConteudosPage /> },
-          { path: ROTAS.categorias, element: <CategoriasPage /> },
           { path: ROTAS.conhecimento, element: <ConhecimentoPage /> },
           { path: ROTAS.assistente, element: <AssistentePage /> },
           { path: ROTAS.documentoDetalhe, element: <DocumentoDetalhePage /> },
@@ -58,6 +61,10 @@ export const routes: RouteObject[] = [
             // Área administrativa: o perfil exigido fica na rota, não na página.
             element: <ProtectedRoute perfis={['ADMIN']} />,
             children: [{ path: ROTAS.usuarios, element: <UsuariosPage /> }],
+          },
+          {
+            element: <ProtectedRoute perfis={PERFIS_GESTAO_CONTEUDO} />,
+            children: [{ path: ROTAS.categorias, element: <CategoriasPage /> }],
           },
           {
             element: <ProtectedRoute perfis={PERFIS_ACOMPANHAMENTO} />,
