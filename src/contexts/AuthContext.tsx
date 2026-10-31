@@ -34,6 +34,12 @@ export interface AuthContextValue {
     perfisPermitidos?: UserRole[],
   ) => Promise<User>
   logout: () => void
+  /**
+   * Aplica ao usuário da sessão o que a API acabou de gravar (ex.: o nome
+   * novo do perfil). Quem lê `user` — o cabeçalho, inclusive — re-renderiza
+   * na hora: não há uma segunda cópia do usuário para manter em dia.
+   */
+  atualizarUsuario: (alteracoes: Partial<User>) => void
 }
 
 // Consumida via useAuth() (src/hooks/useAuth.ts), não diretamente.
@@ -136,12 +142,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setIsLoading(false)
   }, [])
 
+  const atualizarUsuario = useCallback((alteracoes: Partial<User>) => {
+    setUser((atual) => (atual ? { ...atual, ...alteracoes } : atual))
+  }, [])
+
   const value: AuthContextValue = {
     user,
     isAuthenticated: user !== null,
     isLoading,
     login,
     logout,
+    atualizarUsuario,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
