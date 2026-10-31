@@ -16,8 +16,15 @@ import styles from './TrilhaCard.module.css'
  * destaque junto do selo "Atrasada" — é o que a pessoa precisa ver primeiro
  * na lista.
  */
-export function TrilhaCard({ trilha }: { trilha: TrilhaResumo }) {
-  const { progresso } = trilha
+export function TrilhaCard({
+  trilha,
+  mostrarProgresso = true,
+}: {
+  trilha: TrilhaResumo
+  /** Status e barra são do progresso pessoal: a gestão não os vê. */
+  mostrarProgresso?: boolean
+}) {
+  const progresso = mostrarProgresso ? trilha.progresso : null
 
   return (
     <li className={styles.item}>

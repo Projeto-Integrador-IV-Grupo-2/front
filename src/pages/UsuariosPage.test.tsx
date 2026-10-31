@@ -25,6 +25,14 @@ const tabela = () => within(screen.getByRole('table'))
 const painel = (nome: string) =>
   within(screen.getByRole('region', { name: nome }))
 
+/** Editar e desativar ficam no menu de opções (⋯) de cada linha. */
+async function escolherOpcao(nome: string, opcao: string) {
+  await userEvent.click(
+    screen.getByRole('button', { name: `Opções de ${nome}` }),
+  )
+  await userEvent.click(screen.getByRole('menuitem', { name: opcao }))
+}
+
 describe('UsuariosPage', () => {
   it('mostra o carregamento e depois a lista de usuários', async () => {
     server.use(
@@ -255,9 +263,7 @@ describe('UsuariosPage', () => {
     renderizarGestao()
     await screen.findByText('Ana Souza')
 
-    await userEvent.click(
-      screen.getByRole('button', { name: 'Editar Ana Souza' }),
-    )
+    await escolherOpcao('Ana Souza', 'Editar')
 
     const edicao = painel('Editar usuário')
     expect(edicao.getByLabelText('Nome completo')).toHaveValue('Ana Souza')
@@ -294,9 +300,7 @@ describe('UsuariosPage', () => {
     renderizarGestao()
     await screen.findByText('Ana Souza')
 
-    await userEvent.click(
-      screen.getByRole('button', { name: 'Desativar Ana Souza' }),
-    )
+    await escolherOpcao('Ana Souza', 'Desativar')
 
     const dialogo = await screen.findByRole('alertdialog')
     expect(
@@ -330,9 +334,7 @@ describe('UsuariosPage', () => {
     renderizarGestao()
     await screen.findByText('Ana Souza')
 
-    await userEvent.click(
-      screen.getByRole('button', { name: 'Desativar Ana Souza' }),
-    )
+    await escolherOpcao('Ana Souza', 'Desativar')
     const dialogo = await screen.findByRole('alertdialog')
     await userEvent.click(
       within(dialogo).getByRole('button', { name: 'Desativar' }),
@@ -340,8 +342,11 @@ describe('UsuariosPage', () => {
 
     expect(await screen.findByText('Usuário desativado.')).toBeInTheDocument()
     expect(tabela().getByText('Inativo')).toBeInTheDocument()
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Opções de Ana Souza' }),
+    )
     expect(
-      screen.getByRole('button', { name: 'Reativar Ana Souza' }),
+      screen.getByRole('menuitem', { name: 'Reativar' }),
     ).toBeInTheDocument()
   })
 
@@ -374,5 +379,22 @@ describe('UsuariosPage', () => {
 
     expect(await screen.findByText('Usuário da página 1')).toBeInTheDocument()
     expect(paginasPedidas).toContain('1')
+  })
+
+  it('o menu de opções fecha com Esc e devolve o foco ao botão', async () => {
+    renderizarGestao()
+    await screen.findByText('Ana Souza')
+
+    const botao = screen.getByRole('button', { name: 'Opções de Ana Souza' })
+    await userEvent.click(botao)
+    expect(screen.getByRole('menuitem', { name: 'Editar' })).toHaveFocus()
+    // As ações não ficam mais soltas na linha.
+    expect(
+      tabela().queryByRole('button', { name: /^Editar/ }),
+    ).not.toBeInTheDocument()
+
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+    expect(botao).toHaveFocus()
   })
 })

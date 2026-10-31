@@ -29,17 +29,39 @@ export const PERFIS_ACOMPANHAMENTO: UserRole[] = ['ADMIN', 'GESTOR']
  */
 export const PERFIS_GESTAO_CONTEUDO: UserRole[] = ['ADMIN', 'GESTOR']
 
+/**
+ * Perfis autorizados a criar, editar e inativar/reativar Áreas (Card 14 —
+ * controle de acesso, issue #31). A tela inteira é
+ * de gestão: o colaborador não tem o item no menu nem a rota.
+ *
+ * As telas de Trilha têm as próprias listas (`PERFIS_CRIAR_TRILHA`,
+ * `PERFIS_GESTAO_TRILHA` e `PERFIS_ATRIBUIR_TRILHA` abaixo), porque lá criar,
+ * editar e atribuir não são a mesma permissão. Todas passam pelo hook
+ * `usePermissao` e, no fim, pela mesma `temPermissao`: listas diferentes,
+ * uma regra só.
+ */
+export const PERFIS_GESTAO_AREA: UserRole[] = ['ADMIN', 'GESTOR']
+
+/**
+ * Quem estuda trilhas: tem "Minhas trilhas", o progresso pessoal e os botões
+ * de estudo (estudar, iniciar, concluir, retomar, rever conteúdos). Gestão
+ * monta e atribui as trilhas, mas não as cursa.
+ */
+export const PERFIS_ESTUDO: UserRole[] = ['COLABORADOR']
+
 export const ITENS_MENU: ItemMenu[] = [
   { to: ROTAS.dashboard, rotulo: 'Visão geral' },
   { to: ROTAS.trilhas, rotulo: 'Trilhas' },
   { to: ROTAS.usuarios, rotulo: 'Usuários', perfis: ['ADMIN'] },
-  // Sem `perfis`: a listagem fica visível a qualquer autenticado — só as
-  // ações de dentro da tela são restritas (ver PERFIS_GESTAO_AREA).
-  // Categorias fica dentro dela, numa aba (só para quem gerencia conteúdo).
-  { to: ROTAS.areas, rotulo: 'Áreas' },
-  // Conteúdos ficam visíveis a todos (colaborador vê só os publicados); criar,
-  // editar e publicar são ações internas restritas (ver PERFIS_GESTAO_CONTEUDO).
-  { to: ROTAS.conteudos, rotulo: 'Conteúdos' },
+  // Áreas (com a aba Categorias) e Conteúdos são cadastros de gestão. O
+  // colaborador estuda os conteúdos pelas trilhas e lê os documentos no
+  // Conhecimento, como no protótipo.
+  { to: ROTAS.areas, rotulo: 'Áreas', perfis: PERFIS_GESTAO_AREA },
+  {
+    to: ROTAS.conteudos,
+    rotulo: 'Conteúdos',
+    perfis: PERFIS_GESTAO_CONTEUDO,
+  },
   // Base de documentos da empresa: todos os perfis entram (colaborador vê só
   // os publicados — a API filtra).
   { to: ROTAS.conhecimento, rotulo: 'Conhecimento' },
@@ -72,18 +94,6 @@ export const PERFIS_GESTAO_TRILHA: UserRole[] = ['ADMIN']
  * (`POST /api/trilhas/{id}/atribuicoes`). O gestor atribui, mas não edita.
  */
 export const PERFIS_ATRIBUIR_TRILHA: UserRole[] = ['ADMIN', 'GESTOR']
-
-/**
- * Perfis autorizados a criar, editar e inativar/reativar Áreas (Card 14 —
- * controle de acesso, issue #31). Colaborador só visualiza a listagem.
- *
- * As telas de Trilha têm as próprias listas (`PERFIS_CRIAR_TRILHA`,
- * `PERFIS_GESTAO_TRILHA` e `PERFIS_ATRIBUIR_TRILHA` acima), porque lá criar,
- * editar e atribuir não são a mesma permissão. Todas passam pelo hook
- * `usePermissao` e, no fim, pela mesma `temPermissao`: listas diferentes,
- * uma regra só.
- */
-export const PERFIS_GESTAO_AREA: UserRole[] = ['ADMIN', 'GESTOR']
 
 /**
  * Quem monta PDIs: vê a aba "PDIs da equipe", abre o editor e usa o botão

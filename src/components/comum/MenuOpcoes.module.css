@@ -1,0 +1,61 @@
+.gatilho {
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+}
+
+.gatilho:hover,
+.gatilho[aria-expanded='true'] {
+  border-color: var(--color-border-strong);
+  color: var(--color-text);
+  background: var(--color-surface-2);
+}
+
+.menu {
+  position: fixed;
+  z-index: 40;
+  display: flex;
+  min-width: 160px;
+  flex-direction: column;
+  padding: 4px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+}
+
+.item {
+  padding: 8px 12px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  background: transparent;
+  font-size: 0.85rem;
+  text-align: left;
+}
+
+.item:hover:not(:disabled),
+.item:focus-visible {
+  outline: none;
+  background: var(--color-surface-2);
+}
+
+.itemPerigo {
+  color: var(--color-danger);
+}
+
+.itemPerigo:hover:not(:disabled),
+.itemPerigo:focus-visible {
+  background: var(--color-danger-bg);
+}
+
+.item:disabled {
+  opacity: 0.5;
+}

@@ -236,14 +236,17 @@ export function DocumentoDetalhePage() {
   // A mesma tela abre qualquer conteúdo: o documento volta para o
   // Conhecimento; vídeo, texto e link, para o catálogo de Conteúdos.
   const ehDocumento = conteudo.tipo === 'DOCUMENTO'
+  // O catálogo de Conteúdos é tela de gestão: o colaborador volta ao
+  // Conhecimento, que é a tela dele.
+  const voltaParaConteudos = !ehDocumento && podeGerenciar
 
   return (
     <div className={styles.page}>
       <Link
-        to={ehDocumento ? ROTAS.conhecimento : ROTAS.conteudos}
+        to={voltaParaConteudos ? ROTAS.conteudos : ROTAS.conhecimento}
         className={styles.voltar}
       >
-        ← Voltar para {ehDocumento ? 'Conhecimento' : 'Conteúdos'}
+        ← Voltar para {voltaParaConteudos ? 'Conteúdos' : 'Conhecimento'}
       </Link>
 
       <header className={styles.cabecalho}>

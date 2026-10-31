@@ -20,6 +20,8 @@ interface TrilhasFiltrosProps {
   onLimpar: () => void
   /** `null` enquanto carregam; vazio quando não vieram — o select some. */
   areas: RecursoResumo[] | null
+  /** Status do progresso pessoal: só faz sentido para quem estuda. */
+  mostrarStatus?: boolean
 }
 
 /**
@@ -32,6 +34,7 @@ export function TrilhasFiltros({
   onChange,
   onLimpar,
   areas,
+  mostrarStatus = true,
 }: TrilhasFiltrosProps) {
   const idBase = useId()
   const temFiltro =
@@ -79,23 +82,25 @@ export function TrilhasFiltros({
         </div>
       )}
 
-      <div className={styles.campo}>
-        <label htmlFor={`${idBase}-status`}>Status</label>
-        <select
-          id={`${idBase}-status`}
-          value={valores.status}
-          onChange={(evento) =>
-            alterar('status', evento.target.value as StatusProgresso | '')
-          }
-        >
-          <option value="">Todos</option>
-          {STATUS_PROGRESSO.map((status) => (
-            <option key={status} value={status}>
-              {ROTULOS_STATUS_PROGRESSO[status]}
-            </option>
-          ))}
-        </select>
-      </div>
+      {mostrarStatus && (
+        <div className={styles.campo}>
+          <label htmlFor={`${idBase}-status`}>Status</label>
+          <select
+            id={`${idBase}-status`}
+            value={valores.status}
+            onChange={(evento) =>
+              alterar('status', evento.target.value as StatusProgresso | '')
+            }
+          >
+            <option value="">Todos</option>
+            {STATUS_PROGRESSO.map((status) => (
+              <option key={status} value={status}>
+                {ROTULOS_STATUS_PROGRESSO[status]}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {temFiltro && (
         <button type="button" className={styles.limpar} onClick={onLimpar}>

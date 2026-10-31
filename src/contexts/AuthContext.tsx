@@ -17,15 +17,22 @@ import {
   fetchCurrentUser,
   login as requestLogin,
 } from '../services/authService.ts'
-import type { LoginRequest } from '../types/auth.ts'
-import type { User } from '../types/user.ts'
+import { PerfilDiferenteError, type LoginRequest } from '../types/auth.ts'
+import type { User, UserRole } from '../types/user.ts'
 
 export interface AuthContextValue {
   user: User | null
   isAuthenticated: boolean
   /** true enquanto a sessão salva é validada ao carregar a aplicação. */
   isLoading: boolean
-  login: (credentials: LoginRequest) => Promise<User>
+  /**
+   * Entra e abre a sessão. Com `perfisPermitidos`, uma conta de outro perfil
+   * é recusada com `PerfilDiferenteError` e nada fica salvo.
+   */
+  login: (
+    credentials: LoginRequest,
+    perfisPermitidos?: UserRole[],
+  ) => Promise<User>
   logout: () => void
 }
 
@@ -103,16 +110,24 @@ export function AuthProvider({ children }: AuthProviderProps) {
       window.removeEventListener(UNAUTHORIZED_EVENT, handleUnauthorized)
   }, [])
 
-  const login = useCallback(async (credentials: LoginRequest) => {
-    const { token, expiraEm, usuario } = await requestLogin(credentials)
-    // A sessão nova manda: qualquer restauração pendente perde a validade e
-    // a tela não pode continuar presa no estado de carregando.
-    restauracaoValida.current = false
-    setStoredToken(token, expiraEm)
-    setUser(usuario)
-    setIsLoading(false)
-    return usuario
-  }, [])
+  const login = useCallback(
+    async (credentials: LoginRequest, perfisPermitidos?: UserRole[]) => {
+      const { token, expiraEm, usuario } = await requestLogin(credentials)
+      // Conferido antes de guardar o token: a conta de outro perfil não chega
+      // a ter sessão aberta, nem por um instante.
+      if (perfisPermitidos && !perfisPermitidos.includes(usuario.papel)) {
+        throw new PerfilDiferenteError(usuario.papel)
+      }
+      // A sessão nova manda: qualquer restauração pendente perde a validade e
+      // a tela não pode continuar presa no estado de carregando.
+      restauracaoValida.current = false
+      setStoredToken(token, expiraEm)
+      setUser(usuario)
+      setIsLoading(false)
+      return usuario
+    },
+    [],
+  )
 
   const logout = useCallback(() => {
     restauracaoValida.current = false

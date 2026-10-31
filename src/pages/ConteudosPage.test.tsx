@@ -25,35 +25,12 @@ describe('ConteudosPage', () => {
       ),
     )
 
-    renderizar(criarUsuario({ papel: 'COLABORADOR' }))
+    renderizar(criarUsuario({ papel: 'GESTOR' }))
 
     expect(
       await screen.findByRole('heading', { name: 'Boas-vindas' }),
     ).toBeInTheDocument()
     expect(screen.getByText('3 min 05 s')).toBeInTheDocument()
-  })
-
-  it('colaborador não vê os botões de criar, editar e publicar', async () => {
-    server.use(
-      http.get('*/api/conteudos', () =>
-        HttpResponse.json(
-          criarPagina([criarConteudo({ status: 'PUBLICADO' })]),
-        ),
-      ),
-    )
-
-    renderizar(criarUsuario({ papel: 'COLABORADOR' }))
-
-    await screen.findByRole('heading', { name: 'Boas-vindas' })
-    expect(
-      screen.queryByRole('button', { name: /novo conteúdo/i }),
-    ).not.toBeInTheDocument()
-    expect(
-      screen.queryByRole('button', { name: /editar/i }),
-    ).not.toBeInTheDocument()
-    expect(
-      screen.queryByRole('button', { name: /publicar/i }),
-    ).not.toBeInTheDocument()
   })
 
   it('gestor publica um rascunho e a lista recarrega', async () => {

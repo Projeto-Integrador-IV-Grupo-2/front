@@ -2,7 +2,8 @@ import { useId, useState, type FormEvent, type ReactNode } from 'react'
 import { useAuth } from '../hooks/useAuth.ts'
 import { AuthError } from '../services/authService.ts'
 import { HTTP_STATUS } from '../utils/errorHandler.ts'
-import type { User } from '../types/user.ts'
+import { PerfilDiferenteError } from '../types/auth.ts'
+import type { User, UserRole } from '../types/user.ts'
 import styles from './LoginForm.module.css'
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -33,6 +34,11 @@ function validate(email: string, password: string): FieldErrors {
 }
 
 function getErrorMessage(error: unknown): string {
+  if (error instanceof PerfilDiferenteError) {
+    return error.papel === 'COLABORADOR'
+      ? 'Esta conta é de colaborador. Selecione “Colaborador” para entrar.'
+      : 'Esta conta é de administração. Selecione “Administrador” para entrar.'
+  }
   if (error instanceof AuthError) {
     if (error.status === HTTP_STATUS.FORBIDDEN) {
       return 'Sua conta está desativada. Fale com um administrador.'
@@ -84,10 +90,15 @@ function PersonIcon() {
   )
 }
 
-// Seletor puramente visual (pedido do protótipo): o perfil de verdade vem de
-// `usuario.papel` na resposta da API, então esta escolha não entra no
-// envio do formulário — ver LoginRequest em types/auth.ts.
+// Perfil escolhido na tela. Não vai no corpo do login (a API não o recebe):
+// é conferido com o `papel` que a API devolve, e a conta de outro perfil não
+// entra. "Administrador" é a área de gestão, então vale também para gestor.
 type PerfilVisual = 'ADMIN' | 'COLABORADOR'
+
+const PAPEIS_DO_PERFIL: Record<PerfilVisual, UserRole[]> = {
+  ADMIN: ['ADMIN', 'GESTOR'],
+  COLABORADOR: ['COLABORADOR'],
+}
 
 const OPCOES_DE_PERFIL: Array<{
   valor: PerfilVisual
@@ -138,7 +149,10 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
     setFormError(null)
     setIsSubmitting(true)
     try {
-      const user = await login({ email: email.trim(), senha: password })
+      const user = await login(
+        { email: email.trim(), senha: password },
+        PAPEIS_DO_PERFIL[perfilVisual],
+      )
       onSuccess(user)
     } catch (error) {
       setFormError(getErrorMessage(error))

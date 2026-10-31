@@ -25,6 +25,8 @@ import { UsuariosPage } from '../pages/UsuariosPage.tsx'
 import { ROTAS } from './paths.ts'
 import {
   PERFIS_ACOMPANHAMENTO,
+  PERFIS_ESTUDO,
+  PERFIS_GESTAO_AREA,
   PERFIS_GESTAO_CONTEUDO,
   PERFIS_GESTAO_PDI,
 } from './permissions.ts'
@@ -43,7 +45,6 @@ export const routes: RouteObject[] = [
           { path: ROTAS.dashboard, element: <DashboardPage /> },
           { path: ROTAS.trilhas, element: <TrilhasPage /> },
           { path: ROTAS.trilhaDetalhe, element: <TrilhaDetalhePage /> },
-          { path: ROTAS.trilhaEstudo, element: <TrilhaEstudoPage /> },
           // Rota estática: o router a prefere a /trilhas/:id.
           { path: ROTAS.pdi, element: <PdiPage /> },
           {
@@ -51,8 +52,6 @@ export const routes: RouteObject[] = [
             element: <ProtectedRoute perfis={PERFIS_GESTAO_PDI} />,
             children: [{ path: ROTAS.pdiDetalhe, element: <PdiEditorPage /> }],
           },
-          { path: ROTAS.areas, element: <AreasPage /> },
-          { path: ROTAS.conteudos, element: <ConteudosPage /> },
           { path: ROTAS.conhecimento, element: <ConhecimentoPage /> },
           { path: ROTAS.assistente, element: <AssistentePage /> },
           { path: ROTAS.documentoDetalhe, element: <DocumentoDetalhePage /> },
@@ -63,8 +62,22 @@ export const routes: RouteObject[] = [
             children: [{ path: ROTAS.usuarios, element: <UsuariosPage /> }],
           },
           {
+            // Estudar é de quem cursa a trilha; a gestão monta e acompanha.
+            element: <ProtectedRoute perfis={PERFIS_ESTUDO} />,
+            children: [
+              { path: ROTAS.trilhaEstudo, element: <TrilhaEstudoPage /> },
+            ],
+          },
+          {
+            element: <ProtectedRoute perfis={PERFIS_GESTAO_AREA} />,
+            children: [{ path: ROTAS.areas, element: <AreasPage /> }],
+          },
+          {
             element: <ProtectedRoute perfis={PERFIS_GESTAO_CONTEUDO} />,
-            children: [{ path: ROTAS.categorias, element: <CategoriasPage /> }],
+            children: [
+              { path: ROTAS.conteudos, element: <ConteudosPage /> },
+              { path: ROTAS.categorias, element: <CategoriasPage /> },
+            ],
           },
           {
             element: <ProtectedRoute perfis={PERFIS_ACOMPANHAMENTO} />,

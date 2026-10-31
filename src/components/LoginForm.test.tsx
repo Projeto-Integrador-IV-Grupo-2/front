@@ -5,6 +5,7 @@ import { LoginForm } from './LoginForm.tsx'
 import { AuthProvider } from '../contexts/AuthContext.tsx'
 import * as authService from '../services/authService.ts'
 import { AuthError } from '../services/authService.ts'
+import { getStoredToken } from '../services/api.ts'
 import type { LoginResponse } from '../types/auth.ts'
 import type { User } from '../types/user.ts'
 import { criarUsuario } from '../test/factories.ts'
@@ -105,9 +106,56 @@ describe('LoginForm', () => {
     vi.spyOn(authService, 'login').mockResolvedValueOnce(respostaDeLogin())
     const { onSuccess } = renderForm()
 
+    await user.click(screen.getByRole('radio', { name: /Colaborador/ }))
     await fillAndSubmit(user, mockUser.email, '123456')
 
     await waitFor(() => expect(onSuccess).toHaveBeenCalledWith(mockUser))
+  })
+
+  it('recusa a conta de administrador com "Colaborador" marcado, sem abrir sessão', async () => {
+    const user = userEvent.setup()
+    const admin = criarUsuario({ papel: 'ADMIN' })
+    vi.spyOn(authService, 'login').mockResolvedValueOnce(respostaDeLogin(admin))
+    const { onSuccess } = renderForm()
+
+    await user.click(screen.getByRole('radio', { name: /Colaborador/ }))
+    await fillAndSubmit(user, admin.email, '123456')
+
+    expect(
+      await screen.findByText(
+        'Esta conta é de administração. Selecione “Administrador” para entrar.',
+      ),
+    ).toBeInTheDocument()
+    expect(onSuccess).not.toHaveBeenCalled()
+    expect(getStoredToken()).toBeNull()
+  })
+
+  it('recusa a conta de colaborador com "Administrador" marcado', async () => {
+    const user = userEvent.setup()
+    vi.spyOn(authService, 'login').mockResolvedValueOnce(respostaDeLogin())
+    const { onSuccess } = renderForm()
+
+    await fillAndSubmit(user, mockUser.email, '123456')
+
+    expect(
+      await screen.findByText(
+        'Esta conta é de colaborador. Selecione “Colaborador” para entrar.',
+      ),
+    ).toBeInTheDocument()
+    expect(onSuccess).not.toHaveBeenCalled()
+  })
+
+  it('aceita gestor com "Administrador" marcado (área de gestão)', async () => {
+    const user = userEvent.setup()
+    const gestor = criarUsuario({ papel: 'GESTOR' })
+    vi.spyOn(authService, 'login').mockResolvedValueOnce(
+      respostaDeLogin(gestor),
+    )
+    const { onSuccess } = renderForm()
+
+    await fillAndSubmit(user, gestor.email, '123456')
+
+    await waitFor(() => expect(onSuccess).toHaveBeenCalledWith(gestor))
   })
 
   it('exibe mensagem amigável para credenciais inválidas, sem quebrar a tela', async () => {
