@@ -4,7 +4,7 @@ import { MeuPdi } from '../components/pdi/MeuPdi.tsx'
 import { PdisEquipe } from '../components/pdi/PdisEquipe.tsx'
 import { usePermissao } from '../hooks/usePermissao.ts'
 import { ROTAS } from '../routes/paths.ts'
-import { PERFIS_GESTAO_PDI } from '../routes/permissions.ts'
+import { PERFIS_ESTUDO, PERFIS_GESTAO_PDI } from '../routes/permissions.ts'
 import styles from './PdiPage.module.css'
 
 type Aba = 'meu' | 'equipe'
@@ -17,16 +17,22 @@ const ROTULOS: Record<Aba, string> = {
 /**
  * PDI dentro de Trilhas (`/trilhas/pdi`), sem item próprio no menu.
  *
- * "Meu PDI" é de todo mundo; "PDIs da equipe" só aparece para ADMIN e GESTOR.
- * A aba fica na URL (`?aba=equipe`) para o "voltar" do editor cair nela.
+ * "Meu PDI" é de quem estuda (colaborador); "PDIs da equipe", de quem monta
+ * PDIs (ADMIN e GESTOR). Quem tivesse as duas permissões veria as duas abas;
+ * a aba fica na URL (`?aba=equipe`) para o "voltar" do editor cair nela.
  */
 export function PdiPage() {
   const podeGerir = usePermissao(PERFIS_GESTAO_PDI)
+  const estuda = usePermissao(PERFIS_ESTUDO)
   const [parametros, setParametros] = useSearchParams()
-  const abas: Aba[] = podeGerir ? ['meu', 'equipe'] : ['meu']
+  const abas: Aba[] = [
+    ...(estuda ? (['meu'] as const) : []),
+    ...(podeGerir ? (['equipe'] as const) : []),
+  ]
   const pedida = parametros.get('aba') === 'equipe' ? 'equipe' : 'meu'
-  // Colaborador com ?aba=equipe na URL cai em "Meu PDI".
-  const ativa: Aba = abas.includes(pedida) ? pedida : 'meu'
+  // Aba pedida que a pessoa não tem (ex.: colaborador com ?aba=equipe) cai na
+  // primeira que ela tem.
+  const ativa: Aba = abas.includes(pedida) ? pedida : (abas[0] ?? 'meu')
   const refs = useRef<Partial<Record<Aba, HTMLButtonElement | null>>>({})
 
   function selecionar(aba: Aba) {

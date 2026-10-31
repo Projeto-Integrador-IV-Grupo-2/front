@@ -51,30 +51,6 @@
   flex-wrap: wrap;
 }
 
-.secundario,
-.perigo {
-  padding: var(--space-1) var(--space-3);
-  border-radius: var(--radius-sm);
-  font-size: 0.875rem;
-  font-weight: 600;
-  background: transparent;
-}
-
-.secundario {
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-}
-
-.perigo {
-  color: var(--color-danger);
-  border: 1px solid var(--color-danger);
-}
-
-.secundario:disabled,
-.perigo:disabled {
-  opacity: 0.6;
-}
-
 /* Abaixo do breakpoint a tabela vira cartões: cada linha é um bloco e o
    rótulo da coluna aparece antes do valor, vindo de data-rotulo. */
 @media (max-width: 640px) {

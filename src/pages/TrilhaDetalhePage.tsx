@@ -18,7 +18,7 @@ import {
 import { TrilhaFormulario } from '../components/trilhas/TrilhaFormulario.tsx'
 import { usePermissao } from '../hooks/usePermissao.ts'
 import { caminhoEstudo, ROTAS } from '../routes/paths.ts'
-import { PERFIS_GESTAO_PDI } from '../routes/permissions.ts'
+import { PERFIS_ESTUDO, PERFIS_GESTAO_PDI } from '../routes/permissions.ts'
 import {
   PERFIS_ACOMPANHAMENTO,
   PERFIS_ATRIBUIR_TRILHA,
@@ -157,6 +157,8 @@ export function TrilhaDetalhePage() {
   // Mesma permissão da tela de Acompanhamento, de onde vem o dado do painel.
   const podeVerAtribuidos = usePermissao(PERFIS_ACOMPANHAMENTO)
   const podeMontarEtapas = usePermissao(PERFIS_GESTAO_CONTEUDO)
+  // Jornada, progresso pessoal e botões de estudo são de quem cursa a trilha.
+  const estuda = usePermissao(PERFIS_ESTUDO)
 
   const [recarga, setRecarga] = useState(0)
   const [resultado, setResultado] = useState<ResultadoBusca | null>(null)
@@ -597,39 +599,45 @@ export function TrilhaDetalhePage() {
           </header>
 
           <div className={styles.colunas}>
-            <section aria-labelledby="titulo-jornada">
-              <h2 id="titulo-jornada" className={styles.secao}>
-                Jornada
-              </h2>
-              <div className={styles.painel}>
-                <JornadaTrilha
-                  progresso={trilha.progresso}
-                  prazoDias={trilha.prazoDias}
-                />
-                {trilha.ativo && (
-                  <Link
-                    to={caminhoEstudo(trilha.id)}
-                    className={`${styles.botao} ${styles.estudar}`}
-                  >
-                    {trilha.progresso.status === 'CONCLUIDA'
-                      ? 'Rever conteúdos'
-                      : 'Estudar trilha'}
-                  </Link>
-                )}
-                {trilha.ativo ? (
-                  <AcaoProgresso
-                    trilha={trilha}
-                    salvando={salvando}
-                    erro={erroAcao}
-                    onExecutar={() => void executarAcao(trilha)}
-                  />
-                ) : (
-                  <p className={styles.inativaAviso}>
-                    Trilha inativa: o progresso de quem já a recebeu fica
-                    guardado, mas não pode ser alterado.
-                  </p>
-                )}
-              </div>
+            <section
+              aria-labelledby={estuda ? 'titulo-jornada' : 'titulo-etapas'}
+            >
+              {estuda && (
+                <>
+                  <h2 id="titulo-jornada" className={styles.secao}>
+                    Jornada
+                  </h2>
+                  <div className={styles.painel}>
+                    <JornadaTrilha
+                      progresso={trilha.progresso}
+                      prazoDias={trilha.prazoDias}
+                    />
+                    {trilha.ativo && (
+                      <Link
+                        to={caminhoEstudo(trilha.id)}
+                        className={`${styles.botao} ${styles.estudar}`}
+                      >
+                        {trilha.progresso.status === 'CONCLUIDA'
+                          ? 'Rever conteúdos'
+                          : 'Estudar trilha'}
+                      </Link>
+                    )}
+                    {trilha.ativo ? (
+                      <AcaoProgresso
+                        trilha={trilha}
+                        salvando={salvando}
+                        erro={erroAcao}
+                        onExecutar={() => void executarAcao(trilha)}
+                      />
+                    ) : (
+                      <p className={styles.inativaAviso}>
+                        Trilha inativa: o progresso de quem já a recebeu fica
+                        guardado, mas não pode ser alterado.
+                      </p>
+                    )}
+                  </div>
+                </>
+              )}
 
               {podeMontarEtapas && (
                 <section
@@ -648,38 +656,40 @@ export function TrilhaDetalhePage() {
             </section>
 
             <div className={styles.lateral}>
-              <section aria-labelledby="titulo-progresso">
-                <h2 id="titulo-progresso" className={styles.secao}>
-                  Progresso geral
-                </h2>
-                <div className={styles.painel}>
-                  <div className={styles.progressoTopo}>
-                    <SeloStatus status={trilha.progresso.status} />
-                    <span className={styles.percentual}>
-                      {trilha.progresso.percentual}%
-                    </span>
+              {estuda && (
+                <section aria-labelledby="titulo-progresso">
+                  <h2 id="titulo-progresso" className={styles.secao}>
+                    Progresso geral
+                  </h2>
+                  <div className={styles.painel}>
+                    <div className={styles.progressoTopo}>
+                      <SeloStatus status={trilha.progresso.status} />
+                      <span className={styles.percentual}>
+                        {trilha.progresso.percentual}%
+                      </span>
+                    </div>
+                    <BarraProgresso
+                      percentual={trilha.progresso.percentual}
+                      rotulo={`Progresso em ${trilha.nome}`}
+                      semValor
+                    />
+                    {trilha.progresso.prazo && (
+                      <p
+                        className={
+                          trilha.progresso.status === 'ATRASADA'
+                            ? `${styles.prazo} ${styles.prazoAtrasado}`
+                            : styles.prazo
+                        }
+                      >
+                        {trilha.progresso.status === 'ATRASADA'
+                          ? 'Prazo vencido em '
+                          : 'Prazo: '}
+                        {formatarData(trilha.progresso.prazo)}
+                      </p>
+                    )}
                   </div>
-                  <BarraProgresso
-                    percentual={trilha.progresso.percentual}
-                    rotulo={`Progresso em ${trilha.nome}`}
-                    semValor
-                  />
-                  {trilha.progresso.prazo && (
-                    <p
-                      className={
-                        trilha.progresso.status === 'ATRASADA'
-                          ? `${styles.prazo} ${styles.prazoAtrasado}`
-                          : styles.prazo
-                      }
-                    >
-                      {trilha.progresso.status === 'ATRASADA'
-                        ? 'Prazo vencido em '
-                        : 'Prazo: '}
-                      {formatarData(trilha.progresso.prazo)}
-                    </p>
-                  )}
-                </div>
-              </section>
+                </section>
+              )}
 
               {podeVerAtribuidos && (
                 <section aria-labelledby="titulo-atribuidos">

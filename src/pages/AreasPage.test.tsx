@@ -235,27 +235,6 @@ describe('AreasPage', () => {
   })
 
   describe('controle de acesso (Card 14 / issue #31)', () => {
-    it('esconde as ações de gestão para o colaborador', async () => {
-      server.use(
-        http.get('*/api/areas', () =>
-          HttpResponse.json(criarPagina([criarArea({ nome: 'Atendimento' })])),
-        ),
-      )
-
-      renderizar(criarUsuario({ papel: 'COLABORADOR' }))
-      await screen.findByRole('cell', { name: 'Atendimento' })
-
-      expect(
-        screen.queryByRole('button', { name: '+ Nova área' }),
-      ).not.toBeInTheDocument()
-      expect(
-        screen.queryByRole('button', { name: 'Editar Atendimento' }),
-      ).not.toBeInTheDocument()
-      expect(
-        screen.queryByRole('button', { name: 'Inativar Atendimento' }),
-      ).not.toBeInTheDocument()
-    })
-
     it.each(['ADMIN', 'GESTOR'] as const)(
       'mostra as ações de gestão para %s',
       async (papel) => {
@@ -325,7 +304,7 @@ describe('AreasPage', () => {
       )
     }
 
-    it('mostra as trilhas da área para qualquer perfil', async () => {
+    it('mostra as trilhas da área num painel', async () => {
       comUmaArea()
       let areaPedida = ''
       server.use(
@@ -344,7 +323,7 @@ describe('AreasPage', () => {
       )
       const user = userEvent.setup()
 
-      renderizar(criarUsuario({ papel: 'COLABORADOR' }))
+      renderizar(criarUsuario({ papel: 'GESTOR' }))
       const botao = await screen.findByRole('button', {
         name: 'Ver trilhas de Atendimento',
       })

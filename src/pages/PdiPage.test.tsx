@@ -232,12 +232,10 @@ describe('PdiPage — PDIs da equipe', () => {
         ),
       ),
     )
-    const user = userEvent.setup()
-
     renderizarComProvedores({ rota: '/trilhas/pdi', usuario: gestor })
 
-    await user.click(await screen.findByRole('tab', { name: 'PDIs da equipe' }))
-
+    // Gestão não tem "Meu PDI": a tela já abre nos PDIs da equipe.
+    expect(screen.queryByRole('tab', { name: 'Meu PDI' })).toBeNull()
     const lista = await screen.findByRole('list', { name: 'PDIs da equipe' })
     const linhas = within(lista).getAllByRole('listitem')
     expect(linhas).toHaveLength(2)

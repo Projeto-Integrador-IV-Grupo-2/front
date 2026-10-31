@@ -34,6 +34,8 @@ describe('LoginPage', () => {
       </AuthProvider>,
     )
 
+    // O usuário do teste é colaborador: a tela abre em "Administrador".
+    await user.click(screen.getByRole('radio', { name: /Colaborador/ }))
     await user.type(screen.getByLabelText('E-mail'), mockUser.email)
     await user.type(screen.getByLabelText('Senha'), '123456')
     await user.click(screen.getByRole('button', { name: 'Entrar' }))

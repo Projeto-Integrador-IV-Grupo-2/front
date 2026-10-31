@@ -293,6 +293,44 @@ describe('TrilhaDetalhePage', () => {
     ).not.toBeInTheDocument()
   })
 
+  it.each([
+    ['ADMIN', admin],
+    ['GESTOR', gestor],
+  ] as const)(
+    '%s não vê jornada, progresso pessoal nem botões de estudo',
+    async (_papel, usuario) => {
+      renderizarComo(usuario)
+
+      await screen.findByRole('heading', { level: 1, name: 'Onboarding' })
+      for (const nome of [
+        'Estudar trilha',
+        'Rever conteúdos',
+        'Iniciar trilha',
+        'Marcar como concluída',
+        'Retomar trilha',
+      ]) {
+        expect(screen.queryByRole('button', { name: nome })).toBeNull()
+        expect(screen.queryByRole('link', { name: nome })).toBeNull()
+      }
+      expect(screen.queryByRole('heading', { name: 'Jornada' })).toBeNull()
+      expect(
+        screen.queryByRole('heading', { name: 'Progresso geral' }),
+      ).toBeNull()
+      // O que é de gestão continua.
+      expect(
+        screen.getByRole('heading', { name: 'Sobre a trilha' }),
+      ).toBeInTheDocument()
+    },
+  )
+
+  it('admin aberto direto na tela de estudo recebe acesso negado', async () => {
+    renderizarComProvedores({ rota: `/trilhas/${ID}/estudar`, usuario: admin })
+
+    expect(
+      await screen.findByRole('heading', { name: 'Acesso negado' }),
+    ).toBeInTheDocument()
+  })
+
   it('gestor atribui, mas não edita nem inativa', async () => {
     renderizarComo(gestor)
 

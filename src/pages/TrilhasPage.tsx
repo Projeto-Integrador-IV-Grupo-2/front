@@ -14,6 +14,7 @@ import { useValorAdiado } from '../hooks/useValorAdiado.ts'
 import { caminhoTrilha, ROTAS } from '../routes/paths.ts'
 import {
   PERFIS_CRIAR_TRILHA,
+  PERFIS_ESTUDO,
   PERFIS_GESTAO_PDI,
 } from '../routes/permissions.ts'
 import {
@@ -131,10 +132,14 @@ export function TrilhasPage() {
   const { user } = useAuth()
   const podeCriar = usePermissao(PERFIS_CRIAR_TRILHA)
   const gerePdi = usePermissao(PERFIS_GESTAO_PDI)
+  // Gestão não cursa trilhas: fica só no catálogo, sem "Minhas trilhas".
+  const estuda = usePermissao(PERFIS_ESTUDO)
   const areaDoUsuario = user?.area ?? null
 
   const [searchParams, setSearchParams] = useSearchParams()
-  const aba = abaDaUrl(searchParams.get(PARAMETRO_ABA))
+  const aba: Aba = estuda
+    ? abaDaUrl(searchParams.get(PARAMETRO_ABA))
+    : 'catalogo'
 
   const [filtros, setFiltros] = useState<ValoresFiltroTrilhas>(FILTRO_VAZIO)
   // Só o nome é adiado: os selects não geram uma requisição por tecla.
@@ -212,9 +217,9 @@ export function TrilhasPage() {
     return () => controlador.abort()
   }, [chaveBusca, aba, nomeBuscado, areaId, status, recomendarArea])
 
-  // Recomendadas: só no catálogo e só para quem tem área.
+  // Recomendadas: só no catálogo, para quem estuda e tem área.
   const chaveRecomendadas =
-    aba === 'catalogo' && areaDoUsuario ? areaDoUsuario.id : null
+    aba === 'catalogo' && areaDoUsuario && estuda ? areaDoUsuario.id : null
   useEffect(() => {
     if (chaveRecomendadas === null) {
       return
@@ -509,41 +514,43 @@ export function TrilhasPage() {
         {aviso && <p className={styles.aviso}>{aviso}</p>}
       </div>
 
-      <div
-        className={styles.abas}
-        role="tablist"
-        aria-label="Visões das trilhas"
-      >
-        {ABAS.map((item, indice) => {
-          const ativa = item.id === aba
-          return (
-            <button
-              key={item.id}
-              ref={(elemento) => {
-                abasRef.current[indice] = elemento
-              }}
-              type="button"
-              role="tab"
-              id={`aba-${item.id}`}
-              aria-selected={ativa}
-              aria-controls="painel-trilhas"
-              tabIndex={ativa ? 0 : -1}
-              className={
-                ativa ? `${styles.aba} ${styles.abaAtiva}` : styles.aba
-              }
-              onClick={() => trocarAba(item.id)}
-              onKeyDown={(evento) => aoTeclarAba(evento, indice)}
-            >
-              {item.rotulo}
-            </button>
-          )
-        })}
-      </div>
+      {estuda && (
+        <div
+          className={styles.abas}
+          role="tablist"
+          aria-label="Visões das trilhas"
+        >
+          {ABAS.map((item, indice) => {
+            const ativa = item.id === aba
+            return (
+              <button
+                key={item.id}
+                ref={(elemento) => {
+                  abasRef.current[indice] = elemento
+                }}
+                type="button"
+                role="tab"
+                id={`aba-${item.id}`}
+                aria-selected={ativa}
+                aria-controls="painel-trilhas"
+                tabIndex={ativa ? 0 : -1}
+                className={
+                  ativa ? `${styles.aba} ${styles.abaAtiva}` : styles.aba
+                }
+                onClick={() => trocarAba(item.id)}
+                onKeyDown={(evento) => aoTeclarAba(evento, indice)}
+              >
+                {item.rotulo}
+              </button>
+            )
+          })}
+        </div>
+      )}
 
       <div
         id="painel-trilhas"
-        role="tabpanel"
-        aria-labelledby={`aba-${aba}`}
+        role={estuda ? 'tabpanel' : undefined}
+        aria-labelledby={estuda ? `aba-${aba}` : undefined}
         className={styles.painel}
       >
         {recomendadasAtuais && areaDoUsuario && (
@@ -559,6 +566,7 @@ export function TrilhasPage() {
           onChange={alterarFiltros}
           onLimpar={() => alterarFiltros(FILTRO_VAZIO)}
           areas={areas}
+          mostrarStatus={estuda}
         />
 
         {carregando && (
@@ -602,7 +610,11 @@ export function TrilhasPage() {
           <>
             <ul className={styles.grade} aria-label="Trilhas">
               {trilhas.map((trilha) => (
-                <TrilhaCard key={trilha.id} trilha={trilha} />
+                <TrilhaCard
+                  key={trilha.id}
+                  trilha={trilha}
+                  mostrarProgresso={estuda}
+                />
               ))}
             </ul>
 

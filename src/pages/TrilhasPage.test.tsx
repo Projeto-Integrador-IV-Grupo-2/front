@@ -153,6 +153,18 @@ describe('TrilhasPage', () => {
     expect(url!.searchParams.get('sort')).toBe('prazo')
   })
 
+  it('gestão vê só o catálogo, sem "Minhas trilhas", status pessoal nem progresso', async () => {
+    renderizarTrilhas(criarUsuario({ papel: 'ADMIN' }))
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Trilhas' }),
+    ).toBeInTheDocument()
+    await screen.findByRole('list', { name: 'Trilhas' })
+    expect(screen.queryByRole('tab', { name: 'Minhas trilhas' })).toBeNull()
+    expect(screen.queryByLabelText('Status')).toBeNull()
+    expect(screen.queryByRole('progressbar')).toBeNull()
+  })
+
   it('guarda a aba na URL e a mantém ao recarregar', async () => {
     const urls: URL[] = []
     server.use(

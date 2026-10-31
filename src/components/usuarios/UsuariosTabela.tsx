@@ -3,6 +3,7 @@ import {
   ROTULOS_SITUACAO,
   type Usuario,
 } from '../../types/usuario.ts'
+import { MenuOpcoes } from '../comum/MenuOpcoes.tsx'
 import styles from './UsuariosTabela.module.css'
 
 interface UsuariosTabelaProps {
@@ -66,27 +67,20 @@ export function UsuariosTabela({
               </td>
               <td data-rotulo="Entrada">{formatarData(usuario.dataEntrada)}</td>
               <td data-rotulo="Ações" className={styles.acoes}>
-                {/* O nome entra no `aria-label` porque "Editar" se repete em
-                    cada linha: sem ele a lista de botões do leitor de tela não
-                    diz qual usuário cada ação afeta. O texto visível é prefixo
-                    do rótulo, então comando por voz continua funcionando. */}
-                <button
-                  type="button"
-                  className={styles.secundario}
-                  onClick={() => onEditar(usuario)}
-                  aria-label={`Editar ${usuario.nomeCompleto}`}
-                >
-                  Editar
-                </button>
-                <button
-                  type="button"
-                  className={ativo ? styles.perigo : styles.secundario}
-                  onClick={() => onAlterarSituacao(usuario)}
-                  disabled={emAndamento}
-                  aria-label={`${ativo ? 'Desativar' : 'Reativar'} ${usuario.nomeCompleto}`}
-                >
-                  {ativo ? 'Desativar' : 'Reativar'}
-                </button>
+                {/* Um botão de opções por linha; o nome entra no rótulo porque
+                    ele se repete em cada linha da tabela. */}
+                <MenuOpcoes
+                  rotulo={`Opções de ${usuario.nomeCompleto}`}
+                  opcoes={[
+                    { rotulo: 'Editar', aoEscolher: () => onEditar(usuario) },
+                    {
+                      rotulo: ativo ? 'Desativar' : 'Reativar',
+                      aoEscolher: () => onAlterarSituacao(usuario),
+                      perigo: ativo,
+                      desabilitada: emAndamento,
+                    },
+                  ]}
+                />
               </td>
             </tr>
           )

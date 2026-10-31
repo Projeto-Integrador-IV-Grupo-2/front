@@ -91,6 +91,7 @@
 
 .campo {
   display: flex;
+  min-width: 0;
   flex-direction: column;
   gap: var(--space-1);
 }
@@ -102,6 +103,8 @@
 
 .campo select,
 .campo input {
+  width: 100%;
+  min-width: 0;
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
@@ -111,6 +114,11 @@
 .botoes {
   display: flex;
   gap: var(--space-2);
+}
+
+/* O botão não quebra linha: os campos é que encolhem (min-width: 0). */
+.botoes button {
+  white-space: nowrap;
 }
 
 .botoes .principal {

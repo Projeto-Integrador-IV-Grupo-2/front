@@ -97,9 +97,27 @@ describe('router', () => {
     expect(
       await screen.findByRole('heading', { name: 'Acesso negado' }),
     ).toBeInTheDocument()
-    // Conteúdos continua: é onde ele usa as categorias, como filtro.
-    expect(screen.getByRole('link', { name: 'Conteúdos' })).toBeInTheDocument()
   })
+
+  it.each(['/areas', '/conteudos'])(
+    '%s é tela de gestão: o colaborador não tem o item nem a rota',
+    async (rota) => {
+      renderizarComProvedores({
+        rota,
+        usuario: criarUsuario({ papel: 'COLABORADOR' }),
+      })
+
+      expect(
+        await screen.findByRole('heading', { name: 'Acesso negado' }),
+      ).toBeInTheDocument()
+      expect(screen.queryByRole('link', { name: 'Áreas' })).toBeNull()
+      expect(screen.queryByRole('link', { name: 'Conteúdos' })).toBeNull()
+      // As telas dele continuam no menu.
+      expect(
+        screen.getByRole('link', { name: 'Conhecimento' }),
+      ).toBeInTheDocument()
+    },
+  )
 
   it('Categorias fica numa aba de Áreas, não no menu, e marca Áreas no menu', async () => {
     const user = userEvent.setup()
