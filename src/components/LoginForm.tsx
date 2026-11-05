@@ -1,5 +1,7 @@
 import { useId, useState, type FormEvent, type ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth.ts'
+import { ROTAS } from '../routes/paths.ts'
 import { AuthError } from '../services/authService.ts'
 import { HTTP_STATUS } from '../utils/errorHandler.ts'
 import { PerfilDiferenteError } from '../types/auth.ts'
@@ -250,11 +252,9 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
           Manter conectado
         </label>
 
-        {/* Placeholder visual do protótipo — recuperação de senha ainda não
-            tem tela própria. */}
-        <button type="button" className={styles.forgotPasswordLink}>
+        <Link to={ROTAS.esqueciSenha} className={styles.forgotPasswordLink}>
           Esqueci minha senha
-        </button>
+        </Link>
       </div>
 
       {formError && (

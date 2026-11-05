@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { LoginForm } from './LoginForm.tsx'
 import { AuthProvider } from '../contexts/AuthContext.tsx'
@@ -23,9 +24,12 @@ function respostaDeLogin(usuario: User = mockUser): LoginResponse {
 
 function renderForm(onSuccess = vi.fn()) {
   render(
-    <AuthProvider>
-      <LoginForm onSuccess={onSuccess} />
-    </AuthProvider>,
+    // O "Esqueci minha senha" é um Link: precisa de um roteador em volta.
+    <MemoryRouter>
+      <AuthProvider>
+        <LoginForm onSuccess={onSuccess} />
+      </AuthProvider>
+    </MemoryRouter>,
   )
   return { onSuccess }
 }

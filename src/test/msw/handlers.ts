@@ -40,6 +40,16 @@ export const handlers = [
     }),
   ),
 
+  // Recuperação de senha (back #76): as duas respondem 204, sem corpo.
+  http.post(
+    '*/api/auth/esqueci-senha',
+    () => new HttpResponse(null, { status: 204 }),
+  ),
+  http.post(
+    '*/api/auth/redefinir-senha',
+    () => new HttpResponse(null, { status: 204 }),
+  ),
+
   http.get('*/api/auth/me', () => HttpResponse.json(criarUsuario())),
 
   http.get('*/api/dashboard/colaborador', () =>

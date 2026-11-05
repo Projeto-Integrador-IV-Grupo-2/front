@@ -4,6 +4,7 @@ import {
   type RouteObject,
 } from 'react-router-dom'
 import { ProtectedRoute } from '../components/auth/ProtectedRoute.tsx'
+import { RotaPublica } from '../components/auth/RotaPublica.tsx'
 import { AppLayout } from '../components/layout/AppLayout.tsx'
 import { AcompanhamentoPage } from '../pages/AcompanhamentoPage.tsx'
 import { AssistentePage } from '../pages/AssistentePage.tsx'
@@ -14,7 +15,9 @@ import { DocumentoDetalhePage } from '../pages/DocumentoDetalhePage.tsx'
 import { ConteudosPage } from '../pages/ConteudosPage.tsx'
 import { DashboardPage } from '../pages/DashboardPage.tsx'
 import { HistoricoPage } from '../pages/HistoricoPage.tsx'
+import { EsqueciSenhaPage } from '../pages/EsqueciSenhaPage.tsx'
 import { LoginPage } from '../pages/LoginPage.tsx'
+import { RedefinirSenhaPage } from '../pages/RedefinirSenhaPage.tsx'
 import { NotFoundPage } from '../pages/NotFoundPage.tsx'
 import { PdiEditorPage } from '../pages/PdiEditorPage.tsx'
 import { PdiPage } from '../pages/PdiPage.tsx'
@@ -90,6 +93,14 @@ export const routes: RouteObject[] = [
     ],
   },
   { path: ROTAS.login, element: <LoginPage /> },
+  {
+    // Recuperação de senha: só para quem não está logado.
+    element: <RotaPublica />,
+    children: [
+      { path: ROTAS.esqueciSenha, element: <EsqueciSenhaPage /> },
+      { path: ROTAS.redefinirSenha, element: <RedefinirSenhaPage /> },
+    ],
+  },
   { path: '/', element: <Navigate to={ROTAS.dashboard} replace /> },
   { path: '*', element: <NotFoundPage /> },
 ]

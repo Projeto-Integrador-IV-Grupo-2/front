@@ -6,7 +6,13 @@ import {
 } from 'axios'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { api } from './api.ts'
-import { AuthError, fetchCurrentUser, login } from './authService.ts'
+import {
+  AuthError,
+  esqueciSenha,
+  fetchCurrentUser,
+  login,
+  redefinirSenha,
+} from './authService.ts'
 import { criarUsuario } from '../test/factories.ts'
 
 const mockUser = criarUsuario()
@@ -128,5 +134,55 @@ describe('fetchCurrentUser', () => {
     )
 
     await expect(fetchCurrentUser()).rejects.toBeInstanceOf(AuthError)
+  })
+})
+
+describe('recuperação de senha', () => {
+  it('esqueciSenha envia o e-mail para a rota pública', async () => {
+    const postSpy = vi
+      .spyOn(api, 'post')
+      .mockResolvedValueOnce(createAxiosResponse(undefined))
+
+    await esqueciSenha('ana@nexo.com')
+
+    expect(postSpy).toHaveBeenCalledWith('/api/auth/esqueci-senha', {
+      email: 'ana@nexo.com',
+    })
+  })
+
+  it('esqueciSenha normaliza o 429 do limite de pedidos', async () => {
+    vi.spyOn(api, 'post').mockRejectedValueOnce(
+      createAxiosError(429, 'Muitos pedidos'),
+    )
+
+    const erro = await esqueciSenha('ana@nexo.com').catch((e: unknown) => e)
+
+    expect(erro).toBeInstanceOf(AuthError)
+    expect((erro as AuthError).status).toBe(429)
+  })
+
+  it('redefinirSenha envia token e nova senha e traz os erros de campo', async () => {
+    const postSpy = vi.spyOn(api, 'post').mockRejectedValueOnce(
+      (() => {
+        const erro = createAxiosError(400, 'Falha de validação')
+        ;(erro.response!.data as { fieldErrors: unknown }).fieldErrors = [
+          { field: 'novaSenha', message: 'senha fraca' },
+        ]
+        return erro
+      })(),
+    )
+
+    const erro = await redefinirSenha('tok', 'NovaSenha1').catch(
+      (e: unknown) => e,
+    )
+
+    expect(postSpy).toHaveBeenCalledWith('/api/auth/redefinir-senha', {
+      token: 'tok',
+      novaSenha: 'NovaSenha1',
+    })
+    expect((erro as AuthError).status).toBe(400)
+    expect((erro as AuthError).fieldErrors).toEqual([
+      { field: 'novaSenha', message: 'senha fraca' },
+    ])
   })
 })
