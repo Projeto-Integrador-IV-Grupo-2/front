@@ -96,6 +96,11 @@ function descrever(item: InteracaoHistorico): {
         icone: <IconeFaisca tamanho={14} />,
       }
     }
+    case 'SENHA_REDEFINIDA':
+      return {
+        acao: 'redefiniu a senha pelo link do e-mail',
+        icone: <IconeCheck tamanho={14} />,
+      }
     default:
       return { acao: 'teve uma interação', icone: <IconeLivro tamanho={14} /> }
   }

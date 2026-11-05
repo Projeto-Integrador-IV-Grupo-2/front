@@ -74,6 +74,21 @@ describe('HistoricoPage', () => {
     ).toBeInTheDocument()
   })
 
+  it('mostra a senha redefinida pelo link do e-mail', async () => {
+    responder([
+      criarInteracaoHistorico({
+        id: 'h9',
+        tipo: 'SENHA_REDEFINIDA',
+        detalhes: { origem: 'POST /api/auth/redefinir-senha' },
+      }),
+    ])
+    abrir()
+
+    expect(
+      await screen.findByText('Você redefiniu a senha pelo link do e-mail'),
+    ).toBeInTheDocument()
+  })
+
   it('o administrador vê o nome de quem fez cada interação', async () => {
     const admin = criarUsuario({
       id: 'admin-1',

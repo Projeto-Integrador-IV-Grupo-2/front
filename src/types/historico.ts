@@ -4,6 +4,8 @@ export type TipoInteracao =
   | 'TRILHA_INICIADA'
   | 'TRILHA_CONCLUIDA'
   | 'ASSISTENTE_CONSULTADO'
+  /** Senha redefinida pelo link de "esqueci minha senha" (back #76). */
+  | 'SENHA_REDEFINIDA'
 
 /**
  * Uma interação do histórico (record `HistoricoInteracaoResponse`).

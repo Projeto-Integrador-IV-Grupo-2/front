@@ -96,8 +96,13 @@ export function DashboardColaborador({ saudacao }: { saudacao: ReactNode }) {
         ? 'pronto'
         : 'vazio'
 
-  const atividades = dados?.ultimasAtividades
-  const atividadesValidas = listaDeAtividadesValida(atividades)
+  // O histórico também tem interações que não são de trilha (pergunta à IA,
+  // senha redefinida): elas não entram neste painel, mas também não podem
+  // invalidar a lista inteira.
+  const atividadesValidas = listaDeAtividadesValida(dados?.ultimasAtividades)
+  const atividades = atividadesValidas
+    ? (dados?.ultimasAtividades ?? []).filter(ehAtividadeDeTrilha)
+    : []
   const erroAtividades =
     dados && !atividadesValidas
       ? 'A API retornou uma lista de atividades inválida.'
@@ -493,6 +498,10 @@ function listaDePrazosValida(valor: unknown): valor is ProximoPrazoDashboard[] {
   )
 }
 
+function ehAtividadeDeTrilha(atividade: HistoricoInteracaoDashboard): boolean {
+  return Object.prototype.hasOwnProperty.call(ROTULOS_INTERACAO, atividade.tipo)
+}
+
 function listaDeAtividadesValida(
   valor: unknown,
 ): valor is HistoricoInteracaoDashboard[] {
@@ -506,10 +515,6 @@ function listaDeAtividadesValida(
         typeof atividade.id === 'string' &&
         atividade.id.trim().length > 0 &&
         typeof atividade.tipo === 'string' &&
-        Object.prototype.hasOwnProperty.call(
-          ROTULOS_INTERACAO,
-          atividade.tipo,
-        ) &&
         typeof atividade.criadoEm === 'string' &&
         !Number.isNaN(Date.parse(atividade.criadoEm)) &&
         detalhes !== null &&
