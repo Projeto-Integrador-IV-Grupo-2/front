@@ -4,6 +4,7 @@ import type {
 } from '../types/atribuicao.ts'
 import type { Area } from '../types/area.ts'
 import type { InteracaoHistorico } from '../types/historico.ts'
+import type { Notificacao } from '../types/notificacao.ts'
 import type { Arquivo } from '../types/arquivo.ts'
 import type {
   MensagemAssistente,
@@ -515,6 +516,23 @@ export function criarInteracaoHistorico(
       email: 'ana@nexo.com',
     },
     criadoEm: new Date().toISOString(),
+    ...overrides,
+  }
+}
+
+/** Notificação não lida, como vem de `GET /api/notificacoes`. */
+export function criarNotificacao(
+  overrides: Partial<Notificacao> = {},
+): Notificacao {
+  return {
+    id: 'n0000000-0000-4000-8000-000000000001',
+    tipo: 'TRILHA_ATRIBUIDA',
+    titulo: 'Nova trilha para você',
+    mensagem: 'A trilha “Onboarding” foi atribuída a você.',
+    link: '/trilhas/44444444-4444-4444-4444-444444444444',
+    lida: false,
+    lidaEm: null,
+    criadaEm: new Date().toISOString(),
     ...overrides,
   }
 }
