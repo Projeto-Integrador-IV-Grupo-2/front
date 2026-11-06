@@ -35,6 +35,10 @@
   color: var(--color-text);
 }
 
+.sinoLateral {
+  margin-left: auto;
+}
+
 .nav {
   flex: 1;
   display: flex;
@@ -240,24 +244,6 @@
   display: flex;
   align-items: center;
   gap: var(--space-4);
-}
-
-.bellButton {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  background: none;
-  border: none;
-  border-radius: var(--radius-sm);
-  color: var(--color-text-muted);
-}
-
-.bellButton:hover {
-  color: var(--color-text);
-  background: var(--color-primary-soft);
 }
 
 .skipLink {

@@ -1,0 +1,186 @@
+.raiz {
+  position: relative;
+  display: flex;
+}
+
+.sino {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  color: var(--color-text-muted);
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+}
+
+.sino:hover,
+.sino[aria-expanded='true'] {
+  color: var(--color-text);
+  background: var(--color-primary-soft);
+}
+
+.selo {
+  position: absolute;
+  top: 2px;
+  right: 1px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  font-size: 0.625rem;
+  font-weight: 700;
+  line-height: 17px;
+  text-align: center;
+  color: var(--color-primary-contrast);
+  background: var(--color-danger);
+  border: 2px solid var(--color-surface);
+  border-radius: 999px;
+  box-sizing: content-box;
+}
+
+/* Desktop: o sino fica na barra lateral, e o painel abre por cima do conteúdo. */
+.painel {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  left: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  width: min(380px, calc(100vw - 2 * var(--space-4)));
+  max-height: min(560px, calc(100dvh - 120px));
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+}
+
+.painel:focus {
+  outline: none;
+}
+
+.painel:focus-visible {
+  outline: 2px solid var(--color-primary);
+}
+
+.cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.titulo {
+  font-size: 0.9375rem;
+  font-weight: 700;
+}
+
+.acao {
+  padding: 0;
+  font-size: 0.78125rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  background: none;
+  border: none;
+}
+
+.acao:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.acao:disabled {
+  color: var(--color-text-faint);
+  cursor: default;
+}
+
+.corpo {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.lista {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-2);
+}
+
+.aviso,
+.vazio {
+  padding: var(--space-6) var(--space-4);
+  font-size: 0.84375rem;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.vazioTitulo {
+  margin-bottom: var(--space-1);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.erro {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  font-size: 0.84375rem;
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-sm);
+}
+
+.erro button {
+  padding: var(--space-1) var(--space-3);
+  font-size: 0.8125rem;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.erroAcao {
+  padding: var(--space-2) var(--space-4);
+  font-size: 0.8125rem;
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
+}
+
+.rodape {
+  padding: var(--space-3) var(--space-4);
+  text-align: center;
+  border-top: 1px solid var(--color-border);
+}
+
+.verTodas {
+  font-size: 0.84375rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.verTodas:hover {
+  text-decoration: underline;
+}
+
+/* Celular: o sino está na barra superior e o painel ocupa a largura da tela. */
+@media (max-width: 900px) {
+  .painel {
+    position: fixed;
+    top: var(--header-height);
+    right: 0;
+    left: 0;
+    width: auto;
+    max-height: calc(100dvh - var(--header-height));
+    border-right: none;
+    border-left: none;
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+  }
+}

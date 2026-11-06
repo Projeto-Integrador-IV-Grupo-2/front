@@ -90,6 +90,30 @@ describe('AppLayout', () => {
     await waitFor(() => expect(getStoredToken()).toBeNull())
   })
 
+  it('no desktop o sino fica na barra lateral, e há um só', async () => {
+    renderizarComProvedores({ rota: '/dashboard', usuario: criarUsuario() })
+
+    const sinos = await screen.findAllByRole('button', {
+      name: /^Notificações/,
+      hidden: true,
+    })
+    expect(sinos).toHaveLength(1)
+    expect(sinos[0].closest('aside')).not.toBeNull()
+  })
+
+  it('no celular o sino vai para a barra superior, e há um só', async () => {
+    simularTelaEstreita()
+    renderizarComProvedores({ rota: '/dashboard', usuario: criarUsuario() })
+
+    await encontrarBotaoDoMenu()
+    const sinos = screen.getAllByRole('button', {
+      name: /^Notificações/,
+      hidden: true,
+    })
+    expect(sinos).toHaveLength(1)
+    expect(sinos[0].closest('header')).not.toBeNull()
+  })
+
   it('abre e fecha o menu no botão de navegação em tela estreita', async () => {
     simularTelaEstreita()
     const user = userEvent.setup()

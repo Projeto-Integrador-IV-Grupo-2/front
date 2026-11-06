@@ -1,11 +1,5 @@
 import { useRef, useState, type ReactNode } from 'react'
-import {
-  Link,
-  NavLink,
-  Outlet,
-  useLocation,
-  useNavigate,
-} from 'react-router-dom'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { LogoIcon } from '../Logo.tsx'
 import { useAuth } from '../../hooks/useAuth.ts'
 import { useMediaQuery } from '../../hooks/useMediaQuery.ts'
@@ -13,6 +7,8 @@ import { useTema } from '../../hooks/useTema.ts'
 import { ROTAS } from '../../routes/paths.ts'
 import { itensMenuPara } from '../../routes/permissions.ts'
 import type { UserRole } from '../../types/user.ts'
+import { NotificacoesProvider } from '../../contexts/NotificacoesContext.tsx'
+import { SinoNotificacoes } from '../notificacoes/SinoNotificacoes.tsx'
 import styles from './AppLayout.module.css'
 
 const MOBILE_QUERY = '(max-width: 900px)'
@@ -22,6 +18,11 @@ const ROTULO_PERFIL: Record<UserRole, string> = {
   ADMIN: 'Administrador',
   GESTOR: 'Gestor',
   COLABORADOR: 'Colaborador',
+}
+
+/** Título da barra superior nas telas que não estão no menu. */
+const TITULOS_FORA_DO_MENU: Record<string, string> = {
+  [ROTAS.notificacoes]: 'Notificações',
 }
 
 const ICONE_POR_ROTA: Record<string, ReactNode> = {
@@ -56,8 +57,21 @@ function navLinkClassName({ isActive }: { isActive: boolean }): string {
   return isActive ? `${styles.navLink} ${styles.navLinkActive}` : styles.navLink
 }
 
-/** Layout base da área autenticada: menu lateral + barra superior + conteúdo da rota. */
+/**
+ * Layout da área autenticada com o Observer das notificações em volta: o sino
+ * e a página /notificacoes leem o mesmo total. Só existe com alguém logado, e
+ * deslogar desmonta o provider, o que para a atualização do contador.
+ */
 export function AppLayout() {
+  return (
+    <NotificacoesProvider>
+      <LayoutBase />
+    </NotificacoesProvider>
+  )
+}
+
+/** Layout base da área autenticada: menu lateral + barra superior + conteúdo da rota. */
+function LayoutBase() {
   const { user, logout } = useAuth()
   const { tema, alternar: alternarTema } = useTema()
   const navigate = useNavigate()
@@ -117,6 +131,13 @@ export function AppLayout() {
         <div className={styles.sidebarBrand}>
           <LogoIcon className={styles.logo} />
           <span className={styles.brand}>Nexo</span>
+          {/* No desktop não há barra superior: o sino fica aqui. Um sino só
+              por vez, para não buscar o total em dobro. */}
+          {!isMobile && (
+            <span className={styles.sinoLateral}>
+              <SinoNotificacoes />
+            </span>
+          )}
         </div>
 
         <nav id="primary-navigation" className={styles.nav}>
@@ -206,19 +227,14 @@ export function AppLayout() {
             <span aria-hidden="true">☰</span>
           </button>
 
-          <p className={styles.pageTitle}>{itemAtual?.rotulo ?? 'Nexo'}</p>
+          <p className={styles.pageTitle}>
+            {itemAtual?.rotulo ??
+              TITULOS_FORA_DO_MENU[location.pathname] ??
+              'Nexo'}
+          </p>
 
           <div className={styles.topbarActions}>
-            {/* A API ainda não tem notificações: o sino leva às atividades
-                recentes (Histórico), sem um "não lido" que não existe. */}
-            <Link
-              to={ROTAS.historico}
-              className={styles.bellButton}
-              aria-label="Atividades recentes"
-              title="Atividades recentes"
-            >
-              <BellIcon />
-            </Link>
+            {isMobile && <SinoNotificacoes />}
             {user && (
               <span className={styles.avatarChip} aria-hidden="true">
                 {iniciais(user.nomeCompleto)}
@@ -512,31 +528,6 @@ function MoonIcon() {
         stroke="currentColor"
         strokeWidth="1.6"
         strokeLinejoin="round"
-      />
-    </svg>
-  )
-}
-
-function BellIcon() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 20 20"
-      fill="none"
-      aria-hidden="true"
-    >
-      <path
-        d="M5 8a5 5 0 0 1 10 0c0 4 1.5 5 1.5 5h-13S5 12 5 8z"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M8 15.5a2 2 0 0 0 4 0"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
       />
     </svg>
   )
