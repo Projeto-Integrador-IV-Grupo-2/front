@@ -7,6 +7,7 @@ import {
   useNavigate,
 } from 'react-router-dom'
 import { LogoIcon } from '../Logo.tsx'
+import { AvatarUsuario } from '../comum/AvatarUsuario.tsx'
 import { useAuth } from '../../hooks/useAuth.ts'
 import { useMediaQuery } from '../../hooks/useMediaQuery.ts'
 import { useTema } from '../../hooks/useTema.ts'
@@ -45,13 +46,6 @@ const ICONE_POR_ROTA: Record<string, ReactNode> = {
  */
 const ITENS_EM_BREVE: Array<{ rotulo: string; icone: ReactNode }> = []
 
-function iniciais(nomeCompleto: string): string {
-  const partes = nomeCompleto.trim().split(/\s+/)
-  const primeira = partes[0]?.[0] ?? ''
-  const ultima = partes.length > 1 ? partes[partes.length - 1][0] : ''
-  return (primeira + ultima).toUpperCase()
-}
-
 function navLinkClassName({ isActive }: { isActive: boolean }): string {
   return isActive ? `${styles.navLink} ${styles.navLinkActive}` : styles.navLink
 }
@@ -83,11 +77,14 @@ export function AppLayout() {
   // o ProtectedRoute vá recusar depois.
   const itens = itensMenuPara(user?.papel)
   // Subrotas (ex.: /trilhas/:id) herdam o título da seção.
-  const itemAtual = itens.find(
-    (item) =>
-      location.pathname === item.to ||
-      location.pathname.startsWith(`${item.to}/`),
-  )
+  const itemAtual =
+    location.pathname === ROTAS.perfil
+      ? { rotulo: 'Meu perfil' }
+      : itens.find(
+          (item) =>
+            location.pathname === item.to ||
+            location.pathname.startsWith(`${item.to}/`),
+        )
 
   function fecharMenu() {
     if (!isMenuOpen) {
@@ -162,15 +159,29 @@ export function AppLayout() {
           </div>
 
           {user && (
-            <div className={styles.userCard}>
-              <span className={styles.avatar} aria-hidden="true">
-                {iniciais(user.nomeCompleto)}
+            // O cartão do usuário é o atalho para "Meu perfil".
+            <NavLink
+              to={ROTAS.perfil}
+              className={({ isActive }) =>
+                isActive
+                  ? `${styles.userCard} ${styles.userCardAtivo}`
+                  : styles.userCard
+              }
+              onClick={fecharMenu}
+              title="Meu perfil"
+            >
+              <AvatarUsuario
+                usuarioId={user.id}
+                nome={user.nomeCompleto}
+                className={styles.avatar}
+              />
+              <span className={styles.userInfo}>
+                <span className={styles.userName}>{user.nomeCompleto}</span>
+                <span className={styles.userRole}>
+                  {ROTULO_PERFIL[user.papel]} · Meu perfil
+                </span>
               </span>
-              <div>
-                <p className={styles.userName}>{user.nomeCompleto}</p>
-                <p className={styles.userRole}>{ROTULO_PERFIL[user.papel]}</p>
-              </div>
-            </div>
+            </NavLink>
           )}
 
           <button type="button" className={styles.sair} onClick={handleLogout}>
@@ -220,9 +231,18 @@ export function AppLayout() {
               <BellIcon />
             </Link>
             {user && (
-              <span className={styles.avatarChip} aria-hidden="true">
-                {iniciais(user.nomeCompleto)}
-              </span>
+              <Link
+                to={ROTAS.perfil}
+                className={styles.avatarLink}
+                aria-label="Meu perfil"
+                title="Meu perfil"
+              >
+                <AvatarUsuario
+                  usuarioId={user.id}
+                  nome={user.nomeCompleto}
+                  className={styles.avatarChip}
+                />
+              </Link>
             )}
           </div>
         </header>
