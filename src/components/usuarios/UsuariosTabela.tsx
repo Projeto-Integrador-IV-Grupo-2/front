@@ -34,58 +34,66 @@ export function UsuariosTabela({
   onAlterarSituacao,
 }: UsuariosTabelaProps) {
   return (
-    <table className={styles.tabela}>
-      <caption className="visually-hidden">Lista de usuários do tenant</caption>
-      <thead>
-        <tr>
-          <th scope="col">Nome</th>
-          <th scope="col">E-mail</th>
-          <th scope="col">Área</th>
-          <th scope="col">Perfil</th>
-          <th scope="col">Situação</th>
-          <th scope="col">Entrada</th>
-          <th scope="col">
-            <span className="visually-hidden">Ações</span>
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        {usuarios.map((usuario) => {
-          const ativo = usuario.situacao === 'ATIVO'
-          const emAndamento = situacaoEmAndamento === usuario.id
+    <div className={styles.rolagem}>
+      <table className={styles.tabela}>
+        <caption className="visually-hidden">
+          Lista de usuários do tenant
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">Nome</th>
+            <th scope="col">E-mail</th>
+            <th scope="col">Área</th>
+            <th scope="col">Perfil</th>
+            <th scope="col">Situação</th>
+            <th scope="col">Entrada</th>
+            <th scope="col">
+              <span className="visually-hidden">Ações</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {usuarios.map((usuario) => {
+            const ativo = usuario.situacao === 'ATIVO'
+            const emAndamento = situacaoEmAndamento === usuario.id
 
-          return (
-            <tr key={usuario.id}>
-              <td data-rotulo="Nome">{usuario.nomeCompleto}</td>
-              <td data-rotulo="E-mail">{usuario.email}</td>
-              <td data-rotulo="Área">{usuario.area?.nome ?? '—'}</td>
-              <td data-rotulo="Perfil">{ROTULOS_PERFIL[usuario.papel]}</td>
-              <td data-rotulo="Situação">
-                <span className={ativo ? styles.seloAtivo : styles.seloInativo}>
-                  {ROTULOS_SITUACAO[usuario.situacao]}
-                </span>
-              </td>
-              <td data-rotulo="Entrada">{formatarData(usuario.dataEntrada)}</td>
-              <td data-rotulo="Ações" className={styles.acoes}>
-                {/* Um botão de opções por linha; o nome entra no rótulo porque
+            return (
+              <tr key={usuario.id}>
+                <td data-rotulo="Nome">{usuario.nomeCompleto}</td>
+                <td data-rotulo="E-mail">{usuario.email}</td>
+                <td data-rotulo="Área">{usuario.area?.nome ?? '—'}</td>
+                <td data-rotulo="Perfil">{ROTULOS_PERFIL[usuario.papel]}</td>
+                <td data-rotulo="Situação">
+                  <span
+                    className={ativo ? styles.seloAtivo : styles.seloInativo}
+                  >
+                    {ROTULOS_SITUACAO[usuario.situacao]}
+                  </span>
+                </td>
+                <td data-rotulo="Entrada">
+                  {formatarData(usuario.dataEntrada)}
+                </td>
+                <td data-rotulo="Ações" className={styles.acoes}>
+                  {/* Um botão de opções por linha; o nome entra no rótulo porque
                     ele se repete em cada linha da tabela. */}
-                <MenuOpcoes
-                  rotulo={`Opções de ${usuario.nomeCompleto}`}
-                  opcoes={[
-                    { rotulo: 'Editar', aoEscolher: () => onEditar(usuario) },
-                    {
-                      rotulo: ativo ? 'Desativar' : 'Reativar',
-                      aoEscolher: () => onAlterarSituacao(usuario),
-                      perigo: ativo,
-                      desabilitada: emAndamento,
-                    },
-                  ]}
-                />
-              </td>
-            </tr>
-          )
-        })}
-      </tbody>
-    </table>
+                  <MenuOpcoes
+                    rotulo={`Opções de ${usuario.nomeCompleto}`}
+                    opcoes={[
+                      { rotulo: 'Editar', aoEscolher: () => onEditar(usuario) },
+                      {
+                        rotulo: ativo ? 'Desativar' : 'Reativar',
+                        aoEscolher: () => onAlterarSituacao(usuario),
+                        perigo: ativo,
+                        desabilitada: emAndamento,
+                      },
+                    ]}
+                  />
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
   )
 }

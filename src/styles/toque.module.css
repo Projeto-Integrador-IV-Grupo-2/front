@@ -1,0 +1,24 @@
+/*
+ * Alvos de toque no celular.
+ *
+ * Regra global (daí o `:global`), em um arquivo `.module.css` só para poder
+ * importar o breakpoint com `@value` — `global.css` é CSS comum e não tem
+ * acesso aos `@value`. É carregado uma vez, em `main.tsx`.
+ *
+ * Abaixo de 640px todo controle clicável tem no mínimo 44px de altura, a
+ * medida recomendada para o dedo. Caixas de marcação e botões de rádio ficam
+ * de fora: o alvo deles é o próprio rótulo.
+ */
+
+@value ateCelular from './breakpoints.module.css';
+
+@media ateCelular {
+  :global(button),
+  :global(a[role='button']),
+  :global(select),
+  :global(
+    input:not([type='checkbox']):not([type='radio']):not([type='range'])
+  ) {
+    min-height: 44px;
+  }
+}

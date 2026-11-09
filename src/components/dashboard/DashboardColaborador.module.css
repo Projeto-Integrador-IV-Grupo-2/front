@@ -1,3 +1,5 @@
+@value ateCelular from '../../styles/breakpoints.module.css';
+
 /* Peças só do colaborador; listas e selos vêm de ListaDashboard.module.css. */
 
 /* "Continue de onde parou", o destaque do topo no protótipo. */
@@ -129,7 +131,7 @@
   color: var(--color-primary);
 }
 
-@media (max-width: 560px) {
+@media ateCelular {
   .continuar {
     flex-wrap: wrap;
   }
