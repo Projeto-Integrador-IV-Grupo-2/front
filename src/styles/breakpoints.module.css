@@ -1,0 +1,30 @@
+/*
+ * Breakpoints do projeto — ponto único de verdade do CSS.
+ *
+ * Nenhum arquivo de estilo escreve a largura do breakpoint: todos importam os
+ * valores daqui com `@value` e usam `@media ateCelular` / `@media ateTablet`.
+ * Mudar a faixa de uma tela é mudar este arquivo.
+ *
+ *   @value ateCelular from '../../styles/breakpoints.module.css';
+ *
+ *   @media ateCelular {
+ *     .cartao { ... }
+ *   }
+ *
+ * Os mesmos números existem para o código TypeScript em `breakpoints.ts`
+ * (usados pelo hook `useTelaPequena`). Alterou aqui, altere lá.
+ *
+ * Faixas:
+ *   celular  →  até 640px
+ *   tablet   →  de 641px até 1024px
+ *   desktop  →  a partir de 1025px
+ */
+
+/* Larguras-limite, para quem precisa do número (ex.: `max-width`). */
+@value larguraCelular: 640px;
+@value larguraTablet: 1024px;
+
+/* Condições de media query. O valor é repetido de propósito: `@value` não
+   interpola outro `@value` dentro dos parênteses de uma media query. */
+@value ateCelular: (max-width: 640px);
+@value ateTablet: (max-width: 1024px);

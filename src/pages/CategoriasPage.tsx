@@ -152,34 +152,36 @@ export function CategoriasPage() {
       )}
 
       {categorias && categorias.length > 0 && (
-        <table className={styles.tabela}>
-          <thead>
-            <tr>
-              <th scope="col">Nome</th>
-              <th scope="col">Descrição</th>
-              {podeGerenciar && <th scope="col">Ações</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {categorias.map((categoria) => (
-              <tr key={categoria.id}>
-                <td>{categoria.nome}</td>
-                <td>{categoria.descricao ?? '—'}</td>
-                {podeGerenciar && (
-                  <td>
-                    <button
-                      type="button"
-                      onClick={() => abrir(categoria)}
-                      aria-label={`Editar ${categoria.nome}`}
-                    >
-                      Editar
-                    </button>
-                  </td>
-                )}
+        <div className={styles.rolagemTabela}>
+          <table className={styles.tabela}>
+            <thead>
+              <tr>
+                <th scope="col">Nome</th>
+                <th scope="col">Descrição</th>
+                {podeGerenciar && <th scope="col">Ações</th>}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {categorias.map((categoria) => (
+                <tr key={categoria.id}>
+                  <td data-rotulo="Nome">{categoria.nome}</td>
+                  <td data-rotulo="Descrição">{categoria.descricao ?? '—'}</td>
+                  {podeGerenciar && (
+                    <td data-rotulo="Ações">
+                      <button
+                        type="button"
+                        onClick={() => abrir(categoria)}
+                        aria-label={`Editar ${categoria.nome}`}
+                      >
+                        Editar
+                      </button>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {formularioAberto && (

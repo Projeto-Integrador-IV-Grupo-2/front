@@ -1,3 +1,5 @@
+@value ateCelular from '../../styles/breakpoints.module.css';
+
 .secao {
   display: flex;
   min-width: 0;
@@ -149,7 +151,7 @@
   opacity: 0.6;
 }
 
-@media (max-width: 640px) {
+@media ateCelular {
   .salvar {
     width: 100%;
   }

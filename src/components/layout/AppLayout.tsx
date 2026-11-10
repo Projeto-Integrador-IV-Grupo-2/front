@@ -9,14 +9,13 @@ import {
 import { LogoIcon } from '../Logo.tsx'
 import { AvatarUsuario } from '../comum/AvatarUsuario.tsx'
 import { useAuth } from '../../hooks/useAuth.ts'
-import { useMediaQuery } from '../../hooks/useMediaQuery.ts'
+import { useTelaAteTablet } from '../../hooks/useTelaPequena.ts'
 import { useTema } from '../../hooks/useTema.ts'
 import { ROTAS } from '../../routes/paths.ts'
 import { itensMenuPara } from '../../routes/permissions.ts'
 import type { UserRole } from '../../types/user.ts'
 import styles from './AppLayout.module.css'
 
-const MOBILE_QUERY = '(max-width: 900px)'
 const CONTEUDO_ID = 'conteudo-principal'
 
 const ROTULO_PERFIL: Record<UserRole, string> = {
@@ -56,7 +55,9 @@ export function AppLayout() {
   const { tema, alternar: alternarTema } = useTema()
   const navigate = useNavigate()
   const location = useLocation()
-  const isMobile = useMediaQuery(MOBILE_QUERY)
+  // Celular e tablet: a mesma faixa em que o CSS tira a barra lateral do
+  // fluxo e a transforma em gaveta (ver AppLayout.module.css).
+  const isMobile = useTelaAteTablet()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [eraMobile, setEraMobile] = useState(isMobile)
   const alternarRef = useRef<HTMLButtonElement>(null)

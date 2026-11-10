@@ -1,3 +1,5 @@
+@value ateCelular from '../../styles/breakpoints.module.css';
+
 .barra {
   display: flex;
   align-items: center;
@@ -55,7 +57,7 @@
   color: var(--color-danger);
 }
 
-@media (max-width: 640px) {
+@media ateCelular {
   .linha {
     grid-template-columns: minmax(0, 1fr) auto;
   }

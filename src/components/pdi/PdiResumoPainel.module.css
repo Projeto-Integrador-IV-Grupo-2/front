@@ -1,3 +1,5 @@
+@value ateCelular from '../../styles/breakpoints.module.css';
+
 .painel {
   display: flex;
   flex-direction: column;
@@ -43,7 +45,7 @@
   font-weight: 500;
 }
 
-@media (max-width: 640px) {
+@media ateCelular {
   .dados {
     grid-template-columns: minmax(0, 1fr);
   }
