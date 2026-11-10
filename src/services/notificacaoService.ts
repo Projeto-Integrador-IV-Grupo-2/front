@@ -24,11 +24,14 @@ export class NotificacaoServiceError extends Error {
   }
 }
 
-function falha(error: unknown, padrao: string): NotificacaoServiceError {
+function falha(
+  error: unknown,
+  padrao: string,
+  mensagem404?: string,
+): NotificacaoServiceError {
   const { message, status } = normalizarErro(error, padrao, {
     mensagens: {
-      // Notificação de outra pessoa (ou que sumiu na limpeza) responde 404.
-      [HTTP_STATUS.NOT_FOUND]: 'Esta notificação não existe mais.',
+      ...(mensagem404 ? { [HTTP_STATUS.NOT_FOUND]: mensagem404 } : {}),
       [HTTP_STATUS.INTERNAL_SERVER_ERROR]: MENSAGENS_DE_ERRO.ERRO_DO_SERVIDOR,
     },
   })
@@ -87,7 +90,11 @@ export async function marcarComoLida(id: string): Promise<Notificacao> {
     )
     return data
   } catch (error) {
-    throw falha(error, 'Não foi possível marcar a notificação como lida.')
+    throw falha(
+      error,
+      'Não foi possível marcar a notificação como lida.',
+      'Esta notificação não existe mais.',
+    )
   }
 }
 

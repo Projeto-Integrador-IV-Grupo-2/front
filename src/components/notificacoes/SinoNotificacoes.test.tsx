@@ -399,6 +399,49 @@ describe('atualização do contador', () => {
     await new Promise((resolver) => setTimeout(resolver, 50))
     expect(chamadas.total).toBe(antes)
   })
+
+  it('não restaura um total antigo enquanto a marcação está pendente', async () => {
+    servidorDeNotificacoes(notificacoes(1))
+    let total = 1
+    let chamadasDeTotal = 0
+    let patchIniciada = false
+    let liberarPatch: (() => void) | undefined
+    const patchPendente = new Promise<void>((resolver) => {
+      liberarPatch = resolver
+    })
+    server.use(
+      http.get('*/api/notificacoes/nao-lidas/total', () => {
+        chamadasDeTotal++
+        return HttpResponse.json({ total })
+      }),
+      http.patch('*/api/notificacoes/:id/lida', async ({ params }) => {
+        patchIniciada = true
+        await patchPendente
+        total = 0
+        return HttpResponse.json(
+          criarNotificacao({ id: String(params.id), lida: true }),
+        )
+      }),
+    )
+    renderizar('/notificacoes')
+    await sino('Notificações, 1 não lida')
+    const lista = await screen.findByRole('list')
+
+    await userEvent.click(
+      within(lista).getByRole('button', { name: /^Não lida/ }),
+    )
+    await esperarAte(() => patchIniciada)
+    expect(await sino('Notificações, nenhuma não lida')).toBeInTheDocument()
+
+    const antes = chamadasDeTotal
+    act(() => vi.advanceTimersByTime(INTERVALO_ATUALIZACAO_MS))
+    await esperarAte(() => chamadasDeTotal === antes + 1)
+    expect(await sino('Notificações, nenhuma não lida')).toBeInTheDocument()
+    act(() => liberarPatch?.())
+    act(() => liberarPatch?.())
+    await esperarAte(() => chamadasDeTotal === antes + 2)
+    expect(await sino('Notificações, nenhuma não lida')).toBeInTheDocument()
+  })
 })
 
 describe('NotificacoesPage', () => {
@@ -450,6 +493,36 @@ describe('NotificacoesPage', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /^Não lidas/ }))
 
+    expect(
+      await screen.findByText('Nenhuma notificação não lida'),
+    ).toBeInTheDocument()
+  })
+
+  it('marcar todas no filtro de não lidas retorna à primeira página e recarrega', async () => {
+    const chamadas = servidorDeNotificacoes(notificacoes(25))
+    renderizar('/notificacoes')
+    await screen.findByRole('list')
+    await userEvent.click(screen.getByRole('button', { name: /^Não lidas/ }))
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Próxima' }),
+    )
+    expect(await screen.findByText('Página 2 de 2')).toBeInTheDocument()
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Marcar todas como lidas' }),
+    )
+
+    expect(
+      await screen.findByText('Nenhuma notificação não lida'),
+    ).toBeInTheDocument()
+    await waitFor(() =>
+      expect(chamadas.lista.at(-1)?.searchParams.get('page')).toBe('0'),
+    )
+    expect(chamadas.lista.at(-1)?.searchParams.get('naoLidas')).toBe('true')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Todas' }))
+    expect(await screen.findByText('Página 1 de 2')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /^Não lidas/ }))
     expect(
       await screen.findByText('Nenhuma notificação não lida'),
     ).toBeInTheDocument()

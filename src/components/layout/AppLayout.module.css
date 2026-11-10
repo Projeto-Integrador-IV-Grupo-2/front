@@ -6,6 +6,7 @@
 .sidebar {
   position: sticky;
   top: 0;
+  z-index: 11;
   /* dvh acompanha a altura visível de verdade no mobile; vh fica de reserva
      em navegadores sem suporte. */
   height: 100vh;

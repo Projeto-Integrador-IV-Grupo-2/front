@@ -74,6 +74,7 @@ export function NotificacoesProvider({ children }: { children: ReactNode }) {
   // velho; só a busca mais recente pode escrever.
   const geracaoDoTotal = useRef(0)
   const controladorDoTotal = useRef<AbortController | null>(null)
+  const mutacoesEmVoo = useRef(0)
 
   const buscarTotal = useCallback(() => {
     controladorDoTotal.current?.abort()
@@ -82,7 +83,7 @@ export function NotificacoesProvider({ children }: { children: ReactNode }) {
     const geracao = ++geracaoDoTotal.current
     contarNaoLidas({ signal: controlador.signal })
       .then((novo) => {
-        if (geracao === geracaoDoTotal.current) {
+        if (geracao === geracaoDoTotal.current && mutacoesEmVoo.current === 0) {
           setTotal(novo)
         }
       })
@@ -133,7 +134,7 @@ export function NotificacoesProvider({ children }: { children: ReactNode }) {
     }
   }, [usuarioId, buscarTotal, invalidarTotalEmVoo])
 
-  const marcoAtual = useCallback(() => marcoRef.current, [])
+  const marcoAtual = useCallback(() => marcoTodasLidas, [marcoTodasLidas])
 
   const estaLida = useCallback(
     (notificacao: Notificacao, carregadaEm: MarcoDeCarga) =>
@@ -150,6 +151,7 @@ export function NotificacoesProvider({ children }: { children: ReactNode }) {
       }
       // Otimista: o clique navega na hora e o sino já mostra o número novo.
       invalidarTotalEmVoo()
+      mutacoesEmVoo.current++
       setLidasNaSessao((atual) => new Set(atual).add(notificacao.id))
       setTotal((atual) => (atual === null ? atual : Math.max(0, atual - 1)))
       try {
@@ -160,21 +162,32 @@ export function NotificacoesProvider({ children }: { children: ReactNode }) {
           sem.delete(notificacao.id)
           return sem
         })
-        // O número certo vem da API (a notificação pode ter sumido).
-        buscarTotal()
         throw erro
+      } finally {
+        mutacoesEmVoo.current--
+        if (mutacoesEmVoo.current === 0) {
+          buscarTotal()
+        }
       }
     },
     [estaLida, invalidarTotalEmVoo, buscarTotal],
   )
 
   const marcarTodasComoLidas = useCallback(async () => {
-    await pedirMarcarTodas()
     invalidarTotalEmVoo()
-    marcoRef.current += 1
-    setMarcoTodasLidas(marcoRef.current)
-    setTotal(0)
-  }, [invalidarTotalEmVoo])
+    mutacoesEmVoo.current++
+    try {
+      await pedirMarcarTodas()
+      marcoRef.current += 1
+      setMarcoTodasLidas(marcoRef.current)
+      setTotal(0)
+    } finally {
+      mutacoesEmVoo.current--
+      if (mutacoesEmVoo.current === 0) {
+        buscarTotal()
+      }
+    }
+  }, [invalidarTotalEmVoo, buscarTotal])
 
   const value = useMemo<NotificacoesContextValue>(
     () => ({

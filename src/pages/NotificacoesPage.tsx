@@ -93,8 +93,12 @@ export function NotificacoesPage() {
   const totalPaginas = dados ? Math.max(1, dados.page.totalPages) : 1
 
   function trocarFiltro(filtro: Filtro) {
-    if (filtro !== consulta.filtro) {
-      setConsulta({ filtro, pagina: 0, tentativa: consulta.tentativa })
+    if (filtro !== consulta.filtro || consulta.pagina !== 0) {
+      setConsulta((anterior) => ({
+        ...anterior,
+        filtro,
+        pagina: 0,
+      }))
     }
   }
 
@@ -107,6 +111,7 @@ export function NotificacoesPage() {
     setErroAcao(null)
     try {
       await marcarTodasComoLidas()
+      setConsulta((anterior) => ({ ...anterior, pagina: 0 }))
     } catch (causa) {
       setErroAcao(
         mensagemDe(

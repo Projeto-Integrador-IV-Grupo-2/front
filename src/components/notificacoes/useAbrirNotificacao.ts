@@ -4,13 +4,17 @@ import type { MarcoDeCarga } from '../../contexts/NotificacoesContext.tsx'
 import { useNotificacoes } from '../../hooks/useNotificacoes.ts'
 import type { Notificacao } from '../../types/notificacao.ts'
 
-/**
- * Só rota interna da aplicação: começa com "/" e não com "//" (que o navegador
- * leria como outro domínio). O link vem da API, mas o front não confia nele
- * para sair do site.
- */
 export function ehRotaInterna(link: string | null): link is string {
-  return link !== null && link.startsWith('/') && !link.startsWith('//')
+  if (link === null) {
+    return false
+  }
+  try {
+    return (
+      new URL(link, window.location.origin).origin === window.location.origin
+    )
+  } catch {
+    return false
+  }
 }
 
 /**

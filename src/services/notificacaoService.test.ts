@@ -85,6 +85,26 @@ describe('notificacaoService', () => {
     expect((erro as NotificacaoServiceError).status).toBe(404)
   })
 
+  it('404 na listagem e na contagem não diz que uma notificação sumiu', async () => {
+    server.use(
+      http.get('*/api/notificacoes', () =>
+        HttpResponse.json({ message: 'Rota não encontrada.' }, { status: 404 }),
+      ),
+      http.get('*/api/notificacoes/nao-lidas/total', () =>
+        HttpResponse.json({ message: 'Rota não encontrada.' }, { status: 404 }),
+      ),
+    )
+
+    await expect(listarNotificacoes()).rejects.toMatchObject({
+      message: 'Rota não encontrada.',
+      status: 404,
+    })
+    await expect(contarNaoLidas()).rejects.toMatchObject({
+      message: 'Rota não encontrada.',
+      status: 404,
+    })
+  })
+
   it('erro do servidor não mostra a mensagem técnica', async () => {
     server.use(
       http.get('*/api/notificacoes', () =>
