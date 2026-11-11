@@ -9,6 +9,7 @@ import {
   criarDashboardColaborador,
   criarDashboardGestao,
   criarMensagemAssistente,
+  criarNotificacao,
   criarSessaoAssistente,
   criarPagina,
   criarPaginaTrilhas,
@@ -297,4 +298,24 @@ export const handlers = [
 
   // Histórico vazio por padrão: só os testes do Histórico tratam dele.
   http.get('*/api/historico', () => HttpResponse.json(criarPagina([]))),
+
+  // Notificações (back #78): o sino está em toda tela logada, então todo
+  // teste com o layout passa por aqui. Por padrão, nenhuma.
+  http.get('*/api/notificacoes/nao-lidas/total', () =>
+    HttpResponse.json({ total: 0 }),
+  ),
+  http.get('*/api/notificacoes', () => HttpResponse.json(criarPagina([]))),
+  http.patch('*/api/notificacoes/:id/lida', ({ params }) =>
+    HttpResponse.json(
+      criarNotificacao({
+        id: String(params.id),
+        lida: true,
+        lidaEm: new Date().toISOString(),
+      }),
+    ),
+  ),
+  http.patch(
+    '*/api/notificacoes/lidas',
+    () => new HttpResponse(null, { status: 204 }),
+  ),
 ]

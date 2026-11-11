@@ -8,6 +8,7 @@
 .sidebar {
   position: sticky;
   top: 0;
+  z-index: 11;
   /* dvh acompanha a altura visível de verdade no mobile; vh fica de reserva
      em navegadores sem suporte. */
   height: 100vh;
@@ -35,6 +36,10 @@
   font-size: 1.125rem;
   font-weight: 700;
   color: var(--color-text);
+}
+
+.sinoLateral {
+  margin-left: auto;
 }
 
 .nav {
@@ -264,24 +269,6 @@
   display: flex;
   align-items: center;
   gap: var(--space-4);
-}
-
-.bellButton {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  background: none;
-  border: none;
-  border-radius: var(--radius-sm);
-  color: var(--color-text-muted);
-}
-
-.bellButton:hover {
-  color: var(--color-text);
-  background: var(--color-primary-soft);
 }
 
 .skipLink {

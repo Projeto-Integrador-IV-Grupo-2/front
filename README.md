@@ -389,6 +389,47 @@ fixas por palavra-chave, com os dados no `localStorage` (chave
 
 ---
 
+## Notificações (issue #79)
+
+O sino mostra o número de não lidas e abre um painel com as mais recentes. No
+desktop ele fica na barra lateral, ao lado da marca; no celular, na barra
+superior, e o painel ocupa a largura da tela. Só um sino é montado por vez.
+
+| Tela            | O que faz                                                                      |
+| --------------- | ------------------------------------------------------------------------------ |
+| Sino (layout)   | Contador ("9+" acima de 9), painel com as 8 mais recentes e "Marcar todas"     |
+| `/notificacoes` | Lista paginada (20 por página), filtro "Não lidas" e "Marcar todas como lidas" |
+
+Chamadas (back #78), todas no `notificacaoService`, pelo cliente `api`:
+`GET /api/notificacoes` (`page`, `size`, `naoLidas`),
+`GET /api/notificacoes/nao-lidas/total`, `PATCH /api/notificacoes/{id}/lida` e
+`PATCH /api/notificacoes/lidas`.
+
+Como funciona:
+
+- **Observer** — o `NotificacoesContext` guarda o total e o que foi marcado
+  como lido na sessão. O sino e a página leem dele: marcar num lugar atualiza
+  o outro sem nova busca. O provider vive no `AppLayout`, então só existe com
+  alguém logado.
+- **Atualização do contador** — a cada 60 s com a aba visível. Esconder a aba
+  para o intervalo; voltar a ela busca na hora e recomeça. Deslogar desmonta o
+  layout e encerra tudo. Uma resposta que saiu antes de uma marcação é
+  descartada, para não trazer o número velho de volta.
+- **Clique numa notificação** — marca como lida (otimista: o contador cai na
+  hora e volta se a API recusar) e navega para o `link`. Só rota interna é
+  seguida (começa com `/` e não com `//`).
+- **Factory Method** — `apresentacaoDe(tipo)` escolhe ícone, rótulo e cor de
+  cada tipo. Tipo que a API passar a mandar antes do front conhecer aparece
+  com o ícone genérico.
+- **Acessibilidade** — o sino tem `aria-label` com o total exato
+  ("Notificações, 12 não lidas"); o painel abre e fecha pelo teclado, recebe o
+  foco ao abrir, fecha com Esc (o foco volta ao sino), com clique fora ou
+  quando o Tab sai dele. Cada item diz se está lido e o tipo.
+- Carregando, vazio ("Tudo em dia") e erro (com "Tentar novamente") são
+  estados diferentes, no painel e na página.
+
+---
+
 ## Rotas e permissões
 
 | Rota                   | Quem acessa                                               |
@@ -397,6 +438,7 @@ fixas por palavra-chave, com os dados no `localStorage` (chave
 | `/esqueci-senha`       | só quem não está logado (logado vai para a tela inicial)  |
 | `/redefinir-senha`     | só quem não está logado (logado vai para a tela inicial)  |
 | `/dashboard`           | qualquer usuário autenticado                              |
+| `/notificacoes`        | qualquer usuário autenticado                              |
 | `/trilhas`             | qualquer usuário autenticado                              |
 | `/trilhas/:id`         | qualquer usuário autenticado                              |
 | `/trilhas/:id/estudar` | qualquer usuário autenticado                              |

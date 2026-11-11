@@ -11,6 +11,7 @@ import { AssistentePage } from '../pages/AssistentePage.tsx'
 import { AreasPage } from '../pages/AreasPage.tsx'
 import { CategoriasPage } from '../pages/CategoriasPage.tsx'
 import { ConhecimentoPage } from '../pages/ConhecimentoPage.tsx'
+import { NotificacoesPage } from '../pages/NotificacoesPage.tsx'
 import { DocumentoDetalhePage } from '../pages/DocumentoDetalhePage.tsx'
 import { ConteudosPage } from '../pages/ConteudosPage.tsx'
 import { DashboardPage } from '../pages/DashboardPage.tsx'
@@ -47,6 +48,8 @@ export const routes: RouteObject[] = [
         element: <AppLayout />,
         children: [
           { path: ROTAS.dashboard, element: <DashboardPage /> },
+          // Todo perfil recebe notificações.
+          { path: ROTAS.notificacoes, element: <NotificacoesPage /> },
           { path: ROTAS.trilhas, element: <TrilhasPage /> },
           { path: ROTAS.trilhaDetalhe, element: <TrilhaDetalhePage /> },
           // Rota estática: o router a prefere a /trilhas/:id.

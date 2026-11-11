@@ -8,6 +8,8 @@ export const ROTAS = {
   esqueciSenha: '/esqueci-senha',
   redefinirSenha: '/redefinir-senha',
   dashboard: '/dashboard',
+  // Fora do menu: o atalho é o "Ver todas" do sino.
+  notificacoes: '/notificacoes',
   usuarios: '/usuarios',
   trilhas: '/trilhas',
   trilhaDetalhe: '/trilhas/:id',
