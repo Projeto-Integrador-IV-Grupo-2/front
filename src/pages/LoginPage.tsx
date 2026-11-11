@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { LoginForm } from '../components/LoginForm.tsx'
 import {
@@ -16,6 +17,16 @@ export function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const estado = location.state as EstadoDoLogin | null
+  const [aviso, setAviso] = useState(() => estado?.aviso ?? null)
+
+  useEffect(() => {
+    if (estado?.aviso) {
+      navigate(`${location.pathname}${location.search}${location.hash}`, {
+        replace: true,
+        state: estado.from ? { from: estado.from } : null,
+      })
+    }
+  }, [estado, location.hash, location.pathname, location.search, navigate])
 
   // O ProtectedRoute guarda em `state.from` a página que o usuário tentou
   // abrir; depois do login ele volta para lá em vez de cair sempre no
@@ -28,8 +39,8 @@ export function LoginPage() {
 
   return (
     <TelaDeAcesso titulo="Entrar" subtitulo="Acesse com sua conta corporativa.">
-      <AvisoDeAcesso mensagem={estado?.aviso ?? null} />
-      <LoginForm onSuccess={handleSuccess} />
+      <AvisoDeAcesso mensagem={aviso} />
+      <LoginForm onAttempt={() => setAviso(null)} onSuccess={handleSuccess} />
     </TelaDeAcesso>
   )
 }

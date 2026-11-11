@@ -17,6 +17,7 @@ interface FieldErrors {
 
 interface LoginFormProps {
   onSuccess: (user: User) => void
+  onAttempt?: () => void
 }
 
 function validate(email: string, password: string): FieldErrors {
@@ -123,7 +124,7 @@ const OPCOES_DE_PERFIL: Array<{
 ]
 
 /** Formulário de login — validação, chamada ao AuthContext e feedback de erro/loading. */
-export function LoginForm({ onSuccess }: LoginFormProps) {
+export function LoginForm({ onSuccess, onAttempt }: LoginFormProps) {
   const { login } = useAuth()
   const emailId = useId()
   const passwordId = useId()
@@ -142,6 +143,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       return
     }
 
+    onAttempt?.()
     const validationErrors = validate(email, password)
     setFieldErrors(validationErrors)
     if (Object.keys(validationErrors).length > 0) {

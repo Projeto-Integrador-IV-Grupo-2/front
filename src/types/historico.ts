@@ -1,11 +1,13 @@
 /** Tipo da interação (enum `TipoInteracaoHistorico` da API). */
-export type TipoInteracao =
-  | 'TRILHA_ACESSADA'
-  | 'TRILHA_INICIADA'
-  | 'TRILHA_CONCLUIDA'
-  | 'ASSISTENTE_CONSULTADO'
-  /** Senha redefinida pelo link de "esqueci minha senha" (back #76). */
-  | 'SENHA_REDEFINIDA'
+export const TIPOS_INTERACAO = [
+  'TRILHA_ACESSADA',
+  'TRILHA_INICIADA',
+  'TRILHA_CONCLUIDA',
+  'ASSISTENTE_CONSULTADO',
+  'SENHA_REDEFINIDA',
+] as const
+
+export type TipoInteracao = (typeof TIPOS_INTERACAO)[number]
 
 /**
  * Uma interação do histórico (record `HistoricoInteracaoResponse`).

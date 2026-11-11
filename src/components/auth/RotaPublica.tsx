@@ -1,4 +1,4 @@
-import { Navigate, Outlet } from 'react-router-dom'
+import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth.ts'
 import { ROTAS } from '../../routes/paths.ts'
 import styles from './ProtectedRoute.module.css'
@@ -10,6 +10,7 @@ import styles from './ProtectedRoute.module.css'
  */
 export function RotaPublica() {
   const { isAuthenticated, isLoading } = useAuth()
+  const location = useLocation()
 
   if (isLoading) {
     return (
@@ -18,7 +19,10 @@ export function RotaPublica() {
       </p>
     )
   }
-  if (isAuthenticated) {
+  const redefinicaoComToken =
+    location.pathname === ROTAS.redefinirSenha &&
+    Boolean(new URLSearchParams(location.search).get('token'))
+  if (isAuthenticated && !redefinicaoComToken) {
     return <Navigate to={ROTAS.dashboard} replace />
   }
   return <Outlet />

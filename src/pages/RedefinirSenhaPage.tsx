@@ -1,4 +1,4 @@
-import { useEffect, useId, useState, type FormEvent } from 'react'
+import { useId, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { RegrasSenha } from '../components/auth/RegrasSenha.tsx'
 import { TelaDeAcesso } from '../components/auth/TelaDeAcesso.tsx'
@@ -19,16 +19,15 @@ interface ErrosCampo {
 /**
  * Redefinição de senha pelo link do e-mail (issue #77).
  *
- * <p>O token é lido da URL uma vez, fica só na memória do componente (nunca
- * no localStorage) e sai da URL na hora, com `replace` — não sobra no
- * histórico do navegador. Senhas diferentes ou fora da regra não chamam a
- * API. Link inválido ou expirado mostra a mensagem e o caminho para pedir
- * outro.</p>
+ * <p>O token permanece na URL para que recarregar ou voltar à página não
+ * invalide o link; ele nunca é salvo no localStorage. Senhas diferentes ou
+ * fora da regra não chamam a API. Link inválido ou expirado mostra a mensagem
+ * e o caminho para pedir outro.</p>
  */
 export function RedefinirSenhaPage() {
   const navigate = useNavigate()
-  const [parametros, setParametros] = useSearchParams()
-  const [token] = useState(() => parametros.get('token'))
+  const [parametros] = useSearchParams()
+  const token = parametros.get('token')
   const senhaId = useId()
   const confirmacaoId = useId()
   const regrasId = useId()
@@ -39,13 +38,6 @@ export function RedefinirSenhaPage() {
   const [erro, setErro] = useState<string | null>(null)
   const [linkInvalido, setLinkInvalido] = useState<string | null>(null)
   const [salvando, setSalvando] = useState(false)
-
-  // Tira o token da URL e do histórico assim que ele foi lido.
-  useEffect(() => {
-    if (parametros.has('token')) {
-      setParametros({}, { replace: true })
-    }
-  }, [parametros, setParametros])
 
   async function enviar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault()

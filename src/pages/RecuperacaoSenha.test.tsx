@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { delay, http, HttpResponse } from 'msw'
 import { Outlet, useLocation, type RouteObject } from 'react-router-dom'
@@ -168,17 +168,15 @@ describe('Esqueci minha senha', () => {
 })
 
 describe('Redefinir senha', () => {
-  it('lê o token e tira ele da URL', async () => {
+  it('mantém o token na URL para permitir recarregar e voltar à página', async () => {
     renderizarComProvedores({
       rota: `/redefinir-senha?token=${TOKEN}`,
       routes: rotasComUrl,
     })
 
     await screen.findByRole('heading', { name: 'Criar nova senha' })
-    await waitFor(() =>
-      expect(screen.getByTestId('url')).toHaveTextContent(
-        /^\/redefinir-senha$/,
-      ),
+    expect(screen.getByTestId('url')).toHaveTextContent(
+      new RegExp(`^/redefinir-senha\\?token=${TOKEN}$`),
     )
     expect(window.localStorage.getItem('token')).toBeNull()
     expect(JSON.stringify(window.localStorage)).not.toContain(TOKEN)
@@ -317,7 +315,7 @@ describe('Usuário já logado', () => {
     },
   ]
 
-  it.each(['/esqueci-senha', `/redefinir-senha?token=${TOKEN}`])(
+  it.each(['/esqueci-senha', '/redefinir-senha'])(
     'quem abre %s logado vai para a tela inicial',
     async (rota) => {
       renderizarComProvedores({
@@ -331,4 +329,24 @@ describe('Usuário já logado', () => {
       expect(screen.queryByText(/tela de (esqueci|redefinir)/)).toBeNull()
     },
   )
+
+  it('permite redefinir a senha com o link do e-mail mesmo já autenticado', async () => {
+    const corpos = registrarRedefinicoes()
+    renderizarComProvedores({
+      rota: `/redefinir-senha?token=${TOKEN}`,
+      usuario: criarUsuario(),
+      routes: rotasComUrl,
+    })
+
+    await screen.findByRole('heading', { name: 'Criar nova senha' })
+    expect(screen.getByTestId('url')).toHaveTextContent(
+      new RegExp(`^/redefinir-senha\\?token=${TOKEN}$`),
+    )
+    await preencherSenhas('NovaSenha1')
+
+    expect(
+      await screen.findByText('Senha redefinida. Entre com a nova senha.'),
+    ).toBeInTheDocument()
+    expect(corpos).toEqual([{ token: TOKEN, novaSenha: 'NovaSenha1' }])
+  })
 })

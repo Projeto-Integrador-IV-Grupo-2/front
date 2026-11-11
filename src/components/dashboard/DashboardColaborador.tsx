@@ -9,6 +9,7 @@ import type {
   ProximoPrazoDashboard,
   ResumoStatusDashboard,
 } from '../../types/dashboard.ts'
+import { TIPOS_INTERACAO } from '../../types/historico.ts'
 import {
   ROTULOS_STATUS_PROGRESSO,
   type StatusProgresso,
@@ -47,6 +48,10 @@ interface TrilhaParaContinuar {
   trilhaId: string
   trilhaNome: string
   detalhe: string
+}
+
+type AtividadeDeTrilha = HistoricoInteracaoDashboard & {
+  tipo: keyof typeof ROTULOS_INTERACAO
 }
 
 export function DashboardColaborador({ saudacao }: { saudacao: ReactNode }) {
@@ -380,11 +385,7 @@ function PrazoItem({ prazo }: { prazo: ProximoPrazoDashboard }) {
   )
 }
 
-function AtividadeItem({
-  atividade,
-}: {
-  atividade: HistoricoInteracaoDashboard
-}) {
+function AtividadeItem({ atividade }: { atividade: AtividadeDeTrilha }) {
   const trilhaNome = texto(atividade.detalhes?.trilhaNome) ?? 'uma trilha'
   const acao = ROTULOS_INTERACAO[atividade.tipo] ?? 'interagiu com'
   const quando = formatarDataHora(atividade.criadoEm)
@@ -498,7 +499,9 @@ function listaDePrazosValida(valor: unknown): valor is ProximoPrazoDashboard[] {
   )
 }
 
-function ehAtividadeDeTrilha(atividade: HistoricoInteracaoDashboard): boolean {
+function ehAtividadeDeTrilha(
+  atividade: HistoricoInteracaoDashboard,
+): atividade is AtividadeDeTrilha {
   return Object.prototype.hasOwnProperty.call(ROTULOS_INTERACAO, atividade.tipo)
 }
 
@@ -515,6 +518,7 @@ function listaDeAtividadesValida(
         typeof atividade.id === 'string' &&
         atividade.id.trim().length > 0 &&
         typeof atividade.tipo === 'string' &&
+        TIPOS_INTERACAO.some((tipo) => tipo === atividade.tipo) &&
         typeof atividade.criadoEm === 'string' &&
         !Number.isNaN(Date.parse(atividade.criadoEm)) &&
         detalhes !== null &&

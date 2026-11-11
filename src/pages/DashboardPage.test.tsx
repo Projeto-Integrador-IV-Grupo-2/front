@@ -125,6 +125,65 @@ describe('DashboardPage', () => {
     expect(screen.getByText(/Veja seu progresso/)).toBeInTheDocument()
   })
 
+  it('aceita tipos de histórico conhecidos e exibe as atividades de trilha', async () => {
+    const base = criarDashboardColaborador()
+    const atividade = base.ultimasAtividades[0]
+    server.use(
+      http.get('*/api/dashboard/colaborador', () =>
+        HttpResponse.json({
+          ...base,
+          ultimasAtividades: [
+            {
+              ...atividade,
+              id: 'assistente',
+              tipo: 'ASSISTENTE_CONSULTADO',
+              detalhes: { encontrouFontes: true },
+            },
+            {
+              ...atividade,
+              id: 'senha',
+              tipo: 'SENHA_REDEFINIDA',
+              detalhes: {},
+            },
+            atividade,
+          ],
+        }),
+      ),
+    )
+    renderizarComProvedores({
+      rota: rotaDashboard,
+      usuario: criarUsuario({ papel: 'COLABORADOR' }),
+    })
+
+    expect(await screen.findByText(/Você iniciou/)).toBeInTheDocument()
+    expect(
+      screen.queryByText('A API retornou uma lista de atividades inválida.'),
+    ).not.toBeInTheDocument()
+  })
+
+  it('rejeita tipos de interação que não existem na API', async () => {
+    const base = criarDashboardColaborador()
+    const atividade = base.ultimasAtividades[0]
+    server.use(
+      http.get('*/api/dashboard/colaborador', () =>
+        HttpResponse.json({
+          ...base,
+          ultimasAtividades: [{ ...atividade, tipo: 'EVENTO_DESCONHECIDO' }],
+        }),
+      ),
+    )
+    renderizarComProvedores({
+      rota: rotaDashboard,
+      usuario: criarUsuario({ papel: 'COLABORADOR' }),
+    })
+
+    expect(
+      await screen.findByText(
+        'A API retornou uma lista de atividades inválida.',
+      ),
+    ).toBeInTheDocument()
+  })
+
   it('mostra erro do endpoint de gestão sem desmontar a página', async () => {
     server.use(
       http.get('*/api/dashboard/gestao', () =>
