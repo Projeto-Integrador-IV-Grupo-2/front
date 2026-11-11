@@ -52,6 +52,17 @@ export const handlers = [
 
   http.get('*/api/auth/me', () => HttpResponse.json(criarUsuario())),
 
+  // Rotas do perfil (Task 2 do back): o corpo do PUT volta como o novo /me.
+  http.put('*/api/auth/me', async ({ request }) => {
+    const corpo = (await request.json()) as { nomeCompleto: string }
+    return HttpResponse.json(criarUsuario({ nomeCompleto: corpo.nomeCompleto }))
+  }),
+
+  http.patch(
+    '*/api/auth/me/senha',
+    () => new HttpResponse(null, { status: 204 }),
+  ),
+
   http.get('*/api/dashboard/colaborador', () =>
     HttpResponse.json(criarDashboardColaborador()),
   ),

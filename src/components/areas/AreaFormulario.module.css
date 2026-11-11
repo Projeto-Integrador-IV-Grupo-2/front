@@ -1,3 +1,5 @@
+@value ateCelular from '../../styles/breakpoints.module.css';
+
 .backdrop {
   position: fixed;
   inset: 0;
@@ -133,4 +135,30 @@
 .cancelar:disabled {
   opacity: 0.7;
   cursor: not-allowed;
+}
+
+/* No celular o modal vira uma folha presa à base: ocupa a largura da tela e
+   deixa os botões ao alcance do polegar. */
+@media ateCelular {
+  .backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .modal {
+    max-width: none;
+    max-height: 92dvh;
+    padding: var(--space-4);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  }
+
+  .acoes {
+    flex-direction: column-reverse;
+  }
+
+  .cancelar,
+  .salvar {
+    width: 100%;
+    padding: var(--space-3) var(--space-4);
+  }
 }

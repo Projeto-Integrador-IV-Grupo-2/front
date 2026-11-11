@@ -1,3 +1,5 @@
+@value ateCelular from '../../styles/breakpoints.module.css';
+
 .paginacao {
   display: flex;
   align-items: center;
@@ -29,7 +31,7 @@
   opacity: 0.5;
 }
 
-@media (max-width: 640px) {
+@media ateCelular {
   .paginacao {
     justify-content: center;
   }

@@ -1,3 +1,5 @@
+@value ateCelular, ateTablet from '../styles/breakpoints.module.css';
+
 .page {
   display: flex;
   flex-direction: column;
@@ -289,13 +291,13 @@
   }
 }
 
-@media (max-width: 900px) {
+@media ateTablet {
   .colunas {
     grid-template-columns: minmax(0, 1fr);
   }
 }
 
-@media (max-width: 640px) {
+@media ateCelular {
   /* No celular as ações de gestão viram uma coluna de botões largos. */
   .acoesGestao {
     flex-direction: column;

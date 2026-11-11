@@ -1,3 +1,5 @@
+@value ateCelular from '../../styles/breakpoints.module.css';
+
 .painel {
   display: flex;
   flex-direction: column;
@@ -108,7 +110,7 @@
   border: 1px solid var(--color-border);
 }
 
-@media (max-width: 640px) {
+@media ateCelular {
   .painel {
     padding: var(--space-4);
   }

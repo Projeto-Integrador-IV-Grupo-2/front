@@ -453,9 +453,9 @@ src/
 ├── routes/       # definição das rotas (React Router)
 ├── services/     # Axios e chamadas à API — nenhuma página chama o Axios direto
 ├── contexts/     # estado global (ex.: autenticação)
-├── hooks/        # hooks reutilizáveis (ex.: useMediaQuery)
+├── hooks/        # hooks reutilizáveis (ex.: useMediaQuery, useTelaPequena)
 ├── types/        # tipos TypeScript compartilhados
-├── styles/       # estilos globais e tokens de design
+├── styles/       # estilos globais, tokens de design e os breakpoints
 └── test/         # setup, fábricas e mocks HTTP (Vitest + Testing Library + MSW)
 ```
 
@@ -482,6 +482,101 @@ o Axios diretamente. Estado compartilhado (sessão, usuário) vive em
   (`npm run lint` e `npm run format:check`).
 - Todo Pull Request roda lint, testes e build automaticamente
   (`.github/workflows/frontend-ci.yml`, check **Frontend CI**).
+
+---
+
+## Responsividade (issue #80)
+
+As telas funcionam no celular, no tablet e no computador. A regra é uma só:
+**nenhuma tela rola de lado em 360px de largura**. Quando algo não cabe, quem
+rola é o próprio componente (uma tabela, por exemplo), nunca a página.
+
+### Breakpoints
+
+| Faixa   | Largura            | Token do CSS | Constante do TypeScript |
+| ------- | ------------------ | ------------ | ----------------------- |
+| Celular | até 640px          | `ateCelular` | `ATE_CELULAR`           |
+| Tablet  | de 641px a 1024px  | `ateTablet`  | `ATE_TABLET`            |
+| Desktop | a partir de 1025px | —            | —                       |
+
+Os valores vivem em dois arquivos, e **só neles**:
+
+- `src/styles/breakpoints.module.css` — para o CSS;
+- `src/styles/breakpoints.ts` — para o TypeScript.
+
+Uma media query não aceita `var(--...)`, então o número não pode virar uma
+variável CSS comum. O CSS importa o token com `@value`, recurso dos CSS
+Modules:
+
+```css
+@value ateCelular from '../../styles/breakpoints.module.css';
+
+@media ateCelular {
+  .cartao {
+    width: 100%;
+  }
+}
+```
+
+Nenhum `.module.css` escreve `@media (max-width: ...px)` com o número na mão.
+Para conferir, o build gera apenas duas larguras:
+
+```bash
+npm run build && grep -o "@media[^{]*" dist/assets/*.css | sort -u
+```
+
+No TypeScript, quem precisa saber o tamanho da tela usa **um único hook**,
+`src/hooks/useTelaPequena.ts` (`useTelaPequena` para celular,
+`useTelaAteTablet` para celular e tablet). Ele se apoia no `useMediaQuery`,
+que assina o `matchMedia` do navegador e avisa os componentes quando a faixa
+muda — nenhum componente escuta `resize` por conta própria.
+
+### O que muda em cada faixa
+
+- **Menu lateral (`AppLayout`)** — até 1024px a barra sai do fluxo e vira uma
+  gaveta, aberta pelo botão ☰ da barra superior. Ela fecha ao clicar fora, ao
+  navegar (o foco volta para o botão) e ao a janela voltar para desktop.
+- **Tabelas** (Usuários, Áreas, Acompanhamento, Conhecimento e Categorias) —
+  no celular cada linha vira um cartão, com o rótulo da coluna vindo de
+  `data-rotulo`: é a mesma marcação do desktop, só o CSS muda. Acima do
+  celular a tabela fica dentro de um container com `overflow-x: auto`, então
+  a rolagem horizontal, quando precisa existir, acontece dentro da tabela.
+- **Formulários e modais** — no celular ocupam a largura da tela: o modal vira
+  uma folha presa à base (cantos arredondados em cima, até 92% da altura) e os
+  botões ficam empilhados, de ponta a ponta.
+- **Alvos de toque** — abaixo de 640px, botões, selects e campos de texto têm
+  no mínimo 44px de altura (`src/styles/toque.module.css`). Caixas de marcação
+  e botões de rádio ficam de fora: o alvo deles é o próprio rótulo.
+- **Grades de cartões** — quantos cartões cabem por linha é decidido pela
+  própria grade (`repeat(auto-fit, minmax(...))`), não por um breakpoint.
+
+### Telas revisadas
+
+Conferidas em 360px, 768px e 1280px, sem conteúdo cortado e sem rolagem
+horizontal da página:
+
+| Tela                 | Rota                   |
+| -------------------- | ---------------------- |
+| Login                | `/login`               |
+| Visão geral          | `/dashboard`           |
+| Trilhas              | `/trilhas`             |
+| Detalhe da trilha    | `/trilhas/:id`         |
+| Estudo da trilha     | `/trilhas/:id/estudar` |
+| PDI                  | `/trilhas/pdi`         |
+| Editor do PDI        | `/trilhas/pdi/:id`     |
+| Conhecimento         | `/conhecimento`        |
+| Detalhe do documento | `/conhecimento/:id`    |
+| Conteúdos            | `/conteudos`           |
+| Categorias           | `/areas/categorias`    |
+| Assistente           | `/assistente`          |
+| Histórico            | `/historico`           |
+| Acompanhamento       | `/acompanhamento`      |
+| Usuários             | `/usuarios`            |
+| Áreas                | `/areas`               |
+| Perfil               | `/perfil`              |
+
+As notificações ainda não têm tela própria neste repositório (o sino da barra
+superior leva ao Histórico); quando a tela existir, ela entra nesta lista.
 
 ---
 

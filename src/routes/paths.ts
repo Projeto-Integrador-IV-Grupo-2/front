@@ -24,6 +24,8 @@ export const ROTAS = {
   assistente: '/assistente',
   documentoDetalhe: '/conhecimento/:id',
   historico: '/historico',
+  // Fora do menu: o atalho é o cartão do usuário, no rodapé da barra lateral.
+  perfil: '/perfil',
 } as const
 
 /** Caminho do detalhe de uma trilha específica. */

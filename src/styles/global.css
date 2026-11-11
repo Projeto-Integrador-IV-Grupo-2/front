@@ -2,6 +2,10 @@
   color-scheme: light;
 
   /*
+   * Os breakpoints do projeto não ficam aqui: `styles/breakpoints.module.css`
+   * (CSS) e `styles/breakpoints.ts` (TypeScript) são o ponto único deles, já
+   * que uma media query não aceita `var(--...)`.
+   *
    * Cores do protótipo (tema claro, o padrão). Os nomes do protótipo estão ao
    * lado: --accent, --bg, --surface, --ink etc. O tema escuro fica no fim do
    * arquivo e só entra pelo botão "Tema" (html[data-theme='dark']).
@@ -55,9 +59,6 @@
   /* Layout */
   --header-height: 64px;
   --content-max-width: 1120px;
-
-  /* Breakpoint de referência (mantenha em sincronia com useMediaQuery) */
-  --breakpoint-mobile: 640px;
 }
 
 *,

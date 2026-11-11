@@ -1,3 +1,5 @@
+@value ateCelular from '../../styles/breakpoints.module.css';
+
 .tabela {
   width: 100%;
   border-collapse: collapse;
@@ -70,9 +72,25 @@
   min-width: 140px;
 }
 
+/* A rolagem horizontal, quando a tabela não couber, acontece aqui dentro —
+   nunca na página (ver README, "Responsividade"). No celular a tabela vira
+   cartões e não há o que rolar. */
+.rolagem {
+  /* `position: relative` prende aqui dentro os elementos posicionados da
+     tabela (os rótulos `visually-hidden`, por exemplo): sem isso eles se
+     medem contra a página e voltariam a esticá-la de lado. */
+  position: relative;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+
 /* Abaixo do breakpoint a tabela vira cartões: cada linha é um bloco e o
    rótulo da coluna aparece antes do valor, vindo de data-rotulo. */
-@media (max-width: 760px) {
+@media ateCelular {
+  .rolagem {
+    overflow-x: visible;
+  }
+
   .tabela,
   .tabela tbody,
   .tabela tr,
