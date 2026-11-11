@@ -1,4 +1,5 @@
 import type { StatusProgresso } from './trilha.ts'
+import type { TipoInteracao } from './historico.ts'
 
 /** Contagens efetivas por status, iguais às retornadas pela API. */
 export interface ResumoStatusDashboard {
@@ -19,8 +20,7 @@ export interface ProximoPrazoDashboard {
   percentual: number
 }
 
-export type TipoInteracaoHistorico =
-  'TRILHA_ACESSADA' | 'TRILHA_INICIADA' | 'TRILHA_CONCLUIDA'
+export type TipoInteracaoHistorico = TipoInteracao
 
 /** Registro público do histórico, conforme DTO da API. */
 export interface HistoricoInteracaoDashboard {

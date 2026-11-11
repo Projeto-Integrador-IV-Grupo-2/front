@@ -1,5 +1,7 @@
 import { useId, useState, type FormEvent, type ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth.ts'
+import { ROTAS } from '../routes/paths.ts'
 import { AuthError } from '../services/authService.ts'
 import { HTTP_STATUS } from '../utils/errorHandler.ts'
 import { PerfilDiferenteError } from '../types/auth.ts'
@@ -15,6 +17,7 @@ interface FieldErrors {
 
 interface LoginFormProps {
   onSuccess: (user: User) => void
+  onAttempt?: () => void
 }
 
 function validate(email: string, password: string): FieldErrors {
@@ -121,7 +124,7 @@ const OPCOES_DE_PERFIL: Array<{
 ]
 
 /** Formulário de login — validação, chamada ao AuthContext e feedback de erro/loading. */
-export function LoginForm({ onSuccess }: LoginFormProps) {
+export function LoginForm({ onSuccess, onAttempt }: LoginFormProps) {
   const { login } = useAuth()
   const emailId = useId()
   const passwordId = useId()
@@ -140,6 +143,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       return
     }
 
+    onAttempt?.()
     const validationErrors = validate(email, password)
     setFieldErrors(validationErrors)
     if (Object.keys(validationErrors).length > 0) {
@@ -250,11 +254,9 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
           Manter conectado
         </label>
 
-        {/* Placeholder visual do protótipo — recuperação de senha ainda não
-            tem tela própria. */}
-        <button type="button" className={styles.forgotPasswordLink}>
+        <Link to={ROTAS.esqueciSenha} className={styles.forgotPasswordLink}>
           Esqueci minha senha
-        </button>
+        </Link>
       </div>
 
       {formError && (

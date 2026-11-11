@@ -125,6 +125,65 @@ describe('DashboardPage', () => {
     expect(screen.getByText(/Veja seu progresso/)).toBeInTheDocument()
   })
 
+  it('aceita tipos de histórico conhecidos e exibe as atividades de trilha', async () => {
+    const base = criarDashboardColaborador()
+    const atividade = base.ultimasAtividades[0]
+    server.use(
+      http.get('*/api/dashboard/colaborador', () =>
+        HttpResponse.json({
+          ...base,
+          ultimasAtividades: [
+            {
+              ...atividade,
+              id: 'assistente',
+              tipo: 'ASSISTENTE_CONSULTADO',
+              detalhes: { encontrouFontes: true },
+            },
+            {
+              ...atividade,
+              id: 'senha',
+              tipo: 'SENHA_REDEFINIDA',
+              detalhes: {},
+            },
+            atividade,
+          ],
+        }),
+      ),
+    )
+    renderizarComProvedores({
+      rota: rotaDashboard,
+      usuario: criarUsuario({ papel: 'COLABORADOR' }),
+    })
+
+    expect(await screen.findByText(/Você iniciou/)).toBeInTheDocument()
+    expect(
+      screen.queryByText('A API retornou uma lista de atividades inválida.'),
+    ).not.toBeInTheDocument()
+  })
+
+  it('rejeita tipos de interação que não existem na API', async () => {
+    const base = criarDashboardColaborador()
+    const atividade = base.ultimasAtividades[0]
+    server.use(
+      http.get('*/api/dashboard/colaborador', () =>
+        HttpResponse.json({
+          ...base,
+          ultimasAtividades: [{ ...atividade, tipo: 'EVENTO_DESCONHECIDO' }],
+        }),
+      ),
+    )
+    renderizarComProvedores({
+      rota: rotaDashboard,
+      usuario: criarUsuario({ papel: 'COLABORADOR' }),
+    })
+
+    expect(
+      await screen.findByText(
+        'A API retornou uma lista de atividades inválida.',
+      ),
+    ).toBeInTheDocument()
+  })
+
   it('mostra erro do endpoint de gestão sem desmontar a página', async () => {
     server.use(
       http.get('*/api/dashboard/gestao', () =>
@@ -303,5 +362,44 @@ describe('DashboardPage', () => {
     ).toHaveAttribute('href', '/trilhas/trilha-longa')
     expect(screen.getByText(/30% concluído · prazo em/)).toBeInTheDocument()
     expect(filtroMinhas).toBe('true')
+  })
+
+  it('interações que não são de trilha não derrubam as últimas atividades', async () => {
+    const dashboard = criarDashboardColaborador()
+    const usuario = dashboard.ultimasAtividades[0].usuario
+    server.use(
+      http.get('*/api/dashboard/colaborador', () =>
+        HttpResponse.json({
+          ...dashboard,
+          ultimasAtividades: [
+            {
+              id: 'a1',
+              tipo: 'SENHA_REDEFINIDA',
+              detalhes: { origem: 'POST /api/auth/redefinir-senha' },
+              usuario,
+              criadoEm: '2026-10-19T15:00:00Z',
+            },
+            {
+              id: 'a2',
+              tipo: 'ASSISTENTE_CONSULTADO',
+              detalhes: { encontrouFontes: true, quantidadeFontes: 1 },
+              usuario,
+              criadoEm: '2026-10-19T14:45:00Z',
+            },
+            ...dashboard.ultimasAtividades,
+          ],
+        }),
+      ),
+    )
+
+    renderizarComProvedores({
+      rota: rotaDashboard,
+      usuario: criarUsuario({ papel: 'COLABORADOR' }),
+    })
+
+    expect(await screen.findByText(/Você iniciou/)).toBeInTheDocument()
+    expect(
+      screen.queryByText('A API retornou uma lista de atividades inválida.'),
+    ).not.toBeInTheDocument()
   })
 })

@@ -110,12 +110,35 @@ o MSW.
 O backend expõe o domínio em português e o frontend usa os mesmos nomes, sem
 tradução intermediária:
 
-| Chamada                | Envia              | Recebe                                         |
-| ---------------------- | ------------------ | ---------------------------------------------- |
-| `POST /api/auth/login` | `{ email, senha }` | `{ token, tipo, expiraEm, usuario }`           |
-| `GET /api/auth/me`     | —                  | `{ id, tenantId, nomeCompleto, email, papel }` |
+| Chamada                          | Envia                  | Recebe                                            |
+| -------------------------------- | ---------------------- | ------------------------------------------------- |
+| `POST /api/auth/login`           | `{ email, senha }`     | `{ token, tipo, expiraEm, usuario }`              |
+| `GET /api/auth/me`               | —                      | `{ id, tenantId, nomeCompleto, email, papel }`    |
+| `POST /api/auth/esqueci-senha`   | `{ email }`            | 204 (sempre); 429 no limite de pedidos            |
+| `POST /api/auth/redefinir-senha` | `{ token, novaSenha }` | 204; 400 com link inválido ou senha fora da regra |
 
 `papel` é `ADMIN`, `GESTOR` ou `COLABORADOR` (enum `papel_usuario` do banco).
+
+### Esqueci minha senha (issue #77)
+
+O link "Esqueci minha senha" do login leva a `/esqueci-senha`. O e-mail com o
+link de redefinição abre `/redefinir-senha?token=...`. As duas rotas são
+públicas, e quem já está logado vai para a tela inicial (`RotaPublica`).
+
+- **`/esqueci-senha`:** depois do envio mostra **sempre a mesma mensagem**
+  ("Se o e-mail estiver cadastrado..."), exista ou não a conta, com o caminho
+  de volta ao login. O botão fica desabilitado durante o envio. O limite de
+  pedidos (429) tem mensagem própria.
+- **`/redefinir-senha`:** o token é lido da URL uma vez, fica só na memória da
+  tela (nunca no `localStorage`) e sai da URL com `replace`, sem sobrar no
+  histórico. As regras da senha (`utils/regrasSenha.ts`, a mesma política do
+  `@SenhaForte` da API) aparecem enquanto a pessoa digita; senha fora da regra
+  ou confirmação diferente não chamam a API. Link inválido ou expirado mostra a
+  mensagem e "Pedir um novo link". Deu certo, volta ao login com "Senha
+  redefinida".
+- As chamadas ficam no `authService` (`esqueciSenha`, `redefinirSenha`), com o
+  erro normalizado pelo `normalizarErro`, como as demais.
+- O login, o "esqueci" e a redefinição usam o mesmo layout (`TelaDeAcesso`).
 
 ---
 
@@ -371,6 +394,8 @@ fixas por palavra-chave, com os dados no `localStorage` (chave
 | Rota                   | Quem acessa                                               |
 | ---------------------- | --------------------------------------------------------- |
 | `/login`               | qualquer visitante                                        |
+| `/esqueci-senha`       | só quem não está logado (logado vai para a tela inicial)  |
+| `/redefinir-senha`     | só quem não está logado (logado vai para a tela inicial)  |
 | `/dashboard`           | qualquer usuário autenticado                              |
 | `/trilhas`             | qualquer usuário autenticado                              |
 | `/trilhas/:id`         | qualquer usuário autenticado                              |

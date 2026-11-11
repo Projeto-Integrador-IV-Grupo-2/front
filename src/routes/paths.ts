@@ -4,6 +4,9 @@
  */
 export const ROTAS = {
   login: '/login',
+  // Públicas: recuperação de senha (o link do e-mail abre /redefinir-senha?token=...).
+  esqueciSenha: '/esqueci-senha',
+  redefinirSenha: '/redefinir-senha',
   dashboard: '/dashboard',
   usuarios: '/usuarios',
   trilhas: '/trilhas',
