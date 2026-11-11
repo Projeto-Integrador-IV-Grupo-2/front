@@ -1,3 +1,5 @@
+@value ateCelular, ateTablet from '../styles/breakpoints.module.css';
+
 .page {
   width: 100%;
   max-width: 1040px;
@@ -390,13 +392,13 @@
   opacity: 0.5;
 }
 
-@media (max-width: 900px) {
+@media ateTablet {
   .page {
     height: calc(100dvh - var(--header-height) - 2rem);
   }
 }
 
-@media (max-width: 640px) {
+@media ateCelular {
   .page {
     min-height: 420px;
     gap: var(--space-3);

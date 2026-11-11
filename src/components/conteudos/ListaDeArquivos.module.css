@@ -1,3 +1,5 @@
+@value ateCelular from '../../styles/breakpoints.module.css';
+
 .lista {
   display: flex;
   flex-direction: column;
@@ -76,7 +78,7 @@
   font-size: 0.875rem;
 }
 
-@media (max-width: 640px) {
+@media ateCelular {
   .item {
     flex-direction: column;
     align-items: stretch;

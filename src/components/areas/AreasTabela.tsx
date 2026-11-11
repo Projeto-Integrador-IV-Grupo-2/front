@@ -32,80 +32,86 @@ export function AreasTabela({
   onVerTrilhas,
 }: AreasTabelaProps) {
   return (
-    <table className={styles.tabela}>
-      <caption className="visually-hidden">Lista de áreas do tenant</caption>
-      <thead>
-        <tr>
-          <th scope="col">Área</th>
-          <th scope="col">Pessoas</th>
-          <th scope="col">Conteúdos</th>
-          <th scope="col">Situação</th>
-          <th scope="col">Trilhas</th>
-          <th scope="col">
-            <span className="visually-hidden">Ações</span>
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        {areas.map((area) => {
-          const emAndamento = situacaoEmAndamento === area.id
+    <div className={styles.rolagem}>
+      <table className={styles.tabela}>
+        <caption className="visually-hidden">Lista de áreas do tenant</caption>
+        <thead>
+          <tr>
+            <th scope="col">Área</th>
+            <th scope="col">Pessoas</th>
+            <th scope="col">Conteúdos</th>
+            <th scope="col">Situação</th>
+            <th scope="col">Trilhas</th>
+            <th scope="col">
+              <span className="visually-hidden">Ações</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {areas.map((area) => {
+            const emAndamento = situacaoEmAndamento === area.id
 
-          return (
-            <tr key={area.id}>
-              <td data-rotulo="Área">{area.nome}</td>
-              <td data-rotulo="Pessoas">{area.totalPessoas}</td>
-              <td data-rotulo="Conteúdos">{area.totalConteudos}</td>
-              <td data-rotulo="Situação">
-                <span
-                  className={area.ativo ? styles.seloAtivo : styles.seloInativo}
-                >
-                  {area.ativo ? 'Ativa' : 'Inativa'}
-                </span>
-              </td>
-              <td data-rotulo="Trilhas">
-                <button
-                  type="button"
-                  className={styles.link}
-                  onClick={() => onVerTrilhas(area)}
-                  aria-label={`Ver trilhas de ${area.nome}`}
-                >
-                  Ver trilhas
-                </button>
-              </td>
-              <td data-rotulo="Ações" className={styles.acoes}>
-                {/* Colaborador não tem essas ações — nem o botão aparece
+            return (
+              <tr key={area.id}>
+                <td data-rotulo="Área">{area.nome}</td>
+                <td data-rotulo="Pessoas">{area.totalPessoas}</td>
+                <td data-rotulo="Conteúdos">{area.totalConteudos}</td>
+                <td data-rotulo="Situação">
+                  <span
+                    className={
+                      area.ativo ? styles.seloAtivo : styles.seloInativo
+                    }
+                  >
+                    {area.ativo ? 'Ativa' : 'Inativa'}
+                  </span>
+                </td>
+                <td data-rotulo="Trilhas">
+                  <button
+                    type="button"
+                    className={styles.link}
+                    onClick={() => onVerTrilhas(area)}
+                    aria-label={`Ver trilhas de ${area.nome}`}
+                  >
+                    Ver trilhas
+                  </button>
+                </td>
+                <td data-rotulo="Ações" className={styles.acoes}>
+                  {/* Colaborador não tem essas ações — nem o botão aparece
                     (Card 14 / issue #31). A fonte de verdade continua o
                     backend: um 403 vindo da API ainda seria tratado pela
                     página, mesmo que a UI já devesse ter escondido isto. */}
-                {podeGerenciar && (
-                  <>
-                    {/* O nome entra no aria-label porque "Editar" se repete
+                  {podeGerenciar && (
+                    <>
+                      {/* O nome entra no aria-label porque "Editar" se repete
                         em cada linha: sem ele a lista de botões do leitor de
                         tela não diz qual área cada ação afeta. */}
-                    <button
-                      type="button"
-                      className={styles.secundario}
-                      onClick={() => onEditar(area)}
-                      aria-label={`Editar ${area.nome}`}
-                    >
-                      Editar
-                    </button>
-                    <button
-                      type="button"
-                      className={area.ativo ? styles.perigo : styles.secundario}
-                      onClick={() => onAlterarSituacao(area)}
-                      disabled={emAndamento}
-                      aria-label={`${area.ativo ? 'Inativar' : 'Reativar'} ${area.nome}`}
-                    >
-                      {area.ativo ? 'Inativar' : 'Reativar'}
-                    </button>
-                  </>
-                )}
-              </td>
-            </tr>
-          )
-        })}
-      </tbody>
-    </table>
+                      <button
+                        type="button"
+                        className={styles.secundario}
+                        onClick={() => onEditar(area)}
+                        aria-label={`Editar ${area.nome}`}
+                      >
+                        Editar
+                      </button>
+                      <button
+                        type="button"
+                        className={
+                          area.ativo ? styles.perigo : styles.secundario
+                        }
+                        onClick={() => onAlterarSituacao(area)}
+                        disabled={emAndamento}
+                        aria-label={`${area.ativo ? 'Inativar' : 'Reativar'} ${area.nome}`}
+                      >
+                        {area.ativo ? 'Inativar' : 'Reativar'}
+                      </button>
+                    </>
+                  )}
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
   )
 }

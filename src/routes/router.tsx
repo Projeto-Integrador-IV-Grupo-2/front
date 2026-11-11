@@ -19,6 +19,7 @@ import { LoginPage } from '../pages/LoginPage.tsx'
 import { NotFoundPage } from '../pages/NotFoundPage.tsx'
 import { PdiEditorPage } from '../pages/PdiEditorPage.tsx'
 import { PdiPage } from '../pages/PdiPage.tsx'
+import { PerfilPage } from '../pages/PerfilPage.tsx'
 import { TrilhaDetalhePage } from '../pages/TrilhaDetalhePage.tsx'
 import { TrilhaEstudoPage } from '../pages/TrilhaEstudoPage.tsx'
 import { TrilhasPage } from '../pages/TrilhasPage.tsx'
@@ -59,6 +60,8 @@ export const routes: RouteObject[] = [
           { path: ROTAS.assistente, element: <AssistentePage /> },
           { path: ROTAS.documentoDetalhe, element: <DocumentoDetalhePage /> },
           { path: ROTAS.historico, element: <HistoricoPage /> },
+          // Todo perfil edita os próprios dados.
+          { path: ROTAS.perfil, element: <PerfilPage /> },
           {
             // Área administrativa: o perfil exigido fica na rota, não na página.
             element: <ProtectedRoute perfis={['ADMIN']} />,

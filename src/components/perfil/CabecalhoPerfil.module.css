@@ -1,0 +1,156 @@
+@value ateCelular from '../../styles/breakpoints.module.css';
+
+.cartao {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-5);
+  padding: 22px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.identidade {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 18px;
+}
+
+.avatar {
+  width: 84px;
+  height: 84px;
+  border: 3px solid var(--color-surface);
+  box-shadow: 0 0 0 1px var(--color-primary-soft-line);
+  font-size: 1.75rem;
+}
+
+.textos {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.nome {
+  overflow-wrap: anywhere;
+  color: var(--color-text);
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.email {
+  overflow-wrap: anywhere;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+/* Mesmo formato do selo "Ativo" da tabela de usuários. */
+.selo {
+  margin-top: 6px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.foto {
+  display: flex;
+  max-width: 320px;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  text-align: right;
+}
+
+.botoes {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+/* Escondido sem sair da ordem do teclado: o foco aparece no rótulo. */
+.arquivo {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.botao,
+.remover {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.botao:hover,
+.remover:hover:not(:disabled) {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-2);
+}
+
+.arquivo:focus-visible + .botao {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.botao[aria-disabled='true'] {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.remover {
+  color: var(--color-danger);
+}
+
+.dica {
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+}
+
+.erro {
+  color: var(--color-danger);
+  font-size: 0.8125rem;
+}
+
+.aviso {
+  color: var(--color-success);
+  font-size: 0.8125rem;
+}
+
+@media ateCelular {
+  .cartao {
+    flex-direction: column;
+    align-items: stretch;
+    padding: var(--space-4);
+  }
+
+  .foto {
+    max-width: none;
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .botoes {
+    justify-content: flex-start;
+  }
+}

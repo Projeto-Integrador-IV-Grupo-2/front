@@ -1,3 +1,5 @@
+@value ateTablet from '../../styles/breakpoints.module.css';
+
 .painel {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -116,7 +118,7 @@
 
 /* Coluna lateral estreita e celular: a tabela vira cartões, com o rótulo de
    cada coluna vindo de `data-rotulo` — mesma marcação nos dois casos. */
-@media (max-width: 1100px) {
+@media ateTablet {
   .tabela,
   .tabela tbody,
   .tabela tr,
