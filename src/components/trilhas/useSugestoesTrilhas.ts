@@ -36,7 +36,7 @@ async function idsIniciados(signal: AbortSignal): Promise<Set<string>> {
 /**
  * Sugestões da IA para a tela de Trilhas. Corre por fora da listagem: enquanto
  * carrega, ou se falhar, devolve `null` — a seção simplesmente não aparece.
- * Trilha iniciada (evento do `trilhaService`) sai da lista na hora.
+ * Trilha iniciada ou inativada (eventos de `eventosTrilha`) sai da lista na hora.
  */
 export function useSugestoesTrilhas(): EstadoSugestoes | null {
   const [estado, setEstado] = useState<EstadoSugestoes | null>(null)
@@ -69,10 +69,9 @@ export function useSugestoesTrilhas(): EstadoSugestoes | null {
 
   useEffect(
     () =>
+      // Os dois eventos (trilha iniciada e trilha inativada) tiram a trilha
+      // das sugestões.
       assinarEventosTrilha((evento) => {
-        if (evento.tipo !== 'trilha-iniciada') {
-          return
-        }
         setEstado((atual) =>
           atual
             ? {

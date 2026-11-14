@@ -221,6 +221,8 @@ export async function inativarTrilha(id: string): Promise<TrilhaResumo> {
       undefined,
       configBase(),
     )
+    // Observer: trilha inativada não pode continuar nas sugestões.
+    emitirEventoTrilha({ tipo: 'trilha-inativada', trilhaId: id })
     return data
   } catch (error) {
     throw toServiceError(error, 'Não foi possível inativar a trilha.')
@@ -393,6 +395,9 @@ export async function atualizarProgresso(
       request,
       configBase(),
     )
+    // O pedido nunca volta para NAO_INICIADA: mudar o progresso já é ter
+    // iniciado a trilha, então as sugestões precisam saber.
+    emitirEventoTrilha({ tipo: 'trilha-iniciada', trilhaId: id })
     return data
   } catch (error) {
     throw toServiceError(error, 'Não foi possível atualizar o progresso.')

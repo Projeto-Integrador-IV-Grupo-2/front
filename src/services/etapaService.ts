@@ -1,4 +1,5 @@
 import { api } from './api.ts'
+import { emitirEventoTrilha } from './eventosTrilha.ts'
 import { normalizarErro } from '../utils/errorHandler.ts'
 import type { ApiFieldError } from '../types/api.ts'
 import type { ConclusaoEtapa, Etapa, EtapaRequest } from '../types/etapa.ts'
@@ -112,6 +113,9 @@ export async function concluirEtapa(
     const { data } = await api.post<ConclusaoEtapa>(
       `${base(trilhaId)}/${encodeURIComponent(etapaId)}/concluir`,
     )
+    // Concluir uma etapa inicia a trilha no backend: avisa quem mostra a
+    // trilha como "não iniciada" (as sugestões).
+    emitirEventoTrilha({ tipo: 'trilha-iniciada', trilhaId })
     return data
   } catch (error) {
     throw toServiceError(error, 'Não foi possível concluir a etapa.')

@@ -1,4 +1,5 @@
 import { reduzirImagemQuadrada } from '../utils/imagem.ts'
+import { criarCanalDeEventos } from './canalDeEventos.ts'
 
 /**
  * Foto de perfil. A API ainda não tem onde guardá-la, então ela fica no
@@ -18,15 +19,18 @@ export class FotoPerfilError extends Error {
 }
 
 const PREFIXO = 'nexo:foto-perfil:'
-const ouvintes = new Set<() => void>()
+const canal = criarCanalDeEventos<void>('fotos-de-perfil')
 
 function avisar() {
-  ouvintes.forEach((ouvinte) => ouvinte())
+  canal.publicar()
 }
 
-/** Observer: quem mostra a foto (menu, cabeçalho, perfil) se inscreve aqui. */
+/**
+ * Observer: quem mostra a foto (menu, cabeçalho, perfil) se inscreve aqui.
+ * O canal é o mesmo dos outros avisos do app (`canalDeEventos.ts`).
+ */
 export function observarFotos(ouvinte: () => void): () => void {
-  ouvintes.add(ouvinte)
+  const cancelar = canal.assinar(() => ouvinte())
   // Outra aba trocou a foto: esta acompanha.
   function deOutraAba(evento: StorageEvent) {
     if (evento.key === null || evento.key.startsWith(PREFIXO)) {
@@ -35,7 +39,7 @@ export function observarFotos(ouvinte: () => void): () => void {
   }
   window.addEventListener('storage', deOutraAba)
   return () => {
-    ouvintes.delete(ouvinte)
+    cancelar()
     window.removeEventListener('storage', deOutraAba)
   }
 }
