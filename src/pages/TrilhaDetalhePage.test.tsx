@@ -35,7 +35,7 @@ function renderizarComo(usuario: ReturnType<typeof criarUsuario>) {
 /** Colaboradores do diálogo de atribuição, com nomes distinguíveis. */
 function responderColaboradores() {
   server.use(
-    http.get('*/api/usuarios', () =>
+    http.get('*/api/pdis/colaboradores', () =>
       HttpResponse.json(
         criarPaginaUsuarios([
           criarUsuarioGestao({ id: 'u-1', nomeCompleto: 'Ana Souza' }),
@@ -686,7 +686,10 @@ describe('TrilhaDetalhePage', () => {
 
   it('sem a lista de colaboradores, sobra a atribuição por área', async () => {
     server.use(
-      http.get('*/api/usuarios', () => new HttpResponse(null, { status: 403 })),
+      http.get(
+        '*/api/pdis/colaboradores',
+        () => new HttpResponse(null, { status: 403 }),
+      ),
     )
     const usuario = userEvent.setup()
 

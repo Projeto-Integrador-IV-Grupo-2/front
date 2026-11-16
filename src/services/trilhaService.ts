@@ -32,6 +32,12 @@ import type {
 } from '../types/trilha.ts'
 import type { Pagina, RecursoResumo, Usuario } from '../types/usuario.ts'
 
+/** O que o diálogo de atribuição precisa saber de cada pessoa. */
+export type PessoaParaAtribuicao = Pick<
+  Usuario,
+  'id' | 'nomeCompleto' | 'email'
+> & { area?: RecursoResumo | null }
+
 /**
  * Erro das trilhas já normalizado: a UI lê `message`, `status` e
  * `fieldErrors` sem conhecer o Axios. A mensagem da API tem prioridade; o
@@ -273,12 +279,19 @@ export async function atribuirTrilha(
  * Um gestor pode receber 403 (`GET /api/usuarios` é do ADMIN). Quem chama
  * trata isso oferecendo só a atribuição por área, que não precisa da lista.
  */
-export async function listarUsuariosParaAtribuicao(): Promise<Usuario[]> {
+export async function listarUsuariosParaAtribuicao(): Promise<
+  PessoaParaAtribuicao[]
+> {
   try {
-    const { data } = await api.get<Pagina<Usuario>>('/api/usuarios', {
-      ...configBase(),
-      params: { situacao: 'ATIVO', page: 0, size: 100, sort: 'nomeCompleto' },
-    })
+    // `/api/usuarios` é só do administrador; esta rota atende também o gestor
+    // e já devolve apenas colaboradores ativos — os únicos que recebem trilha.
+    const { data } = await api.get<Pagina<PessoaParaAtribuicao>>(
+      '/api/pdis/colaboradores',
+      {
+        ...configBase(),
+        params: { page: 0, size: 500, sort: 'nomeCompleto' },
+      },
+    )
     return data.content
   } catch (error) {
     throw toServiceError(error, 'Não foi possível carregar os colaboradores.')

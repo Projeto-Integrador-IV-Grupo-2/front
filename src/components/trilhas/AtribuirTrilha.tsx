@@ -11,13 +11,14 @@ import type {
   AtribuirTrilhaRequest,
   TrilhaDetalhe,
 } from '../../types/trilha.ts'
-import type { RecursoResumo, Usuario } from '../../types/usuario.ts'
+import type { PessoaParaAtribuicao } from '../../services/trilhaService.ts'
+import type { RecursoResumo } from '../../types/usuario.ts'
 import styles from './AtribuirTrilha.module.css'
 
 interface AtribuirTrilhaProps {
   trilha: TrilhaDetalhe
   /** `null` enquanto a lista carrega. */
-  colaboradores: Usuario[] | null
+  colaboradores: PessoaParaAtribuicao[] | null
   /**
    * A lista não veio (um gestor recebe 403 em `GET /api/usuarios`): sobra a
    * atribuição por área, que não depende dela.
