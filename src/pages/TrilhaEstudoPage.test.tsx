@@ -16,8 +16,15 @@ import { renderizarComProvedores } from '../test/renderWithProviders.tsx'
 // O player real carrega um iframe do Vimeo, que o jsdom não roda. O mock guarda
 // os ouvintes para o teste disparar "timeupdate" e "ended" como o Vimeo faria.
 const ouvintes = vi.hoisted(() => new Map<string, (dados: unknown) => void>())
+// `true` faz o `ready()` do player rejeitar, como o Vimeo faz com vídeo removido.
+const vimeo = vi.hoisted(() => ({ falha: false }))
 vi.mock('@vimeo/player', () => ({
   default: class {
+    ready() {
+      return vimeo.falha
+        ? Promise.reject(new Error('NotFoundError'))
+        : Promise.resolve()
+    }
     on(evento: string, ouvinte: (dados: unknown) => void) {
       ouvintes.set(evento, ouvinte)
     }
@@ -164,6 +171,54 @@ describe('TrilhaEstudoPage', () => {
     expect(
       await screen.findByText('Parabéns! Você concluiu a trilha.'),
     ).toBeInTheDocument()
+  })
+
+  it('vídeo que não carrega avisa e libera a conclusão manual', async () => {
+    const user = userEvent.setup()
+    vimeo.falha = true
+    let conclusoes = 0
+    server.use(
+      http.get('*/api/trilhas/:id/etapas', () =>
+        HttpResponse.json([
+          criarEtapa({
+            id: 'v1',
+            titulo: 'Vídeo removido',
+            conteudo: {
+              ...criarEtapa().conteudo,
+              tipo: 'VIDEO',
+              videoUrl: 'https://vimeo.com/22439234',
+              corpo: null,
+            },
+          }),
+        ]),
+      ),
+      http.post('*/api/trilhas/:id/etapas/:etapaId/concluir', () => {
+        conclusoes++
+        return HttpResponse.json({
+          etapaId: 'v1',
+          progresso: criarProgressoTrilha({
+            status: 'CONCLUIDA',
+            percentual: 100,
+          }),
+        })
+      }),
+    )
+
+    try {
+      renderizar()
+
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'Não foi possível carregar este vídeo',
+      )
+      expect(
+        screen.getByRole('link', { name: 'Tentar abrir no Vimeo' }),
+      ).toHaveAttribute('href', 'https://vimeo.com/22439234')
+
+      await user.click(screen.getByRole('button', { name: 'Concluir etapa' }))
+      await waitFor(() => expect(conclusoes).toBe(1))
+    } finally {
+      vimeo.falha = false
+    }
   })
 
   it('mostra o erro da API quando a conclusão falha', async () => {
