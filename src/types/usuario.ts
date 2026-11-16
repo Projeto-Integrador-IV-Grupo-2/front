@@ -41,7 +41,8 @@ export interface Pagina<T> {
 export interface UsuarioFiltro {
   nome?: string
   email?: string
-  departamento?: string
+  /** Área do usuário, pelo id (o filtro é uma seleção das áreas cadastradas). */
+  areaId?: string
   perfil?: UserRole | ''
   situacao?: SituacaoUsuario | ''
 }

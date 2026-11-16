@@ -1,0 +1,87 @@
+.carregando,
+.vazio {
+  padding: var(--space-4);
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+}
+
+.etapas {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.etapa {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.etapa:last-child {
+  border-bottom: none;
+}
+
+.marca {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+}
+
+.vista .marca {
+  color: var(--color-surface);
+  background: var(--color-success);
+  border-color: var(--color-success);
+}
+
+.etapaTexto {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.etapaTitulo {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.etapaMeta {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.situacaoEtapa {
+  flex: 0 0 auto;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  text-align: right;
+}
+
+.vista .situacaoEtapa {
+  font-weight: 500;
+  color: var(--color-success);
+}
+
+@media (max-width: 600px) {
+  .etapa {
+    flex-wrap: wrap;
+  }
+
+  .situacaoEtapa {
+    flex-basis: 100%;
+    padding-left: calc(28px + var(--space-3));
+    text-align: left;
+  }
+}

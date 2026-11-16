@@ -43,9 +43,15 @@ interface ConteudoFormularioProps {
   /**
    * Tipos oferecidos no select, em ordem. O primeiro é o padrão no cadastro.
    * A tela de Conhecimento passa a lista começando em `DOCUMENTO`; o catálogo
-   * de estudo usa o padrão `TIPOS_CONTEUDO`, que não oferece documento.
+   * de estudo usa o padrão `TIPOS_CONTEUDO`.
    */
   tipos?: TipoConteudo[]
+  /**
+   * Mostra o campo Categoria. O catálogo de estudo organiza os conteúdos só
+   * pela área (a mesma das trilhas) e esconde a categoria; na edição, a que
+   * o conteúdo já tiver é mantida.
+   */
+  comCategoria?: boolean
   /**
    * Como a tela chama o que está sendo cadastrado — vira "Novo documento",
    * "Editar documento", "Cadastrar documento". O catálogo de estudo fala em
@@ -71,6 +77,7 @@ export function ConteudoFormulario({
   onCategoriaCriada,
   tipos = TIPOS_CONTEUDO,
   substantivo = 'conteúdo',
+  comCategoria = true,
 }: ConteudoFormularioProps) {
   const ids = {
     titulo: useId(),
@@ -190,6 +197,30 @@ export function ConteudoFormulario({
     ) : null
   }
 
+  const campoArea = (
+    <div className={styles.campo}>
+      <label htmlFor={ids.area}>Área</label>
+      <select
+        id={ids.area}
+        value={areaId}
+        onChange={(event) => setAreaId(event.target.value)}
+        disabled={salvando}
+      >
+        <option value="">Todas as áreas</option>
+        {areas.map((area) => (
+          <option key={area.id} value={area.id}>
+            {area.nome}
+          </option>
+        ))}
+      </select>
+      {!comCategoria && (
+        <span className={styles.ajuda}>
+          As mesmas áreas cadastradas para as trilhas.
+        </span>
+      )}
+    </div>
+  )
+
   return (
     <>
       <Modal
@@ -230,48 +261,37 @@ export function ConteudoFormulario({
                   ))}
                 </select>
               </div>
-              <div className={styles.campo}>
-                <label htmlFor={ids.categoria}>Categoria</label>
-                <select
-                  id={ids.categoria}
-                  value={categoriaId}
-                  onChange={(event) => setCategoriaId(event.target.value)}
-                  disabled={salvando}
-                >
-                  <option value="">Sem categoria</option>
-                  {opcoesDeCategoria.map((categoria) => (
-                    <option key={categoria.id} value={categoria.id}>
-                      {categoria.nome}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  className={styles.acaoSecundaria}
-                  onClick={() => setCriandoCategoria(true)}
-                  disabled={salvando}
-                >
-                  + Nova categoria
-                </button>
-              </div>
+              {comCategoria ? (
+                <div className={styles.campo}>
+                  <label htmlFor={ids.categoria}>Categoria</label>
+                  <select
+                    id={ids.categoria}
+                    value={categoriaId}
+                    onChange={(event) => setCategoriaId(event.target.value)}
+                    disabled={salvando}
+                  >
+                    <option value="">Sem categoria</option>
+                    {opcoesDeCategoria.map((categoria) => (
+                      <option key={categoria.id} value={categoria.id}>
+                        {categoria.nome}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    className={styles.acaoSecundaria}
+                    onClick={() => setCriandoCategoria(true)}
+                    disabled={salvando}
+                  >
+                    + Nova categoria
+                  </button>
+                </div>
+              ) : (
+                campoArea
+              )}
             </div>
 
-            <div className={styles.campo}>
-              <label htmlFor={ids.area}>Área</label>
-              <select
-                id={ids.area}
-                value={areaId}
-                onChange={(event) => setAreaId(event.target.value)}
-                disabled={salvando}
-              >
-                <option value="">Todas as áreas</option>
-                {areas.map((area) => (
-                  <option key={area.id} value={area.id}>
-                    {area.nome}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {comCategoria && campoArea}
 
             {tipo === 'VIDEO' && (
               <div className={styles.campo}>

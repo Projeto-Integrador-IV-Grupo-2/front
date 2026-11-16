@@ -3,6 +3,7 @@ import {
   criarArea,
   criarArquivo,
   criarAtribuicao,
+  criarAtribuicaoDetalhe,
   criarColaboradorAcompanhamento,
   criarCompetencia,
   criarConteudo,
@@ -213,6 +214,10 @@ export const handlers = [
             'attachment; filename="acompanhamento-trilhas.csv"',
         },
       }),
+  ),
+
+  http.get('*/api/atribuicoes/:atribuicaoId', () =>
+    HttpResponse.json(criarAtribuicaoDetalhe()),
   ),
 
   // PDI (issue #42). As rotas fixas vêm antes de /api/pdis/:id.

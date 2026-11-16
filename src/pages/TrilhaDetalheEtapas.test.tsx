@@ -65,6 +65,9 @@ describe('TrilhaDetalhePage — etapas (issue #39)', () => {
     )
 
     renderizar(criarUsuario({ papel: 'GESTOR' }))
+    await user.click(
+      await screen.findByRole('tab', { name: 'Etapas e informações' }),
+    )
 
     const lista = await screen.findByRole('list', { name: 'Etapas da trilha' })
     expect(within(lista).getByText('Manual')).toBeInTheDocument()
@@ -98,6 +101,9 @@ describe('TrilhaDetalhePage — etapas (issue #39)', () => {
     )
 
     renderizar(criarUsuario({ papel: 'ADMIN' }))
+    await user.click(
+      await screen.findByRole('tab', { name: 'Etapas e informações' }),
+    )
 
     await user.click(await screen.findByRole('button', { name: 'Descer A' }))
 

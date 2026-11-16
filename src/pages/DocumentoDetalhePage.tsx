@@ -364,6 +364,7 @@ export function DocumentoDetalhePage() {
             setCategorias((atuais) => [...atuais, categoria])
           }
           tipos={ehDocumento ? TIPOS_NO_FORMULARIO : TIPOS_CONTEUDO}
+          comCategoria={ehDocumento}
           substantivo={ehDocumento ? 'documento' : 'conteúdo'}
         />
       )}

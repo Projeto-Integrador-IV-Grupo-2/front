@@ -19,7 +19,7 @@ interface ProtectedRouteProps {
  * tela de login piscar a cada recarregamento com token válido.
  */
 export function ProtectedRoute({ perfis }: ProtectedRouteProps) {
-  const { user, isAuthenticated, isLoading } = useAuth()
+  const { user, isAuthenticated, isLoading, ultimoUsuarioId } = useAuth()
   const location = useLocation()
 
   if (isLoading) {
@@ -33,7 +33,15 @@ export function ProtectedRoute({ perfis }: ProtectedRouteProps) {
   if (!isAuthenticated) {
     // `state.from` deixa o caminho pedido disponível para quem quiser
     // devolver o usuário a ele depois do login.
-    return <Navigate to={ROTAS.login} replace state={{ from: location }} />
+    // `usuarioId` diz de quem era a sessão que caiu: o login só devolve a
+    // pessoa a essa página se for ela mesma quem entrar de novo.
+    return (
+      <Navigate
+        to={ROTAS.login}
+        replace
+        state={{ from: location, usuarioId: ultimoUsuarioId }}
+      />
+    )
   }
 
   if (!temPermissao(perfis, user?.papel)) {

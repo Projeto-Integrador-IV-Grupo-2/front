@@ -6,9 +6,12 @@ import {
   TelaDeAcesso,
 } from '../components/auth/TelaDeAcesso.tsx'
 import { ROTAS } from '../routes/paths.ts'
+import type { User } from '../types/user.ts'
 
 interface EstadoDoLogin {
   from?: { pathname?: string }
+  /** De quem era a sessão que caiu; ausente num link aberto sem sessão. */
+  usuarioId?: string | null
   /** Mensagem de sucesso de quem chegou aqui (ex.: senha redefinida). */
   aviso?: string
 }
@@ -33,8 +36,14 @@ export function LoginPage() {
   // dashboard. Link direto para /usuarios sobrevive ao desvio pelo login.
   const origem = estado?.from?.pathname
 
-  function handleSuccess() {
-    navigate(origem ?? ROTAS.dashboard, { replace: true })
+  function handleSuccess(usuario: User) {
+    // A página guardada é de quem estava na sessão que caiu. Outra pessoa
+    // entrando (ex.: o colaborador depois do admin) começa no Dashboard, e não
+    // no Perfil ou na tela em que a sessão anterior parou.
+    const mesmaPessoa = !estado?.usuarioId || estado.usuarioId === usuario.id
+    navigate(origem && mesmaPessoa ? origem : ROTAS.dashboard, {
+      replace: true,
+    })
   }
 
   return (

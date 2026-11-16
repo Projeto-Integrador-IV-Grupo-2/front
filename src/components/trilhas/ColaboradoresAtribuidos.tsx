@@ -1,15 +1,22 @@
 import { Link } from 'react-router-dom'
-import { ROTAS } from '../../routes/paths.ts'
+import { caminhoColaboradorNaTrilha } from '../../routes/paths.ts'
 import type { AtribuicaoAcompanhamento } from '../../types/atribuicao.ts'
+import { Paginacao } from '../areas/Paginacao.tsx'
 import { formatarDataCurta } from './formatacao.ts'
 import { BarraProgresso, SeloStatus } from './StatusProgresso.tsx'
 import styles from './ColaboradoresAtribuidos.module.css'
 
 interface ColaboradoresAtribuidosProps {
+  /** Trilha da tela: compõe o link de "Detalhes" de cada colaborador. */
+  trilhaId: string
   /** `null` enquanto a busca está em voo. */
   atribuicoes: AtribuicaoAcompanhamento[] | null
   /** Quantos existem ao todo — pode ser maior do que o que cabe na página. */
   total: number
+  /** Página atual (zero-based) e quantas existem. */
+  pagina: number
+  totalPaginas: number
+  onIrPara: (pagina: number) => void
   erro: string | null
   onTentarNovamente: () => void
 }
@@ -35,8 +42,12 @@ function iniciais(nome: string): string {
  * só da cor.
  */
 export function ColaboradoresAtribuidos({
+  trilhaId,
   atribuicoes,
   total,
+  pagina,
+  totalPaginas,
+  onIrPara,
   erro,
   onTentarNovamente,
 }: ColaboradoresAtribuidosProps) {
@@ -89,6 +100,9 @@ export function ColaboradoresAtribuidos({
             <th scope="col">Nome</th>
             <th scope="col">Progresso</th>
             <th scope="col">Situação</th>
+            <th scope="col">
+              <span className="visually-hidden">Ações</span>
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -130,17 +144,33 @@ export function ColaboradoresAtribuidos({
                 <td data-rotulo="Situação">
                   <SeloStatus status={atribuicao.status} />
                 </td>
+                <td data-rotulo="">
+                  <Link
+                    className={styles.detalhes}
+                    to={caminhoColaboradorNaTrilha(trilhaId, atribuicao.id)}
+                    aria-label={`Detalhes de ${colaborador.nomeCompleto}`}
+                  >
+                    Detalhes
+                  </Link>
+                </td>
               </tr>
             )
           })}
         </tbody>
       </table>
 
-      {total > atribuicoes.length && (
-        <p className={styles.rodape}>
-          Mostrando {atribuicoes.length} de {total}.{' '}
-          <Link to={ROTAS.acompanhamento}>Ver no acompanhamento</Link>
-        </p>
+      {totalPaginas > 1 && (
+        <div className={styles.rodape}>
+          <Paginacao
+            pagina={pagina}
+            totalPaginas={totalPaginas}
+            totalElementos={total}
+            onIrPara={onIrPara}
+            desabilitado={false}
+            item="colaborador"
+            itens="colaboradores"
+          />
+        </div>
       )}
     </div>
   )

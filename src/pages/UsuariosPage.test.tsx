@@ -33,6 +33,13 @@ async function escolherOpcao(nome: string, opcao: string) {
   await userEvent.click(screen.getByRole('menuitem', { name: opcao }))
 }
 
+/** Área é obrigatória no cadastro: escolhe a que vem de GET /api/areas. */
+async function escolherArea(novo: ReturnType<typeof within>) {
+  const area = novo.getByLabelText('Área')
+  await within(area).findByRole('option', { name: 'Tecnologia' })
+  await userEvent.selectOptions(area, 'Tecnologia')
+}
+
 describe('UsuariosPage', () => {
   it('mostra o carregamento e depois a lista de usuários', async () => {
     server.use(
@@ -170,6 +177,7 @@ describe('UsuariosPage', () => {
     await userEvent.type(novo.getByLabelText('Nome completo'), 'Carla Dias')
     await userEvent.type(novo.getByLabelText('E-mail'), 'carla@nexo.com')
     await userEvent.type(novo.getByLabelText('Senha'), 'Senha1234')
+    await escolherArea(novo)
     await userEvent.click(novo.getByRole('button', { name: 'Cadastrar' }))
 
     expect(await screen.findByText('Carla Dias')).toBeInTheDocument()
@@ -201,6 +209,7 @@ describe('UsuariosPage', () => {
     await userEvent.type(novo.getByLabelText('Nome completo'), 'Ana Souza')
     await userEvent.type(novo.getByLabelText('E-mail'), 'ana@nexo.com')
     await userEvent.type(novo.getByLabelText('Senha'), 'Senha1234')
+    await escolherArea(novo)
     await userEvent.click(novo.getByRole('button', { name: 'Cadastrar' }))
 
     expect(
@@ -244,6 +253,28 @@ describe('UsuariosPage', () => {
       senha: '123',
       areaId: '33333333-3333-3333-3333-333333333333',
     })
+  })
+
+  it('não cadastra sem área nem senha e diz o que falta', async () => {
+    let enviou = false
+    server.use(
+      http.post('*/api/usuarios', () => {
+        enviou = true
+        return HttpResponse.json(criarUsuarioGestao(), { status: 201 })
+      }),
+    )
+
+    renderizarGestao()
+    await screen.findByText('Ana Souza')
+    await userEvent.click(screen.getByRole('button', { name: 'Novo usuário' }))
+    const novo = painel('Novo usuário')
+    await userEvent.type(novo.getByLabelText('Nome completo'), 'Carla Dias')
+    await userEvent.type(novo.getByLabelText('E-mail'), 'carla@nexo.com')
+    await userEvent.click(novo.getByRole('button', { name: 'Cadastrar' }))
+
+    expect(await novo.findByText('Selecione a área.')).toBeInTheDocument()
+    expect(novo.getByText('Informe a senha.')).toBeInTheDocument()
+    expect(enviou).toBe(false)
   })
 
   it('edita reaproveitando o formulário, sem pedir e-mail nem senha', async () => {

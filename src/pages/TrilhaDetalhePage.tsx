@@ -54,11 +54,11 @@ import type {
 import type { RecursoResumo, Usuario } from '../types/usuario.ts'
 import styles from './TrilhaDetalhePage.module.css'
 
-/**
- * Quantos colaboradores o painel do detalhe mostra. É um resumo: quem precisa
- * da lista inteira, com filtros e paginação, vai para o Acompanhamento.
- */
-const COLABORADORES_NO_PAINEL = 10
+/** Colaboradores por página na lista da trilha. */
+const COLABORADORES_POR_PAGINA = 10
+
+/** Abas da visão de gestão: quem recebeu a trilha e a trilha em si. */
+type AbaGestao = 'colaboradores' | 'trilha'
 
 interface ResultadoBusca {
   /** Identifica a busca que produziu este resultado (id + recarga). */
@@ -68,10 +68,11 @@ interface ResultadoBusca {
 }
 
 interface ResultadoAtribuidos {
-  /** Identifica a busca que produziu este resultado (trilha + recarga). */
+  /** Identifica a busca que produziu este resultado (trilha + página + recarga). */
   chave: string
   atribuicoes: AtribuicaoAcompanhamento[] | null
   total: number
+  totalPaginas: number
   erro: string | null
 }
 
@@ -174,6 +175,8 @@ export function TrilhaDetalhePage() {
   const [adicionandoAoPdi, setAdicionandoAoPdi] = useState(false)
 
   const [recargaAtribuidos, setRecargaAtribuidos] = useState(0)
+  const [paginaAtribuidos, setPaginaAtribuidos] = useState(0)
+  const [aba, setAba] = useState<AbaGestao>('colaboradores')
   const [atribuidos, setAtribuidos] = useState<ResultadoAtribuidos | null>(null)
 
   const [dialogo, setDialogo] = useState<Dialogo | null>(null)
@@ -228,7 +231,7 @@ export function TrilhaDetalhePage() {
   // Quem recebeu a trilha. Só para quem pode acompanhar; refeito depois de
   // cada atribuição, para o painel já mostrar quem acabou de entrar.
   const chaveAtribuidos = podeVerAtribuidos
-    ? `${id}:${recargaAtribuidos}`
+    ? `${id}:${paginaAtribuidos}:${recargaAtribuidos}`
     : null
   useEffect(() => {
     if (chaveAtribuidos === null) {
@@ -238,7 +241,7 @@ export function TrilhaDetalhePage() {
 
     listarAtribuicoes(
       { trilhaId: id },
-      { page: 0, size: COLABORADORES_NO_PAINEL },
+      { page: paginaAtribuidos, size: COLABORADORES_POR_PAGINA },
       { signal: controlador.signal },
     )
       .then((pagina) => {
@@ -247,6 +250,7 @@ export function TrilhaDetalhePage() {
             chave: chaveAtribuidos,
             atribuicoes: pagina.content,
             total: pagina.page.totalElements,
+            totalPaginas: pagina.page.totalPages,
             erro: null,
           })
         }
@@ -257,6 +261,7 @@ export function TrilhaDetalhePage() {
             chave: chaveAtribuidos,
             atribuicoes: [],
             total: 0,
+            totalPaginas: 0,
             erro:
               causa instanceof AtribuicaoServiceError
                 ? causa.message
@@ -266,7 +271,7 @@ export function TrilhaDetalhePage() {
       })
 
     return () => controlador.abort()
-  }, [chaveAtribuidos, id])
+  }, [chaveAtribuidos, id, paginaAtribuidos])
 
   // As áreas alimentam a edição e a atribuição; são buscadas uma vez, quando
   // o primeiro diálogo que precisa delas abre.
@@ -330,6 +335,13 @@ export function TrilhaDetalhePage() {
     setDialogo(null)
     setErroDialogo(null)
     setFieldErrors([])
+    if (aberto === 'atribuicao') {
+      // A lista de colaboradores é buscada de novo na próxima abertura: quem
+      // foi cadastrado com esta tela aberta precisa aparecer para receber a
+      // trilha.
+      setColaboradores(null)
+      setColaboradoresIndisponiveis(false)
+    }
     // Sem isso o foco cairia no <body> quando o diálogo some.
     const origem =
       aberto === 'edicao'
@@ -463,6 +475,8 @@ export function TrilhaDetalhePage() {
       fecharDialogo()
       setAviso(avisoDaAtribuicao(resumo))
       // O painel de colaboradores passa a incluir quem acabou de receber.
+      setPaginaAtribuidos(0)
+      setAba('colaboradores')
       setRecargaAtribuidos((atual) => atual + 1)
     } catch (causa) {
       registrarErroDoDialogo(causa, 'Não foi possível atribuir a trilha.')
@@ -598,105 +612,49 @@ export function TrilhaDetalhePage() {
             )}
           </header>
 
-          <div className={styles.colunas}>
-            <section
-              aria-labelledby={estuda ? 'titulo-jornada' : 'titulo-etapas'}
-            >
-              {estuda && (
-                <>
-                  <h2 id="titulo-jornada" className={styles.secao}>
-                    Jornada
-                  </h2>
-                  <div className={styles.painel}>
-                    <JornadaTrilha
-                      progresso={trilha.progresso}
-                      prazoDias={trilha.prazoDias}
-                    />
-                    {trilha.ativo && (
-                      <Link
-                        to={caminhoEstudo(trilha.id)}
-                        className={`${styles.botao} ${styles.estudar}`}
-                      >
-                        {trilha.progresso.status === 'CONCLUIDA'
-                          ? 'Rever conteúdos'
-                          : 'Estudar trilha'}
-                      </Link>
-                    )}
-                    {trilha.ativo ? (
-                      <AcaoProgresso
-                        trilha={trilha}
-                        salvando={salvando}
-                        erro={erroAcao}
-                        onExecutar={() => void executarAcao(trilha)}
-                      />
-                    ) : (
-                      <p className={styles.inativaAviso}>
-                        Trilha inativa: o progresso de quem já a recebeu fica
-                        guardado, mas não pode ser alterado.
-                      </p>
-                    )}
-                  </div>
-                </>
-              )}
-
-              {podeMontarEtapas && (
-                <section
-                  aria-labelledby="titulo-etapas"
-                  className={styles.secaoEtapas}
+          {podeVerAtribuidos ? (
+            <>
+              {/* Gestão não cursa a trilha: abre direto em quem a recebeu. A
+                  montagem das etapas e os dados ficam na outra aba. */}
+              <div
+                role="tablist"
+                aria-label="Seções da trilha"
+                className={styles.abas}
+              >
+                <button
+                  type="button"
+                  role="tab"
+                  id="aba-colaboradores"
+                  aria-selected={aba === 'colaboradores'}
+                  aria-controls="painel-colaboradores"
+                  className={`${styles.aba} ${aba === 'colaboradores' ? styles.abaAtiva : ''}`}
+                  onClick={() => setAba('colaboradores')}
                 >
-                  <h2 id="titulo-etapas" className={styles.secao}>
-                    Etapas da trilha
-                  </h2>
-                  <EtapasGestao
-                    trilhaId={trilha.id}
-                    onAlterou={() => void atualizarAposEtapas(trilha.id)}
-                  />
-                </section>
-              )}
-            </section>
+                  Colaboradores
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  id="aba-trilha"
+                  aria-selected={aba === 'trilha'}
+                  aria-controls="painel-trilha"
+                  className={`${styles.aba} ${aba === 'trilha' ? styles.abaAtiva : ''}`}
+                  onClick={() => setAba('trilha')}
+                >
+                  {podeMontarEtapas ? 'Etapas e informações' : 'Informações'}
+                </button>
+              </div>
 
-            <div className={styles.lateral}>
-              {estuda && (
-                <section aria-labelledby="titulo-progresso">
-                  <h2 id="titulo-progresso" className={styles.secao}>
-                    Progresso geral
-                  </h2>
-                  <div className={styles.painel}>
-                    <div className={styles.progressoTopo}>
-                      <SeloStatus status={trilha.progresso.status} />
-                      <span className={styles.percentual}>
-                        {trilha.progresso.percentual}%
-                      </span>
-                    </div>
-                    <BarraProgresso
-                      percentual={trilha.progresso.percentual}
-                      rotulo={`Progresso em ${trilha.nome}`}
-                      semValor
-                    />
-                    {trilha.progresso.prazo && (
-                      <p
-                        className={
-                          trilha.progresso.status === 'ATRASADA'
-                            ? `${styles.prazo} ${styles.prazoAtrasado}`
-                            : styles.prazo
-                        }
-                      >
-                        {trilha.progresso.status === 'ATRASADA'
-                          ? 'Prazo vencido em '
-                          : 'Prazo: '}
-                        {formatarData(trilha.progresso.prazo)}
-                      </p>
-                    )}
-                  </div>
-                </section>
-              )}
-
-              {podeVerAtribuidos && (
-                <section aria-labelledby="titulo-atribuidos">
+              {aba === 'colaboradores' ? (
+                <section
+                  id="painel-colaboradores"
+                  aria-labelledby="titulo-atribuidos"
+                >
                   <h2 id="titulo-atribuidos" className={styles.secao}>
                     Colaboradores atribuídos
                   </h2>
                   <ColaboradoresAtribuidos
+                    trilhaId={trilha.id}
                     atribuicoes={
                       atribuidos?.chave === chaveAtribuidos
                         ? atribuidos.atribuicoes
@@ -707,6 +665,13 @@ export function TrilhaDetalhePage() {
                         ? atribuidos.total
                         : 0
                     }
+                    pagina={paginaAtribuidos}
+                    totalPaginas={
+                      atribuidos?.chave === chaveAtribuidos
+                        ? atribuidos.totalPaginas
+                        : 0
+                    }
+                    onIrPara={setPaginaAtribuidos}
                     erro={
                       atribuidos?.chave === chaveAtribuidos
                         ? atribuidos.erro
@@ -717,43 +682,138 @@ export function TrilhaDetalhePage() {
                     }
                   />
                 </section>
-              )}
-
-              <section aria-labelledby="titulo-sobre">
-                <h2 id="titulo-sobre" className={styles.secao}>
-                  Sobre a trilha
-                </h2>
-                <dl className={`${styles.painel} ${styles.dados}`}>
-                  <div>
-                    <dt>Área</dt>
-                    <dd>{trilha.area?.nome ?? 'Multi-área'}</dd>
-                  </div>
-                  <div>
-                    <dt>Duração prevista</dt>
-                    <dd>
-                      {trilha.prazoDias
-                        ? `${trilha.prazoDias} ${trilha.prazoDias === 1 ? 'dia' : 'dias'}`
-                        : 'Sem prazo definido'}
-                    </dd>
-                  </div>
-                  {trilha.objetivos && (
-                    <div className={styles.cheio}>
-                      <dt>Objetivo</dt>
-                      <dd>{trilha.objetivos}</dd>
-                    </div>
+              ) : (
+                <div
+                  id="painel-trilha"
+                  role="tabpanel"
+                  aria-labelledby="aba-trilha"
+                  className={podeMontarEtapas ? styles.colunas : undefined}
+                >
+                  {podeMontarEtapas && (
+                    <section aria-labelledby="titulo-etapas">
+                      <h2 id="titulo-etapas" className={styles.secao}>
+                        Etapas da trilha
+                      </h2>
+                      <EtapasGestao
+                        trilhaId={trilha.id}
+                        onAlterou={() => void atualizarAposEtapas(trilha.id)}
+                      />
+                    </section>
                   )}
-                  <div>
-                    <dt>Criada em</dt>
-                    <dd>{formatarInstante(trilha.criadoEm)}</dd>
+                  <div className={styles.lateral}>
+                    <SobreTrilha trilha={trilha} />
                   </div>
-                  <div>
-                    <dt>Situação</dt>
-                    <dd>{trilha.ativo ? 'Ativa' : 'Inativa'}</dd>
-                  </div>
-                </dl>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className={styles.colunas}>
+              <section
+                aria-labelledby={estuda ? 'titulo-jornada' : 'titulo-etapas'}
+              >
+                {estuda && (
+                  <>
+                    <h2 id="titulo-jornada" className={styles.secao}>
+                      Jornada
+                    </h2>
+                    <div className={styles.painel}>
+                      <JornadaTrilha
+                        progresso={trilha.progresso}
+                        prazoDias={trilha.prazoDias}
+                      />
+                      {/* Sem atribuição (`progresso.id` nulo), não há o que
+                          estudar: quem coloca o colaborador na trilha é a
+                          gestão. */}
+                      {trilha.progresso.id === null ? (
+                        <p className={styles.inativaAviso}>
+                          Esta trilha não foi atribuída a você. Peça ao
+                          administrador ou ao seu gestor para incluí-lo nela.
+                        </p>
+                      ) : (
+                        trilha.ativo && (
+                          <Link
+                            to={caminhoEstudo(trilha.id)}
+                            className={`${styles.botao} ${styles.estudar}`}
+                          >
+                            {trilha.progresso.status === 'CONCLUIDA'
+                              ? 'Rever conteúdos'
+                              : 'Estudar trilha'}
+                          </Link>
+                        )
+                      )}
+                      {trilha.progresso.id === null ? null : trilha.ativo ? (
+                        <AcaoProgresso
+                          trilha={trilha}
+                          salvando={salvando}
+                          erro={erroAcao}
+                          onExecutar={() => void executarAcao(trilha)}
+                        />
+                      ) : (
+                        <p className={styles.inativaAviso}>
+                          Trilha inativa: o progresso de quem já a recebeu fica
+                          guardado, mas não pode ser alterado.
+                        </p>
+                      )}
+                    </div>
+                  </>
+                )}
+
+                {podeMontarEtapas && (
+                  <section
+                    aria-labelledby="titulo-etapas"
+                    className={styles.secaoEtapas}
+                  >
+                    <h2 id="titulo-etapas" className={styles.secao}>
+                      Etapas da trilha
+                    </h2>
+                    <EtapasGestao
+                      trilhaId={trilha.id}
+                      onAlterou={() => void atualizarAposEtapas(trilha.id)}
+                    />
+                  </section>
+                )}
               </section>
+
+              <div className={styles.lateral}>
+                {estuda && (
+                  <section aria-labelledby="titulo-progresso">
+                    <h2 id="titulo-progresso" className={styles.secao}>
+                      Progresso geral
+                    </h2>
+                    <div className={styles.painel}>
+                      <div className={styles.progressoTopo}>
+                        <SeloStatus status={trilha.progresso.status} />
+                        <span className={styles.percentual}>
+                          {trilha.progresso.percentual}%
+                        </span>
+                      </div>
+                      <BarraProgresso
+                        percentual={trilha.progresso.percentual}
+                        rotulo={`Progresso em ${trilha.nome}`}
+                        semValor
+                      />
+                      {trilha.progresso.prazo && (
+                        <p
+                          className={
+                            trilha.progresso.status === 'ATRASADA'
+                              ? `${styles.prazo} ${styles.prazoAtrasado}`
+                              : styles.prazo
+                          }
+                        >
+                          {trilha.progresso.status === 'ATRASADA'
+                            ? 'Prazo vencido em '
+                            : 'Prazo: '}
+                          {formatarData(trilha.progresso.prazo)}
+                        </p>
+                      )}
+                    </div>
+                  </section>
+                )}
+
+                <SobreTrilha trilha={trilha} />
+              </div>
             </div>
-          </div>
+          )}
 
           {dialogo === 'edicao' && (
             <TrilhaFormulario
@@ -838,6 +898,45 @@ function AcaoProgresso({
         {salvando ? acao.emAndamento : acao.rotulo}
       </button>
     </div>
+  )
+}
+
+/** "Sobre a trilha": área, duração, objetivo, criação e situação. */
+function SobreTrilha({ trilha }: { trilha: TrilhaDetalhe }) {
+  return (
+    <section aria-labelledby="titulo-sobre">
+      <h2 id="titulo-sobre" className={styles.secao}>
+        Sobre a trilha
+      </h2>
+      <dl className={`${styles.painel} ${styles.dados}`}>
+        <div>
+          <dt>Área</dt>
+          <dd>{trilha.area?.nome ?? 'Multi-área'}</dd>
+        </div>
+        <div>
+          <dt>Duração prevista</dt>
+          <dd>
+            {trilha.prazoDias
+              ? `${trilha.prazoDias} ${trilha.prazoDias === 1 ? 'dia' : 'dias'}`
+              : 'Sem prazo definido'}
+          </dd>
+        </div>
+        {trilha.objetivos && (
+          <div className={styles.cheio}>
+            <dt>Objetivo</dt>
+            <dd>{trilha.objetivos}</dd>
+          </div>
+        )}
+        <div>
+          <dt>Criada em</dt>
+          <dd>{formatarInstante(trilha.criadoEm)}</dd>
+        </div>
+        <div>
+          <dt>Situação</dt>
+          <dd>{trilha.ativo ? 'Ativa' : 'Inativa'}</dd>
+        </div>
+      </dl>
+    </section>
   )
 }
 

@@ -54,9 +54,7 @@ describe('AppLayout', () => {
     expect(
       await screen.findByRole('link', { name: 'Usuários' }),
     ).toBeInTheDocument()
-    expect(
-      screen.getByRole('link', { name: 'Visão geral' }),
-    ).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Dashboard' })).toBeInTheDocument()
   })
 
   it.each(['GESTOR', 'COLABORADOR'] as const)(
@@ -68,7 +66,7 @@ describe('AppLayout', () => {
       })
 
       expect(
-        await screen.findByRole('link', { name: 'Visão geral' }),
+        await screen.findByRole('link', { name: 'Dashboard' }),
       ).toBeInTheDocument()
       expect(
         screen.queryByRole('link', { name: 'Usuários' }),

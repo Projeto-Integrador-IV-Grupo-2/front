@@ -85,6 +85,9 @@ export function UsuarioFormulario({
     estadoInicial(usuario),
   )
   const primeiroCampo = useRef<HTMLInputElement>(null)
+  // Conferências locais do cadastro: o que a API também recusaria, avisado
+  // antes de enviar.
+  const [errosLocais, setErrosLocais] = useState<Record<string, string>>({})
 
   useEffect(() => {
     primeiroCampo.current?.focus()
@@ -95,7 +98,10 @@ export function UsuarioFormulario({
   }
 
   function erroDoCampo(campo: string): string | undefined {
-    return fieldErrors.find((item) => item.field === campo)?.message
+    return (
+      errosLocais[campo] ??
+      fieldErrors.find((item) => item.field === campo)?.message
+    )
   }
 
   function aoSubmeter(evento: FormEvent<HTMLFormElement>) {
@@ -111,6 +117,18 @@ export function UsuarioFormulario({
         areaId: ouNulo(valores.areaId),
         papel: valores.papel,
       })
+      return
+    }
+
+    const erros: Record<string, string> = {}
+    if (!valores.senha) {
+      erros.senha = 'Informe a senha.'
+    }
+    if (!valores.areaId) {
+      erros.areaId = 'Selecione a área.'
+    }
+    setErrosLocais(erros)
+    if (Object.keys(erros).length > 0) {
       return
     }
 
@@ -196,8 +214,7 @@ export function UsuarioFormulario({
 
             <div className={styles.campo}>
               <label htmlFor={`${idBase}-senha`}>Senha</label>
-              {/* Sem regra no front: quem decide se a senha serve é a API,
-                  e a mensagem dela aparece logo abaixo. */}
+              {/* Senha inicial livre: qualquer valor não vazio serve. */}
               <input
                 id={`${idBase}-senha`}
                 type="password"
@@ -250,8 +267,12 @@ export function UsuarioFormulario({
             id={`${idBase}-area`}
             value={valores.areaId}
             onChange={(evento) => alterar('areaId', evento.target.value)}
+            required={!edicao}
+            aria-invalid={Boolean(erroDoCampo('areaId'))}
           >
-            <option value="">Sem área</option>
+            <option value="" disabled={!edicao}>
+              {edicao ? 'Sem área' : 'Selecione a área'}
+            </option>
             {opcoesArea.map((area) => (
               <option key={area.id} value={area.id}>
                 {area.nome}

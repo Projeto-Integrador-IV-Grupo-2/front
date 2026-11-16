@@ -1,5 +1,6 @@
 import type {
   AtribuicaoAcompanhamento,
+  AtribuicaoDetalhe,
   ColaboradorAcompanhamento,
 } from '../types/atribuicao.ts'
 import type { Area } from '../types/area.ts'
@@ -174,8 +175,8 @@ export function criarTrilhaDetalhe(
     prazoDias: 30,
     ativo: true,
     criadoEm: '2026-08-01T12:00:00Z',
+    // Atribuída e ainda não iniciada: o colaborador só estuda o que recebeu.
     progresso: criarProgressoTrilha({
-      id: null,
       status: 'NAO_INICIADA',
       percentual: 0,
       prazo: null,
@@ -215,6 +216,35 @@ export function criarAtribuicao(
     prazo: '2026-10-30',
     atribuidoEm: '2026-09-01T12:00:00Z',
     concluidoEm: null,
+    ...overrides,
+  }
+}
+
+/** Andamento de um colaborador numa trilha: uma etapa vista e uma pendente. */
+export function criarAtribuicaoDetalhe(
+  overrides: Partial<AtribuicaoDetalhe> = {},
+): AtribuicaoDetalhe {
+  return {
+    atribuicao: criarAtribuicao(),
+    iniciadoEm: '2026-09-02T12:00:00Z',
+    etapas: [
+      {
+        id: 'et-1',
+        ordem: 1,
+        titulo: 'Boas-vindas',
+        conteudo: { id: 'c-1', titulo: 'Vídeo de boas-vindas', tipo: 'VIDEO' },
+        concluida: true,
+        concluidaEm: '2026-09-03T15:30:00Z',
+      },
+      {
+        id: 'et-2',
+        ordem: 2,
+        titulo: 'Cultura da empresa',
+        conteudo: { id: 'c-2', titulo: 'Nosso jeito', tipo: 'TEXTO' },
+        concluida: false,
+        concluidaEm: null,
+      },
+    ],
     ...overrides,
   }
 }

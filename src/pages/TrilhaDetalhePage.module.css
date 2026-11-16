@@ -336,3 +336,34 @@
 .secaoEtapas {
   margin-top: var(--space-5);
 }
+
+/* Abas da visão de gestão — mesmo visual das abas de Áreas, Trilhas e PDI. */
+.abas {
+  display: flex;
+  gap: var(--space-1);
+  margin-bottom: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.aba {
+  margin-bottom: -1px;
+  padding: var(--space-2) var(--space-4);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+}
+
+.aba:hover {
+  color: var(--color-text);
+}
+
+.abaAtiva,
+.abaAtiva:hover {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}

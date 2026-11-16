@@ -40,6 +40,12 @@ export interface AuthContextValue {
    * na hora: não há uma segunda cópia do usuário para manter em dia.
    */
   atualizarUsuario: (alteracoes: Partial<User>) => void
+  /**
+   * Id de quem estava na sessão que acabou (logout ou 401), ou `null` se
+   * ninguém entrou desde que a página abriu. O login usa para só devolver a
+   * pessoa à página onde a sessão caiu quando é a mesma pessoa.
+   */
+  ultimoUsuarioId: string | null
 }
 
 // Consumida via useAuth() (src/hooks/useAuth.ts), não diretamente.
@@ -54,6 +60,7 @@ interface AuthProviderProps {
 /** Estado global de autenticação: sessão, usuário logado e login/logout. */
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null)
+  const [ultimoUsuarioId, setUltimoUsuarioId] = useState<string | null>(null)
   // Só há o que restaurar se a sessão anterior existir e ainda valer. A
   // leitura é pura: descartar o token vencido é trabalho do efeito abaixo.
   const [isLoading, setIsLoading] = useState(() => temSessaoSalva())
@@ -74,6 +81,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       .then((currentUser) => {
         if (restauracaoValida.current) {
           setUser(currentUser)
+          setUltimoUsuarioId(currentUser.id)
         }
       })
       .catch(() => {
@@ -129,6 +137,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       restauracaoValida.current = false
       setStoredToken(token, expiraEm)
       setUser(usuario)
+      setUltimoUsuarioId(usuario.id)
       setIsLoading(false)
       return usuario
     },
@@ -153,6 +162,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     login,
     logout,
     atualizarUsuario,
+    ultimoUsuarioId,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

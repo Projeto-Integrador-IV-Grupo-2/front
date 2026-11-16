@@ -107,7 +107,7 @@ export function TrocaSenhaForm() {
       aria-labelledby={tituloId}
       aria-busy={salvando}
     >
-      {/* Rótulo fora do cartão, como os painéis da Visão geral. */}
+      {/* Rótulo fora do cartão, como os painéis do Dashboard. */}
       <h2 id={tituloId} className={styles.rotulo}>
         Senha de acesso
       </h2>

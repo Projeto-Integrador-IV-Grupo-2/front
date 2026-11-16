@@ -50,6 +50,11 @@ function responderColaboradores() {
   )
 }
 
+/** Etapas e "Sobre a trilha" ficam na segunda aba da visão de gestão. */
+async function abrirAbaDaTrilha() {
+  await userEvent.click(screen.getByRole('tab', { name: /informações/i }))
+}
+
 const emAndamento = () =>
   criarTrilhaDetalhe({
     progresso: criarProgressoTrilha({
@@ -255,6 +260,32 @@ describe('TrilhaDetalhePage', () => {
     ).toBeInTheDocument()
   })
 
+  it('trilha não atribuída não oferece estudar nem iniciar ao colaborador', async () => {
+    server.use(
+      http.get('*/api/trilhas/:id', () =>
+        HttpResponse.json(
+          criarTrilhaDetalhe({
+            progresso: criarProgressoTrilha({
+              id: null,
+              status: 'NAO_INICIADA',
+              percentual: 0,
+              prazo: null,
+              atribuidoEm: null,
+            }),
+          }),
+        ),
+      ),
+    )
+
+    renderizarDetalhe()
+
+    expect(
+      await screen.findByText(/Esta trilha não foi atribuída a você/),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Iniciar trilha' })).toBeNull()
+    expect(screen.queryByRole('link', { name: 'Estudar trilha' })).toBeNull()
+  })
+
   it('mostra o selo e o prazo vencido em destaque quando a trilha atrasa', async () => {
     server.use(
       http.get('*/api/trilhas/:id', () =>
@@ -317,6 +348,7 @@ describe('TrilhaDetalhePage', () => {
         screen.queryByRole('heading', { name: 'Progresso geral' }),
       ).toBeNull()
       // O que é de gestão continua.
+      await abrirAbaDaTrilha()
       expect(
         screen.getByRole('heading', { name: 'Sobre a trilha' }),
       ).toBeInTheDocument()
@@ -406,6 +438,7 @@ describe('TrilhaDetalhePage', () => {
     expect(
       screen.getByRole('button', { name: 'Atribuir colaboradores' }),
     ).toBeInTheDocument()
+    await abrirAbaDaTrilha()
     const sobre = screen.getByRole('region', { name: 'Sobre a trilha' })
     expect(within(sobre).getByText('30 dias')).toBeInTheDocument()
     expect(within(sobre).getByText('Ativa')).toBeInTheDocument()
@@ -515,6 +548,7 @@ describe('TrilhaDetalhePage', () => {
     ).toBeVisible()
     // E a trilha segue ativa na tela: nada de selo "Inativa".
     expect(screen.queryByText('Inativa')).not.toBeInTheDocument()
+    await abrirAbaDaTrilha()
     const sobre = screen.getByRole('region', { name: 'Sobre a trilha' })
     expect(within(sobre).getByText('Ativa')).toBeInTheDocument()
   })
@@ -760,6 +794,48 @@ describe('TrilhaDetalhePage', () => {
         name: 'Progresso de Bruno Castro',
       }),
     ).toHaveAttribute('aria-valuenow', '20')
+  })
+
+  it('gestão abre na lista de colaboradores, com Detalhes de cada um', async () => {
+    const usuario = userEvent.setup()
+    server.use(
+      http.get('*/api/atribuicoes', () =>
+        HttpResponse.json(criarPagina([criarAtribuicao({ id: 'at-1' })])),
+      ),
+    )
+
+    renderizarComo(gestor)
+
+    const painel = await screen.findByRole('region', {
+      name: 'Colaboradores atribuídos',
+    })
+    expect(screen.getByRole('tab', { name: 'Colaboradores' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
+    // Etapas e dados da trilha ficam na outra aba.
+    expect(
+      screen.queryByRole('heading', { name: 'Sobre a trilha' }),
+    ).not.toBeInTheDocument()
+
+    await usuario.click(
+      await within(painel).findByRole('link', {
+        name: 'Detalhes de Ana Souza',
+      }),
+    )
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Ana Souza' }),
+    ).toBeInTheDocument()
+    const etapas = screen.getByRole('region', {
+      name: 'Etapas (1 de 2 vistas)',
+    })
+    expect(within(etapas).getByText('Boas-vindas')).toBeInTheDocument()
+    expect(within(etapas).getByText(/^Vista em /)).toBeInTheDocument()
+    expect(within(etapas).getByText('Não vista')).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'Voltar para a trilha' }),
+    ).toHaveAttribute('href', `/trilhas/${ID}`)
   })
 
   it('pede ao acompanhamento só as atribuições desta trilha', async () => {

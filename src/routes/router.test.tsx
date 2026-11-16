@@ -28,7 +28,7 @@ describe('router', () => {
     renderizarComProvedores({ rota: '/dashboard', usuario: criarUsuario() })
 
     expect(
-      await screen.findByRole('heading', { name: 'Visão geral' }),
+      await screen.findByRole('heading', { name: 'Dashboard' }),
     ).toBeInTheDocument()
     expect(screen.getByText('Nexo')).toBeInTheDocument()
   })
@@ -83,9 +83,7 @@ describe('router', () => {
     expect(
       screen.getByRole('button', { name: 'Sair da conta' }),
     ).toBeInTheDocument()
-    expect(
-      screen.getByRole('link', { name: 'Visão geral' }),
-    ).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Dashboard' })).toBeInTheDocument()
   })
 
   it('nega Categorias (dentro de Áreas) ao colaborador aberta pela URL', async () => {

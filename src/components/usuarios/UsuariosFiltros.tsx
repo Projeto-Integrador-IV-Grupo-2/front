@@ -4,6 +4,7 @@ import {
   ROTULOS_PERFIL,
   ROTULOS_SITUACAO,
   SITUACOES,
+  type RecursoResumo,
   type UsuarioFiltro,
 } from '../../types/usuario.ts'
 import styles from './UsuariosFiltros.module.css'
@@ -11,6 +12,8 @@ import styles from './UsuariosFiltros.module.css'
 interface UsuariosFiltrosProps {
   /** Valores em edição. O componente é controlado: quem filtra é a página. */
   valores: UsuarioFiltro
+  /** Áreas cadastradas, para a seleção do filtro de área. */
+  areas: RecursoResumo[]
   onChange: (valores: UsuarioFiltro) => void
   onAplicar: () => void
   onLimpar: () => void
@@ -23,6 +26,7 @@ interface UsuariosFiltrosProps {
  */
 export function UsuariosFiltros({
   valores,
+  areas,
   onChange,
   onAplicar,
   onLimpar,
@@ -66,13 +70,19 @@ export function UsuariosFiltros({
       </div>
 
       <div className={styles.campo}>
-        <label htmlFor={`${idBase}-departamento`}>Área</label>
-        <input
-          id={`${idBase}-departamento`}
-          type="search"
-          value={valores.departamento ?? ''}
-          onChange={(evento) => alterar('departamento', evento.target.value)}
-        />
+        <label htmlFor={`${idBase}-area`}>Área</label>
+        <select
+          id={`${idBase}-area`}
+          value={valores.areaId ?? ''}
+          onChange={(evento) => alterar('areaId', evento.target.value)}
+        >
+          <option value="">Todas</option>
+          {areas.map((area) => (
+            <option key={area.id} value={area.id}>
+              {area.nome}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className={styles.campo}>

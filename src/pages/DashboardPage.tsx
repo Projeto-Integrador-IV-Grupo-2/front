@@ -44,7 +44,7 @@ export function DashboardPage() {
 
   return (
     <div className={styles.page}>
-      <h1 className="visually-hidden">Visão geral</h1>
+      <h1 className="visually-hidden">Dashboard</h1>
 
       {podeVerPainelColaborador && <DashboardColaborador saudacao={saudacao} />}
       {podeVerPainelGestao && <DashboardGestao saudacao={saudacao} />}

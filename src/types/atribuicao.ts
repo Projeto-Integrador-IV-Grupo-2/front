@@ -1,3 +1,4 @@
+import type { TipoConteudo } from './conteudo.ts'
 import type { StatusProgresso } from './trilha.ts'
 import type { RecursoResumo } from './usuario.ts'
 
@@ -66,4 +67,26 @@ export interface AtribuicaoPaginacao {
 export interface ArquivoExportado {
   conteudo: Blob
   nome: string
+}
+
+/** Uma etapa da trilha e se o colaborador já a concluiu (`EtapaDoColaborador`). */
+export interface EtapaDoColaborador {
+  id: string
+  ordem: number
+  titulo: string
+  conteudo: { id: string; titulo: string; tipo: TipoConteudo }
+  concluida: boolean
+  /** Quando o colaborador concluiu; nulo se ainda não concluiu. */
+  concluidaEm: string | null
+}
+
+/**
+ * O andamento de um colaborador numa trilha, etapa por etapa
+ * (`GET /api/atribuicoes/{id}`, record `AtribuicaoDetalheResponse`).
+ */
+export interface AtribuicaoDetalhe {
+  atribuicao: AtribuicaoAcompanhamento
+  /** Quando o colaborador começou; nulo se ainda não começou. */
+  iniciadoEm: string | null
+  etapas: EtapaDoColaborador[]
 }

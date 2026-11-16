@@ -11,6 +11,7 @@ import type { ApiErrorResponse, ApiFieldError } from '../types/api.ts'
 import type {
   ArquivoExportado,
   AtribuicaoAcompanhamento,
+  AtribuicaoDetalhe,
   AtribuicaoFiltro,
   AtribuicaoPaginacao,
   ColaboradorAcompanhamento,
@@ -114,6 +115,30 @@ export async function buscarAcompanhamentoDoColaborador(
       {
         mensagens: {
           [HTTP_STATUS.NOT_FOUND]: 'Colaborador não encontrado.',
+        },
+      },
+    )
+  }
+}
+
+/** Uma atribuição com as etapas da trilha e o que o colaborador já concluiu. */
+export async function buscarAtribuicao(
+  atribuicaoId: string,
+  config?: { signal?: AbortSignal },
+): Promise<AtribuicaoDetalhe> {
+  try {
+    const { data } = await api.get<AtribuicaoDetalhe>(
+      `/api/atribuicoes/${encodeURIComponent(atribuicaoId)}`,
+      { signal: config?.signal },
+    )
+    return data
+  } catch (error) {
+    throw toServiceError(
+      error,
+      'Não foi possível carregar o andamento do colaborador.',
+      {
+        mensagens: {
+          [HTTP_STATUS.NOT_FOUND]: 'Atribuição não encontrada.',
         },
       },
     )

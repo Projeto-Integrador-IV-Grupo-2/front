@@ -50,7 +50,7 @@ export const PERFIS_GESTAO_AREA: UserRole[] = ['ADMIN', 'GESTOR']
 export const PERFIS_ESTUDO: UserRole[] = ['COLABORADOR']
 
 export const ITENS_MENU: ItemMenu[] = [
-  { to: ROTAS.dashboard, rotulo: 'Visão geral' },
+  { to: ROTAS.dashboard, rotulo: 'Dashboard' },
   { to: ROTAS.trilhas, rotulo: 'Trilhas' },
   { to: ROTAS.usuarios, rotulo: 'Usuários', perfis: ['ADMIN'] },
   // Áreas (com a aba Categorias) e Conteúdos são cadastros de gestão. O

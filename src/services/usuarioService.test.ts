@@ -40,12 +40,12 @@ describe('usuarioService', () => {
       }),
     )
 
-    await listarUsuarios({ perfil: 'GESTOR', departamento: 'Vendas' })
+    await listarUsuarios({ perfil: 'GESTOR', areaId: 'area-1' })
 
     const params = url!.searchParams
     expect(params.get('papel')).toBe('GESTOR')
     expect(params.has('perfil')).toBe(false)
-    expect(params.get('departamento')).toBe('Vendas')
+    expect(params.get('areaId')).toBe('area-1')
   })
 
   it('devolve o conteúdo e os contadores da página', async () => {

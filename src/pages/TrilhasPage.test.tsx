@@ -43,9 +43,6 @@ describe('TrilhasPage', () => {
 
     renderizarTrilhas()
 
-    expect(
-      await screen.findByRole('tab', { name: 'Minhas trilhas' }),
-    ).toHaveAttribute('aria-selected', 'true')
     const link = await screen.findByRole('link', {
       name: /Atendimento ao Cliente/,
     })
@@ -112,29 +109,24 @@ describe('TrilhasPage', () => {
     expect(screen.queryByRole('button', { name: 'Nova trilha' })).toBeNull()
   })
 
-  it('mostra o estado vazio de cada aba e leva ao catálogo', async () => {
+  it('colaborador sem trilhas vê o estado vazio, sem catálogo', async () => {
     server.use(
       http.get('*/api/trilhas', () =>
         HttpResponse.json(criarPaginaTrilhas([])),
       ),
     )
-    const usuario = userEvent.setup()
 
     renderizarTrilhas()
 
     expect(
       await screen.findByText('Você ainda não tem trilhas'),
     ).toBeInTheDocument()
-
-    await usuario.click(screen.getByRole('button', { name: 'Ver catálogo' }))
-
-    expect(screen.getByRole('tab', { name: 'Catálogo' })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    )
     expect(
-      await screen.findByText('Nenhuma trilha disponível no momento'),
+      screen.getByText(
+        'As trilhas atribuídas a você aparecem aqui, ordenadas pelo prazo.',
+      ),
     ).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Ver catálogo' })).toBeNull()
   })
 
   it('"Minhas trilhas" pede só as do usuário, pelo prazo', async () => {
@@ -165,7 +157,7 @@ describe('TrilhasPage', () => {
     expect(screen.queryByRole('progressbar')).toBeNull()
   })
 
-  it('guarda a aba na URL e a mantém ao recarregar', async () => {
+  it('colaborador não tem a aba Catálogo, nem pela URL', async () => {
     const urls: URL[] = []
     server.use(
       http.get('*/api/trilhas', ({ request }) => {
@@ -174,33 +166,18 @@ describe('TrilhasPage', () => {
       }),
     )
 
-    // Recarregar = abrir a aplicação já com ?aba=catalogo na URL.
+    // Entrar numa trilha é atribuição da gestão: o catálogo não aparece.
     renderizarComProvedores({
       rota: '/trilhas?aba=catalogo',
       usuario: colaborador,
     })
 
-    expect(
-      await screen.findByRole('tab', { name: 'Catálogo' }),
-    ).toHaveAttribute('aria-selected', 'true')
     await screen.findByRole('link', { name: /Onboarding/ })
-    const ultima = urls[urls.length - 1].searchParams
-    expect(ultima.has('minhas')).toBe(false)
-    expect(ultima.get('sort')).toBe('nome')
-  })
-
-  it('troca de aba pelo teclado', async () => {
-    const usuario = userEvent.setup()
-
-    renderizarTrilhas()
-
-    const minhas = await screen.findByRole('tab', { name: 'Minhas trilhas' })
-    minhas.focus()
-    await usuario.keyboard('{ArrowRight}')
-
-    const catalogo = screen.getByRole('tab', { name: 'Catálogo' })
-    expect(catalogo).toHaveAttribute('aria-selected', 'true')
-    expect(catalogo).toHaveFocus()
+    expect(screen.queryByRole('tab', { name: 'Catálogo' })).toBeNull()
+    expect(screen.queryByRole('tab', { name: 'Minhas trilhas' })).toBeNull()
+    expect(urls.every((url) => url.searchParams.get('minhas') === 'true')).toBe(
+      true,
+    )
   })
 
   it('combina busca, área e status e volta para a primeira página', async () => {
@@ -301,49 +278,6 @@ describe('TrilhasPage', () => {
     expect(
       await screen.findByRole('link', { name: /Onboarding/ }),
     ).toBeInTheDocument()
-  })
-
-  it('recomenda as trilhas da área do usuário no catálogo', async () => {
-    const area = { id: 'area-vendas', nome: 'Vendas' }
-    const urls: URL[] = []
-    server.use(
-      http.get('*/api/trilhas', ({ request }) => {
-        const url = new URL(request.url)
-        urls.push(url)
-        return HttpResponse.json(
-          criarPaginaTrilhas(
-            url.searchParams.get('areaId') === area.id
-              ? [
-                  criarTrilhaResumo({
-                    id: 'rec',
-                    nome: 'Técnicas de Venda',
-                    area,
-                  }),
-                ]
-              : [criarTrilhaResumo()],
-          ),
-        )
-      }),
-    )
-
-    renderizarComProvedores({
-      rota: '/trilhas?aba=catalogo',
-      usuario: criarUsuario({ area }),
-    })
-
-    const secao = await screen.findByRole('list', {
-      name: 'Recomendadas para sua área',
-    })
-    expect(
-      within(secao).getByRole('link', { name: /Técnicas de Venda/ }),
-    ).toBeInTheDocument()
-    expect(screen.getByText('Trilhas da área Vendas.')).toBeInTheDocument()
-    // O catálogo também traz as da área primeiro.
-    await waitFor(() =>
-      expect(
-        urls.some((url) => url.searchParams.get('recomendar') === 'AREA'),
-      ).toBe(true),
-    )
   })
 
   it('não mostra recomendações para quem não tem área', async () => {

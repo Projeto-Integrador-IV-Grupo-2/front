@@ -14,6 +14,7 @@ import { ConhecimentoPage } from '../pages/ConhecimentoPage.tsx'
 import { NotificacoesPage } from '../pages/NotificacoesPage.tsx'
 import { DocumentoDetalhePage } from '../pages/DocumentoDetalhePage.tsx'
 import { ConteudosPage } from '../pages/ConteudosPage.tsx'
+import { ColaboradorNaTrilhaPage } from '../pages/ColaboradorNaTrilhaPage.tsx'
 import { DashboardPage } from '../pages/DashboardPage.tsx'
 import { HistoricoPage } from '../pages/HistoricoPage.tsx'
 import { EsqueciSenhaPage } from '../pages/EsqueciSenhaPage.tsx'
@@ -92,6 +93,10 @@ export const routes: RouteObject[] = [
             element: <ProtectedRoute perfis={PERFIS_ACOMPANHAMENTO} />,
             children: [
               { path: ROTAS.acompanhamento, element: <AcompanhamentoPage /> },
+              {
+                path: ROTAS.trilhaColaborador,
+                element: <ColaboradorNaTrilhaPage />,
+              },
             ],
           },
         ],

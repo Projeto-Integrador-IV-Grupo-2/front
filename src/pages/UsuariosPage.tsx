@@ -26,7 +26,7 @@ import styles from './UsuariosPage.module.css'
 const FILTRO_VAZIO: UsuarioFiltro = {
   nome: '',
   email: '',
-  departamento: '',
+  areaId: '',
   perfil: '',
   situacao: '',
 }
@@ -276,6 +276,7 @@ export function UsuariosPage() {
 
       <UsuariosFiltros
         valores={filtros}
+        areas={opcoesAreas}
         onChange={setFiltros}
         onAplicar={aplicarFiltros}
         onLimpar={limparFiltros}

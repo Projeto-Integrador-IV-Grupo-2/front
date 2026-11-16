@@ -14,6 +14,8 @@ export const ROTAS = {
   trilhas: '/trilhas',
   trilhaDetalhe: '/trilhas/:id',
   trilhaEstudo: '/trilhas/:id/estudar',
+  // Andamento de um colaborador na trilha: aberto pelo "Detalhes" da lista.
+  trilhaColaborador: '/trilhas/:id/colaboradores/:atribuicaoId',
   // O PDI vive dentro de Trilhas: sem item próprio no menu.
   pdi: '/trilhas/pdi',
   pdiDetalhe: '/trilhas/pdi/:id',
@@ -48,4 +50,14 @@ export function caminhoDocumento(id: string): string {
 /** Caminho do editor de um PDI específico. */
 export function caminhoPdi(id: string): string {
   return ROTAS.pdiDetalhe.replace(':id', encodeURIComponent(id))
+}
+
+/** Andamento de um colaborador numa trilha: etapas vistas, datas e progresso. */
+export function caminhoColaboradorNaTrilha(
+  trilhaId: string,
+  atribuicaoId: string,
+): string {
+  return ROTAS.trilhaColaborador
+    .replace(':id', encodeURIComponent(trilhaId))
+    .replace(':atribuicaoId', encodeURIComponent(atribuicaoId))
 }

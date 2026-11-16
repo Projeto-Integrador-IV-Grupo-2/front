@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { AssistenteTrilhas } from '../components/trilhas/AssistenteTrilhas.tsx'
 import { TrilhaCard } from '../components/trilhas/TrilhaCard.tsx'
 import { TrilhaFormulario } from '../components/trilhas/TrilhaFormulario.tsx'
@@ -36,35 +36,16 @@ import type { Pagina, RecursoResumo } from '../types/usuario.ts'
 import styles from './TrilhasPage.module.css'
 
 const TAMANHO_PAGINA = 12
-const TAMANHO_RECOMENDADAS = 4
 const CARTOES_ESQUELETO = 4
 
 const FILTRO_VAZIO: ValoresFiltroTrilhas = { nome: '', areaId: '', status: '' }
 
 type Aba = 'minhas' | 'catalogo'
 
-const ABAS: Array<{ id: Aba; rotulo: string }> = [
-  { id: 'minhas', rotulo: 'Minhas trilhas' },
-  { id: 'catalogo', rotulo: 'Catálogo' },
-]
-
-/** Parâmetro da URL que guarda a aba — recarregar a página mantém a escolha. */
-const PARAMETRO_ABA = 'aba'
-
-function abaDaUrl(valor: string | null): Aba {
-  return valor === 'catalogo' ? 'catalogo' : 'minhas'
-}
-
 interface ResultadoBusca {
   /** Identifica a busca que produziu este resultado (aba + filtros + recarga). */
   chave: string
   paginas: Pagina<TrilhaResumo>[]
-  erro: string | null
-}
-
-interface ResultadoRecomendadas {
-  chave: string
-  trilhas: TrilhaResumo[]
   erro: string | null
 }
 
@@ -136,10 +117,9 @@ export function TrilhasPage() {
   const estuda = usePermissao(PERFIS_ESTUDO)
   const areaDoUsuario = user?.area ?? null
 
-  const [searchParams, setSearchParams] = useSearchParams()
-  const aba: Aba = estuda
-    ? abaDaUrl(searchParams.get(PARAMETRO_ABA))
-    : 'catalogo'
+  // Quem estuda vê só as trilhas que recebeu: entrar numa trilha é
+  // atribuição da gestão, não escolha no catálogo. A gestão vê o catálogo.
+  const aba: Aba = estuda ? 'minhas' : 'catalogo'
 
   const [filtros, setFiltros] = useState<ValoresFiltroTrilhas>(FILTRO_VAZIO)
   // Só o nome é adiado: os selects não geram uma requisição por tecla.
@@ -151,8 +131,6 @@ export function TrilhasPage() {
   const [resultado, setResultado] = useState<ResultadoBusca | null>(null)
   const [carregandoMais, setCarregandoMais] = useState(false)
   const [erroMais, setErroMais] = useState<string | null>(null)
-  const [recomendadas, setRecomendadas] =
-    useState<ResultadoRecomendadas | null>(null)
 
   const [formularioAberto, setFormularioAberto] = useState(false)
   // Rascunho vindo da IA: abre o cadastro já preenchido.
@@ -171,7 +149,6 @@ export function TrilhasPage() {
   const [areasIndisponiveis, setAreasIndisponiveis] = useState(false)
   const [aviso, setAviso] = useState<string | null>(null)
   const novaTrilhaRef = useRef<HTMLButtonElement>(null)
-  const abasRef = useRef<Array<HTMLButtonElement | null>>([])
 
   const { areaId, status } = filtros
   const recomendarArea = aba === 'catalogo' && areaDoUsuario !== null
@@ -217,43 +194,6 @@ export function TrilhasPage() {
     return () => controlador.abort()
   }, [chaveBusca, aba, nomeBuscado, areaId, status, recomendarArea])
 
-  // Recomendadas: só no catálogo, para quem estuda e tem área.
-  const chaveRecomendadas =
-    aba === 'catalogo' && areaDoUsuario && estuda ? areaDoUsuario.id : null
-  useEffect(() => {
-    if (chaveRecomendadas === null) {
-      return
-    }
-    const controlador = new AbortController()
-    listarTrilhas(
-      { areaId: chaveRecomendadas },
-      { page: 0, size: TAMANHO_RECOMENDADAS },
-      { signal: controlador.signal },
-    )
-      .then((pagina) => {
-        if (!controlador.signal.aborted) {
-          setRecomendadas({
-            chave: chaveRecomendadas,
-            trilhas: pagina.content,
-            erro: null,
-          })
-        }
-      })
-      .catch((causa: unknown) => {
-        if (!controlador.signal.aborted) {
-          setRecomendadas({
-            chave: chaveRecomendadas,
-            trilhas: [],
-            erro: mensagemDe(
-              causa,
-              'Não foi possível carregar as recomendações.',
-            ),
-          })
-        }
-      })
-    return () => controlador.abort()
-  }, [chaveRecomendadas])
-
   // As áreas alimentam o filtro e o cadastro; falha aqui só esconde o filtro.
   useEffect(() => {
     let ativo = true
@@ -282,37 +222,6 @@ export function TrilhasPage() {
   const total = ultimaPagina?.page.totalElements ?? 0
   const temFiltro =
     filtros.nome.trim() !== '' || filtros.areaId !== '' || filtros.status !== ''
-
-  function trocarAba(nova: Aba) {
-    if (nova === aba) {
-      return
-    }
-    setErroMais(null)
-    setSearchParams(
-      (atuais) => {
-        const proximos = new URLSearchParams(atuais)
-        proximos.set(PARAMETRO_ABA, nova)
-        return proximos
-      },
-      { replace: true },
-    )
-  }
-
-  // Setas trocam de aba, como pede o padrão de abas do WAI-ARIA.
-  function aoTeclarAba(
-    evento: KeyboardEvent<HTMLButtonElement>,
-    indice: number,
-  ) {
-    const passo =
-      evento.key === 'ArrowRight' ? 1 : evento.key === 'ArrowLeft' ? -1 : 0
-    if (passo === 0) {
-      return
-    }
-    evento.preventDefault()
-    const proximo = (indice + passo + ABAS.length) % ABAS.length
-    trocarAba(ABAS[proximo].id)
-    abasRef.current[proximo]?.focus()
-  }
 
   function alterarFiltros(valores: ValoresFiltroTrilhas) {
     setErroMais(null)
@@ -425,10 +334,6 @@ export function TrilhasPage() {
   }
 
   const listaVazia = !carregando && erroBusca === null && trilhas.length === 0
-  const recomendadasAtuais =
-    chaveRecomendadas !== null && recomendadas?.chave === chaveRecomendadas
-      ? recomendadas
-      : null
 
   return (
     <div className={styles.page}>
@@ -514,53 +419,7 @@ export function TrilhasPage() {
         {aviso && <p className={styles.aviso}>{aviso}</p>}
       </div>
 
-      {estuda && (
-        <div
-          className={styles.abas}
-          role="tablist"
-          aria-label="Visões das trilhas"
-        >
-          {ABAS.map((item, indice) => {
-            const ativa = item.id === aba
-            return (
-              <button
-                key={item.id}
-                ref={(elemento) => {
-                  abasRef.current[indice] = elemento
-                }}
-                type="button"
-                role="tab"
-                id={`aba-${item.id}`}
-                aria-selected={ativa}
-                aria-controls="painel-trilhas"
-                tabIndex={ativa ? 0 : -1}
-                className={
-                  ativa ? `${styles.aba} ${styles.abaAtiva}` : styles.aba
-                }
-                onClick={() => trocarAba(item.id)}
-                onKeyDown={(evento) => aoTeclarAba(evento, indice)}
-              >
-                {item.rotulo}
-              </button>
-            )
-          })}
-        </div>
-      )}
-
-      <div
-        id="painel-trilhas"
-        role={estuda ? 'tabpanel' : undefined}
-        aria-labelledby={estuda ? `aba-${aba}` : undefined}
-        className={styles.painel}
-      >
-        {recomendadasAtuais && areaDoUsuario && (
-          <SecaoRecomendadas
-            area={areaDoUsuario}
-            trilhas={recomendadasAtuais.trilhas}
-            erro={recomendadasAtuais.erro}
-          />
-        )}
-
+      <div id="painel-trilhas" className={styles.painel}>
         <TrilhasFiltros
           valores={filtros}
           onChange={alterarFiltros}
@@ -598,12 +457,7 @@ export function TrilhasPage() {
         )}
 
         {listaVazia && (
-          <EstadoVazio
-            aba={aba}
-            temFiltro={temFiltro}
-            podeCriar={podeCriar}
-            onVerCatalogo={() => trocarAba('catalogo')}
-          />
+          <EstadoVazio aba={aba} temFiltro={temFiltro} podeCriar={podeCriar} />
         )}
 
         {!carregando && erroBusca === null && trilhas.length > 0 && (
@@ -668,54 +522,13 @@ export function TrilhasPage() {
   )
 }
 
-interface SecaoRecomendadasProps {
-  area: RecursoResumo
-  trilhas: TrilhaResumo[]
-  erro: string | null
-}
-
-/** Trilhas da área do usuário. Sem nada a recomendar, a seção não aparece. */
-function SecaoRecomendadas({ area, trilhas, erro }: SecaoRecomendadasProps) {
-  if (erro === null && trilhas.length === 0) {
-    return null
-  }
-  return (
-    <section
-      className={styles.recomendadas}
-      aria-labelledby="titulo-recomendadas"
-    >
-      <div>
-        <h2 id="titulo-recomendadas" className={styles.subtitulo}>
-          Recomendadas para sua área
-        </h2>
-        <p className={styles.hint}>Trilhas da área {area.nome}.</p>
-      </div>
-      {erro ? (
-        <p className={styles.erroMais}>{erro}</p>
-      ) : (
-        <ul className={styles.grade} aria-label="Recomendadas para sua área">
-          {trilhas.map((trilha) => (
-            <TrilhaCard key={trilha.id} trilha={trilha} />
-          ))}
-        </ul>
-      )}
-    </section>
-  )
-}
-
 interface EstadoVazioProps {
   aba: Aba
   temFiltro: boolean
   podeCriar: boolean
-  onVerCatalogo: () => void
 }
 
-function EstadoVazio({
-  aba,
-  temFiltro,
-  podeCriar,
-  onVerCatalogo,
-}: EstadoVazioProps) {
+function EstadoVazio({ aba, temFiltro, podeCriar }: EstadoVazioProps) {
   let titulo: string
   let texto: string
   if (temFiltro) {
@@ -723,8 +536,7 @@ function EstadoVazio({
     texto = 'Nenhuma trilha combina com a busca e os filtros atuais.'
   } else if (aba === 'minhas') {
     titulo = 'Você ainda não tem trilhas'
-    texto =
-      'As trilhas que você iniciar ou receber aparecem aqui, ordenadas pelo prazo.'
+    texto = 'As trilhas atribuídas a você aparecem aqui, ordenadas pelo prazo.'
   } else if (podeCriar) {
     titulo = 'Nenhuma trilha cadastrada ainda'
     texto =
@@ -739,11 +551,6 @@ function EstadoVazio({
       <TrilhaVaziaIcone />
       <p className={styles.vazioTitulo}>{titulo}</p>
       <p className={styles.vazioTexto}>{texto}</p>
-      {!temFiltro && aba === 'minhas' && (
-        <button type="button" className={styles.mais} onClick={onVerCatalogo}>
-          Ver catálogo
-        </button>
-      )}
     </div>
   )
 }

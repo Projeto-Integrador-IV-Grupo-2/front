@@ -18,9 +18,11 @@ import {
 import { ROTAS, caminhoTrilha } from '../../routes/paths.ts'
 import { PainelDashboard, type EstadoPainel } from './PainelDashboard.tsx'
 import {
+  AlertaIcon,
   CartaoIndicador,
   CheckIcon,
   GradeIndicadores,
+  ItemAtencao,
   PlayIcon as PlayIconIndicador,
   RelogioIcon,
   ResumoStatus,
@@ -30,25 +32,11 @@ import {
 import lista from './ListaDashboard.module.css'
 import styles from './DashboardColaborador.module.css'
 
-const SELOS_STATUS: Record<StatusProgresso, string> = {
-  NAO_INICIADA: lista.seloNeutro,
-  EM_ANDAMENTO: lista.seloAndamento,
-  CONCLUIDA: lista.seloSucesso,
-  ATRASADA: lista.seloPerigo,
-}
-
 const ROTULOS_INTERACAO = {
   TRILHA_ACESSADA: 'acessou',
   TRILHA_INICIADA: 'iniciou',
   TRILHA_CONCLUIDA: 'concluiu',
 } as const
-
-/** Trilha do cartão "Continue de onde parou". */
-interface TrilhaParaContinuar {
-  trilhaId: string
-  trilhaNome: string
-  detalhe: string
-}
 
 type AtividadeDeTrilha = HistoricoInteracaoDashboard & {
   tipo: keyof typeof ROTULOS_INTERACAO
@@ -93,13 +81,6 @@ export function DashboardColaborador({ saudacao }: { saudacao: ReactNode }) {
     dados && !prazosValidos
       ? 'A API retornou uma lista de prazos inválida.'
       : erro
-  const estadoPrazos: EstadoPainel = carregando
-    ? 'carregando'
-    : erroPrazos
-      ? 'erro'
-      : prazosValidos && prazos.length > 0
-        ? 'pronto'
-        : 'vazio'
 
   // O histórico também tem interações que não são de trilha (pergunta à IA,
   // senha redefinida): elas não entram neste painel, mas também não podem
@@ -120,19 +101,33 @@ export function DashboardColaborador({ saudacao }: { saudacao: ReactNode }) {
         ? 'pronto'
         : 'vazio'
 
-  const minhasTrilhas = useMinhasTrilhas()
-  const continuar = trilhaParaContinuar(
-    prazosValidos ? prazos : [],
-    minhasTrilhas,
-    atividadesValidas ? atividades : [],
-  )
+  const minhas = useMinhasTrilhas()
+  const estadoMinhas: EstadoPainel =
+    minhas.status === 'carregando'
+      ? 'carregando'
+      : minhas.status === 'erro'
+        ? 'erro'
+        : minhas.trilhas.length > 0
+          ? 'pronto'
+          : 'vazio'
 
-  const quantosPrazos = prazosValidos
-    ? prazos.filter((prazo) => prazo.status !== 'CONCLUIDA').length
-    : 0
+  // Mesmo arranjo do painel de gestão, com os dados de quem está logado:
+  // o que pede atenção, as trilhas com o progresso e o resumo por status.
+  const atencoes = montarAtencoes(
+    resumoOk ? resumo : undefined,
+    prazosValidos ? prazos : [],
+  )
+  const estadoAtencoes: EstadoPainel = carregando
+    ? 'carregando'
+    : erroPrazos
+      ? 'erro'
+      : atencoes.length > 0
+        ? 'pronto'
+        : 'vazio'
+
   const selo =
-    quantosPrazos > 0
-      ? `${quantosPrazos} ${quantosPrazos === 1 ? 'prazo' : 'prazos'} nesta semana`
+    atencoes.length > 0
+      ? `${atencoes.length} ${atencoes.length === 1 ? 'item precisa' : 'itens precisam'} de atenção`
       : null
 
   return (
@@ -175,21 +170,36 @@ export function DashboardColaborador({ saudacao }: { saudacao: ReactNode }) {
         )}
       </GradeIndicadores>
 
-      {continuar && <CartaoContinuar trilha={continuar} />}
-
-      <div className={lista.colunas}>
+      <div className={`${lista.colunas} ${lista.colunasIguais}`}>
         <div className={lista.coluna}>
           <PainelDashboard
-            titulo="Próximos prazos"
-            estado={estadoPrazos}
+            titulo="Precisa de atenção"
+            estado={estadoAtencoes}
             mensagemErro={erroPrazos}
-            mensagemVazia="Você não tem prazos nos próximos sete dias."
+            mensagemVazia="Nada precisa da sua atenção agora."
+            semCartao
           >
-            <ul className={lista.lista}>
-              {(prazosValidos ? prazos : []).map((prazo) => (
-                <PrazoItem key={prazo.atribuicaoId} prazo={prazo} />
+            <ul className={lista.atencoes}>
+              {atencoes.map((item) => (
+                <ItemAtencao
+                  key={item.chave}
+                  tom={item.tom}
+                  icone={item.icone}
+                  texto={item.texto}
+                  etiqueta={item.etiqueta}
+                  para={item.para}
+                />
               ))}
             </ul>
+          </PainelDashboard>
+
+          <PainelDashboard
+            titulo="Minhas trilhas"
+            estado={estadoMinhas}
+            mensagemErro="Não foi possível carregar suas trilhas."
+            mensagemVazia="Você ainda não recebeu nenhuma trilha."
+          >
+            <MinhasTrilhas trilhas={minhas.trilhas} />
           </PainelDashboard>
 
           <PainelDashboard
@@ -208,49 +218,122 @@ export function DashboardColaborador({ saudacao }: { saudacao: ReactNode }) {
 
         <div className={lista.coluna}>
           <PainelDashboard
-            titulo="Suas trilhas"
+            titulo="Suas trilhas por status"
             estado={estadoResumo}
             mensagemErro={erroResumo}
+            esticar
           >
             {resumoOk && <ResumoTrilhas resumo={resumo} />}
           </PainelDashboard>
-
-          <aside className={styles.ia} aria-label="Assistente de IA">
-            <span className={styles.iaIcone}>
-              <SparkleIcon />
-            </span>
-            <div>
-              <p className={styles.iaTexto}>
-                Dúvida sobre uma política, um processo ou um código interno?
-                Pergunte à IA — ela consulta toda a base de conhecimento da
-                empresa.
-              </p>
-              <Link to={ROTAS.assistente} className={styles.iaBotao}>
-                Abrir assistente
-              </Link>
-            </div>
-          </aside>
         </div>
       </div>
     </div>
   )
 }
 
-/** Ordem de prioridade do "Continue de onde parou" entre as minhas trilhas. */
-const PRIORIDADE_CONTINUAR: StatusProgresso[] = [
-  'ATRASADA',
-  'EM_ANDAMENTO',
-  'NAO_INICIADA',
-]
+/** Item de "Precisa de atenção" do colaborador. */
+interface Atencao {
+  chave: string
+  tom: 'perigo' | 'alerta'
+  icone: ReactNode
+  texto: string
+  etiqueta: string
+  para: string
+}
 
-/**
- * Trilhas do usuário (iniciadas ou recebidas), pelo prazo. O dashboard só
- * traz prazos dos próximos sete dias; sem esta lista, uma trilha recebida com
- * prazo maior não apareceria em lugar nenhum da visão geral. Se a busca
- * falhar, o cartão usa as outras fontes.
- */
-function useMinhasTrilhas(): TrilhaResumo[] {
-  const [trilhas, setTrilhas] = useState<TrilhaResumo[]>([])
+/** Atrasos, depois os prazos da semana, depois o que ainda não começou. */
+function montarAtencoes(
+  resumo: ResumoStatusDashboard | undefined,
+  prazos: ProximoPrazoDashboard[],
+): Atencao[] {
+  const itens: Atencao[] = []
+  if (resumo && resumo.atrasadas > 0) {
+    itens.push({
+      chave: 'atrasadas',
+      tom: 'perigo',
+      icone: <AlertaIcon />,
+      texto: `${resumo.atrasadas} ${resumo.atrasadas === 1 ? 'trilha está atrasada' : 'trilhas estão atrasadas'}`,
+      etiqueta: 'Atraso',
+      para: ROTAS.trilhas,
+    })
+  }
+  for (const prazo of prazos) {
+    if (prazo.status === 'CONCLUIDA') continue
+    itens.push({
+      chave: `prazo-${prazo.atribuicaoId}`,
+      tom: prazo.status === 'ATRASADA' ? 'perigo' : 'alerta',
+      icone: <RelogioIcon />,
+      texto: `${prazo.trilhaNome} vence em ${formatarData(prazo.prazo)} · ${prazo.percentual}% concluído`,
+      etiqueta: 'Prazo nesta semana',
+      para: caminhoTrilha(prazo.trilhaId),
+    })
+  }
+  if (resumo && resumo.naoIniciadas > 0) {
+    itens.push({
+      chave: 'nao-iniciadas',
+      tom: 'alerta',
+      icone: <PlayIconIndicador />,
+      texto: `${resumo.naoIniciadas} ${resumo.naoIniciadas === 1 ? 'trilha ainda não foi iniciada' : 'trilhas ainda não foram iniciadas'}`,
+      etiqueta: 'Não iniciadas',
+      para: ROTAS.trilhas,
+    })
+  }
+  return itens
+}
+
+/** As trilhas recebidas, com o progresso de cada uma — como o ranking da gestão. */
+function MinhasTrilhas({ trilhas }: { trilhas: TrilhaResumo[] }) {
+  return (
+    <ol className={lista.lista}>
+      {trilhas.map((trilha) => {
+        const status = trilha.progresso?.status ?? 'NAO_INICIADA'
+        const percentual = trilha.progresso?.percentual ?? 0
+        return (
+          <li key={trilha.id}>
+            <Link
+              to={caminhoTrilha(trilha.id)}
+              className={`${lista.linha} ${lista.linhaLink}`}
+            >
+              <span className={lista.linhaCorpo}>
+                <span className={lista.linhaTitulo}>{trilha.nome}</span>
+                <span className={lista.linhaMeta}>
+                  {ROTULOS_STATUS_PROGRESSO[status]} · {percentual}% concluído
+                  {trilha.progresso?.prazo &&
+                    ` · prazo em ${formatarData(trilha.progresso.prazo)}`}
+                </span>
+              </span>
+              <span
+                className={lista.miniBarra}
+                role="progressbar"
+                aria-label={`Progresso em ${trilha.nome}`}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={percentual}
+              >
+                <span
+                  className={lista.barraPreenchida}
+                  style={{ width: `${percentual}%` }}
+                />
+              </span>
+            </Link>
+          </li>
+        )
+      })}
+    </ol>
+  )
+}
+
+interface MinhasTrilhasEstado {
+  status: 'carregando' | 'pronto' | 'erro'
+  trilhas: TrilhaResumo[]
+}
+
+/** Trilhas recebidas pelo usuário, da mais urgente (prazo) para a menos. */
+function useMinhasTrilhas(): MinhasTrilhasEstado {
+  const [estado, setEstado] = useState<MinhasTrilhasEstado>({
+    status: 'carregando',
+    trilhas: [],
+  })
   useEffect(() => {
     const controlador = new AbortController()
     listarTrilhas(
@@ -259,81 +342,18 @@ function useMinhasTrilhas(): TrilhaResumo[] {
       { signal: controlador.signal },
     )
       .then((pagina) => {
-        if (!controlador.signal.aborted) setTrilhas(pagina.content)
+        if (!controlador.signal.aborted) {
+          setEstado({ status: 'pronto', trilhas: pagina.content })
+        }
       })
-      .catch(() => undefined)
+      .catch(() => {
+        if (!controlador.signal.aborted) {
+          setEstado({ status: 'erro', trilhas: [] })
+        }
+      })
     return () => controlador.abort()
   }, [])
-  return trilhas
-}
-
-/**
- * A trilha para retomar: o prazo mais próximo ainda aberto; senão, a minha
- * trilha mais urgente (atrasada, em andamento, não iniciada); por fim, a
- * última trilha acessada ou iniciada.
- */
-function trilhaParaContinuar(
-  prazos: ProximoPrazoDashboard[],
-  minhas: TrilhaResumo[],
-  atividades: HistoricoInteracaoDashboard[],
-): TrilhaParaContinuar | undefined {
-  const prazo = prazos.find((item) => item.status !== 'CONCLUIDA')
-  if (prazo) {
-    return {
-      trilhaId: prazo.trilhaId,
-      trilhaNome: prazo.trilhaNome,
-      detalhe: `${prazo.percentual}% concluído · prazo em ${formatarData(prazo.prazo)}`,
-    }
-  }
-  for (const status of PRIORIDADE_CONTINUAR) {
-    const trilha = minhas.find((item) => item.progresso?.status === status)
-    if (trilha?.progresso) {
-      const { percentual, prazo: dataPrazo } = trilha.progresso
-      return {
-        trilhaId: trilha.id,
-        trilhaNome: trilha.nome,
-        detalhe: dataPrazo
-          ? `${percentual}% concluído · prazo em ${formatarData(dataPrazo)}`
-          : `${percentual}% concluído`,
-      }
-    }
-  }
-  const atividade = atividades.find(
-    (item) =>
-      item.tipo !== 'TRILHA_CONCLUIDA' &&
-      texto(item.detalhes?.trilhaId) &&
-      texto(item.detalhes?.trilhaNome),
-  )
-  if (!atividade) return undefined
-  return {
-    trilhaId: texto(atividade.detalhes.trilhaId)!,
-    trilhaNome: texto(atividade.detalhes.trilhaNome)!,
-    detalhe: `Último acesso em ${formatarDataHora(atividade.criadoEm)}`,
-  }
-}
-
-function CartaoContinuar({ trilha }: { trilha: TrilhaParaContinuar }) {
-  return (
-    <section className={styles.continuar} aria-labelledby="continuar-titulo">
-      <span className={styles.continuarIcone}>
-        <PlayIcon />
-      </span>
-      <div className={styles.continuarCorpo}>
-        <span className={styles.continuarRotulo}>Continue de onde parou</span>
-        <h3 id="continuar-titulo" className={styles.continuarTitulo}>
-          {trilha.trilhaNome}
-        </h3>
-        <p className={styles.continuarDetalhe}>{trilha.detalhe}</p>
-      </div>
-      <Link
-        to={caminhoTrilha(trilha.trilhaId)}
-        className={styles.continuarBotao}
-        aria-label={`Continuar ${trilha.trilhaNome}`}
-      >
-        Continuar
-      </Link>
-    </section>
-  )
+  return estado
 }
 
 function ResumoTrilhas({ resumo }: { resumo: ResumoStatusDashboard }) {
@@ -364,27 +384,6 @@ const ROTULOS_PLURAIS: Record<StatusProgresso, string> = {
   ATRASADA: 'Atrasadas',
 }
 
-function PrazoItem({ prazo }: { prazo: ProximoPrazoDashboard }) {
-  return (
-    <li>
-      <Link
-        to={caminhoTrilha(prazo.trilhaId)}
-        className={`${lista.linha} ${lista.linhaLink}`}
-      >
-        <span className={lista.linhaCorpo}>
-          <span className={lista.linhaTitulo}>{prazo.trilhaNome}</span>
-          <span className={lista.linhaMeta}>
-            Prazo: {formatarData(prazo.prazo)} · {prazo.percentual}% concluído
-          </span>
-        </span>
-        <span className={`${lista.selo} ${SELOS_STATUS[prazo.status]}`}>
-          {ROTULOS_STATUS_PROGRESSO[prazo.status]}
-        </span>
-      </Link>
-    </li>
-  )
-}
-
 function AtividadeItem({ atividade }: { atividade: AtividadeDeTrilha }) {
   const trilhaNome = texto(atividade.detalhes?.trilhaNome) ?? 'uma trilha'
   const acao = ROTULOS_INTERACAO[atividade.tipo] ?? 'interagiu com'
@@ -399,44 +398,6 @@ function AtividadeItem({ atividade }: { atividade: AtividadeDeTrilha }) {
         <span className={lista.linhaMeta}>{quando}</span>
       </span>
     </li>
-  )
-}
-
-function PlayIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 20 20"
-      fill="none"
-      aria-hidden="true"
-    >
-      <path
-        d="M7 5l8 5-8 5V5z"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-    </svg>
-  )
-}
-
-function SparkleIcon() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 20 20"
-      fill="none"
-      aria-hidden="true"
-    >
-      <path
-        d="M10 2.5l1.4 4.6 4.6 1.4-4.6 1.4L10 14.5l-1.4-4.6-4.6-1.4 4.6-1.4L10 2.5z"
-        stroke="currentColor"
-        strokeWidth="1.3"
-        strokeLinejoin="round"
-      />
-    </svg>
   )
 }
 

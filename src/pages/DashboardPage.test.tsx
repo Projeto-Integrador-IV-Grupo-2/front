@@ -34,19 +34,22 @@ describe('DashboardPage', () => {
     })
 
     expect(await screen.findByText('66,67%')).toBeInTheDocument()
+    // Mesmo arranjo do painel de gestão, só com os dados de quem entrou.
+    for (const titulo of [
+      'Seus indicadores',
+      'Precisa de atenção',
+      'Minhas trilhas',
+      'Suas trilhas por status',
+    ]) {
+      expect(screen.getByRole('heading', { name: titulo })).toBeInTheDocument()
+    }
+    // O prazo da semana entra em "Precisa de atenção", com link para a trilha.
+    const atencao = screen.getByRole('region', { name: 'Precisa de atenção' })
     expect(
-      screen.getByRole('heading', { name: 'Suas trilhas' }),
-    ).toBeInTheDocument()
-    expect(screen.getAllByText('Onboarding').length).toBeGreaterThan(0)
-    expect(screen.getByText(/Você iniciou/)).toBeInTheDocument()
-    expect(screen.getByText('Não iniciadas')).toBeInTheDocument()
-    // O prazo aberto mais próximo vira o "Continue de onde parou".
-    expect(
-      screen.getByRole('link', { name: 'Continuar Onboarding' }),
+      within(atencao).getByRole('link', { name: /Onboarding vence em/ }),
     ).toHaveAttribute('href', '/trilhas/44444444-4444-4444-4444-444444444444')
-    expect(
-      screen.getByRole('link', { name: 'Abrir assistente' }),
-    ).toHaveAttribute('href', '/assistente')
+    expect(screen.getByText(/Você iniciou/)).toBeInTheDocument()
+    expect(screen.getAllByText('Não iniciadas').length).toBeGreaterThan(0)
     expect(
       screen.queryByRole('heading', { name: 'Indicadores gerais' }),
     ).not.toBeInTheDocument()
@@ -120,7 +123,7 @@ describe('DashboardPage', () => {
 
     expect(await screen.findAllByRole('alert')).not.toHaveLength(0)
     expect(
-      screen.getByRole('heading', { name: 'Visão geral' }),
+      screen.getByRole('heading', { name: 'Dashboard' }),
     ).toBeInTheDocument()
     expect(screen.getByText(/Veja seu progresso/)).toBeInTheDocument()
   })
@@ -316,14 +319,14 @@ describe('DashboardPage', () => {
       await screen.findByText('Você ainda não tem trilhas atribuídas.'),
     ).toBeInTheDocument()
     expect(
-      screen.getByText('Você não tem prazos nos próximos sete dias.'),
+      screen.getByText('Nada precisa da sua atenção agora.'),
     ).toBeInTheDocument()
     expect(
       screen.getByText('Suas interações com as trilhas aparecerão aqui.'),
     ).toBeInTheDocument()
   })
 
-  it('sem prazo na semana, o "Continue de onde parou" usa a trilha em andamento', async () => {
+  it('lista em "Minhas trilhas" as trilhas recebidas, com o progresso', async () => {
     let filtroMinhas: string | null = null
     server.use(
       http.get('*/api/dashboard/colaborador', () =>
@@ -357,10 +360,20 @@ describe('DashboardPage', () => {
       usuario: criarUsuario({ papel: 'COLABORADOR' }),
     })
 
+    const minhas = await screen.findByRole('region', {
+      name: 'Minhas trilhas',
+    })
     expect(
-      await screen.findByRole('link', { name: 'Continuar Liderança' }),
+      await within(minhas).findByRole('link', { name: /Liderança/ }),
     ).toHaveAttribute('href', '/trilhas/trilha-longa')
-    expect(screen.getByText(/30% concluído · prazo em/)).toBeInTheDocument()
+    expect(
+      within(minhas).getByText(/Em andamento · 30% concluído · prazo em/),
+    ).toBeInTheDocument()
+    expect(
+      within(minhas).getByRole('progressbar', {
+        name: 'Progresso em Liderança',
+      }),
+    ).toHaveAttribute('aria-valuenow', '30')
     expect(filtroMinhas).toBe('true')
   })
 

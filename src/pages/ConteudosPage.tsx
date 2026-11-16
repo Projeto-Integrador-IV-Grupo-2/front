@@ -7,7 +7,6 @@ import { usePermissao } from '../hooks/usePermissao.ts'
 import { caminhoDocumento } from '../routes/paths.ts'
 import { PERFIS_GESTAO_CONTEUDO } from '../routes/permissions.ts'
 import { listarAreas } from '../services/areaService.ts'
-import { listarCategorias } from '../services/categoriaService.ts'
 import {
   atualizarConteudo,
   ConteudoServiceError,
@@ -21,7 +20,6 @@ import {
   ROTULOS_STATUS_CONTEUDO,
   ROTULOS_TIPO_CONTEUDO,
   TIPOS_CONTEUDO,
-  type Categoria,
   type Conteudo,
   type ConteudoFiltro,
   type ConteudoRequest,
@@ -46,7 +44,7 @@ function erroDe(causa: unknown, padrao: string): ConteudoServiceError {
 }
 
 /**
- * Catálogo de conteúdos (issue #39): filtros por título, categoria, área,
+ * Catálogo de conteúdos (issue #39): filtros por título, área,
  * tipo e situação; cadastro, edição e publicação para ADMIN e GESTOR.
  * Colaborador vê só os publicados — a API já filtra, a tela só esconde as ações.
  */
@@ -59,7 +57,6 @@ export function ConteudosPage() {
   const [recarga, setRecarga] = useState(0)
   const [resultado, setResultado] = useState<ResultadoBusca | null>(null)
 
-  const [categorias, setCategorias] = useState<Categoria[]>([])
   const [areas, setAreas] = useState<RecursoResumo[]>([])
 
   const [aviso, setAviso] = useState<string | null>(null)
@@ -106,9 +103,6 @@ export function ConteudosPage() {
   // filtro só fica sem opções.
   useEffect(() => {
     let ativo = true
-    listarCategorias({ size: 100 })
-      .then((busca) => ativo && setCategorias(busca.content))
-      .catch(() => undefined)
     listarAreas({}, { size: 100 })
       .then(
         (busca) =>
@@ -229,24 +223,6 @@ export function ConteudosPage() {
         />
         <button type="submit">Buscar</button>
 
-        <label htmlFor="filtro-categoria" className="visually-hidden">
-          Categoria
-        </label>
-        <select
-          id="filtro-categoria"
-          value={filtro.categoriaId ?? ''}
-          onChange={(event) =>
-            alterarFiltro({ categoriaId: event.target.value })
-          }
-        >
-          <option value="">Todas as categorias</option>
-          {categorias.map((categoria) => (
-            <option key={categoria.id} value={categoria.id}>
-              {categoria.nome}
-            </option>
-          ))}
-        </select>
-
         <label htmlFor="filtro-area" className="visually-hidden">
           Área
         </label>
@@ -365,7 +341,6 @@ export function ConteudosPage() {
                   {formatarDuracao(conteudo.duracaoSegundos) && (
                     <span>{formatarDuracao(conteudo.duracaoSegundos)}</span>
                   )}
-                  {conteudo.categoria && <span>{conteudo.categoria.nome}</span>}
                   {conteudo.area && <span>{conteudo.area.nome}</span>}
                 </div>
                 {conteudo.descricao && (
@@ -413,7 +388,8 @@ export function ConteudosPage() {
       {formularioAberto && (
         <ConteudoFormulario
           conteudo={emEdicao}
-          categorias={categorias}
+          categorias={[]}
+          comCategoria={false}
           areas={areas}
           salvando={salvando}
           erro={erroFormulario}
