@@ -19,6 +19,8 @@ import {
   type MensagemConversa,
   type MensagemErro,
 } from '../utils/assistenteMensagens.ts'
+import { useAuth } from '../hooks/useAuth.ts'
+import { iniciais } from '../utils/nome.ts'
 import styles from './AssistentePage.module.css'
 
 const SUGESTOES = [
@@ -38,6 +40,7 @@ function linkParaFonte(titulo: string): string {
  * Tela de conversa com a IA. O estado e a sessão ficam concentrados nesta página.
  */
 export function AssistentePage() {
+  const { user } = useAuth()
   const [mensagens, setMensagens] = useState<MensagemConversa[]>([])
   const [perguntaDigitada, setPerguntaDigitada] = useState('')
   const [sessaoId, setSessaoId] = useState<string | null>(null)
@@ -211,7 +214,8 @@ export function AssistentePage() {
                 <div className={styles.identidadeMensagem}>
                   <span className={styles.avatarMensagem} aria-hidden="true">
                     {mensagem.tipo === 'usuario' ? (
-                      'Você'
+                      // O círculo de 26px só comporta as iniciais; "Você" quebrava em duas linhas.
+                      iniciais(user?.nomeCompleto ?? 'Você')
                     ) : mensagem.tipo === 'erro' ? (
                       '!'
                     ) : (

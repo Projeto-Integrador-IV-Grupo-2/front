@@ -29,7 +29,7 @@ interface Mensagem {
 const ATALHOS_GESTAO = [
   'Monte uma trilha de onboarding para novos colaboradores',
   'Crie uma trilha de atendimento ao cliente',
-  'Quais lacunas de conhecimento a equipe tem?',
+  'Que conteúdos faltam na base para montar boas trilhas?',
   'Qual trilha devo fazer primeiro?',
 ]
 
@@ -172,7 +172,7 @@ export function AssistenteTrilhas({
             <>
               <p className={styles.nota}>
                 {podeCriar
-                  ? 'Descreva a trilha que você precisa e eu monto um rascunho com nome, objetivos e prazo. Também ajudo a achar lacunas de conhecimento da equipe.'
+                  ? 'Descreva a trilha que você precisa e eu monto um rascunho com nome, objetivos e prazo. Também aponto os conteúdos que faltam na base para cobrir um tema.'
                   : 'Pergunte o que estudar, quais trilhas combinam com o seu PDI ou como se preparar para a próxima avaliação.'}
               </p>
               <div className={styles.atalhos}>

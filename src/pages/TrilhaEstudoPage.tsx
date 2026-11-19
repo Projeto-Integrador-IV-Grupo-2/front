@@ -51,6 +51,8 @@ export function TrilhaEstudoPage() {
   const [concluindo, setConcluindo] = useState<string | null>(null)
   const [erroConclusao, setErroConclusao] = useState<string | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
+  // Etapa cujo vídeo não carregou: ganha o botão de conclusão manual.
+  const [videoComFalha, setVideoComFalha] = useState<string | null>(null)
   // Estado local depois das conclusões: começa com o que a API mandou.
   const [etapasLocais, setEtapasLocais] = useState<Etapa[] | null>(null)
   const [progressoLocal, setProgressoLocal] = useState<ProgressoTrilha | null>(
@@ -230,11 +232,14 @@ export function TrilhaEstudoPage() {
                     videoUrl={etapa.conteudo.videoUrl}
                     titulo={etapa.titulo}
                     onConcluir={() => void concluir(etapa)}
+                    onFalha={() => setVideoComFalha(etapa.id)}
                   />
                   <p className={styles.hint}>
                     {formatarDuracao(etapa.conteudo.duracaoSegundos) &&
                       `Duração: ${formatarDuracao(etapa.conteudo.duracaoSegundos)}. `}
-                    A etapa é concluída sozinha ao terminar o vídeo.
+                    {videoComFalha === etapa.id
+                      ? 'Depois de assistir no Vimeo, conclua a etapa pelo botão abaixo.'
+                      : 'A etapa é concluída sozinha ao terminar o vídeo.'}
                   </p>
                 </>
               )}
@@ -265,7 +270,9 @@ export function TrilhaEstudoPage() {
                 {etapa.concluida ? (
                   <span className={styles.feito}>Etapa concluída</span>
                 ) : (
-                  etapa.conteudo.tipo !== 'VIDEO' && (
+                  // Vídeo se conclui sozinho; o botão só aparece se o player falhou.
+                  (etapa.conteudo.tipo !== 'VIDEO' ||
+                    videoComFalha === etapa.id) && (
                     <button
                       type="button"
                       className={styles.botao}

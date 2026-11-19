@@ -392,18 +392,18 @@ describe('trilhaService (API)', () => {
     })
   })
 
-  it('pede só os colaboradores ativos para o diálogo de atribuição', async () => {
-    let url: URL | null = null
+  it('pede os colaboradores pela rota que o gestor também acessa', async () => {
+    let chamada = false
     server.use(
-      http.get('*/api/usuarios', ({ request }) => {
-        url = new URL(request.url)
+      http.get('*/api/pdis/colaboradores', () => {
+        chamada = true
         return HttpResponse.json(criarPaginaUsuarios())
       }),
     )
 
     const lista = await listarUsuariosParaAtribuicao()
 
-    expect(url!.searchParams.get('situacao')).toBe('ATIVO')
+    expect(chamada).toBe(true)
     expect(lista).toHaveLength(1)
   })
 

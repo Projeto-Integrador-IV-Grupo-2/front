@@ -40,6 +40,7 @@ import {
   inativarTrilha,
   listarAreasParaTrilha,
   listarUsuariosParaAtribuicao,
+  type PessoaParaAtribuicao,
   TrilhaServiceError,
 } from '../services/trilhaService.ts'
 import type { ApiFieldError } from '../types/api.ts'
@@ -51,7 +52,7 @@ import type {
   StatusProgresso,
   TrilhaDetalhe,
 } from '../types/trilha.ts'
-import type { RecursoResumo, Usuario } from '../types/usuario.ts'
+import type { RecursoResumo } from '../types/usuario.ts'
 import styles from './TrilhaDetalhePage.module.css'
 
 /** Colaboradores por página na lista da trilha. */
@@ -184,7 +185,9 @@ export function TrilhaDetalhePage() {
   const [fieldErrors, setFieldErrors] = useState<ApiFieldError[]>([])
   const [areas, setAreas] = useState<RecursoResumo[] | null>(null)
   const [areasIndisponiveis, setAreasIndisponiveis] = useState(false)
-  const [colaboradores, setColaboradores] = useState<Usuario[] | null>(null)
+  const [colaboradores, setColaboradores] = useState<
+    PessoaParaAtribuicao[] | null
+  >(null)
   const [colaboradoresIndisponiveis, setColaboradoresIndisponiveis] =
     useState(false)
   // Devolve o foco a quem abriu o diálogo quando ele fecha.
@@ -298,8 +301,8 @@ export function TrilhaDetalhePage() {
     }
   }, [precisaDeAreas, areas])
 
-  // Um gestor pode receber 403 na lista de usuários: aí sobra a atribuição
-  // por área, e o diálogo avisa.
+  // Se a lista de colaboradores falhar, sobra a atribuição por área, e o
+  // diálogo avisa.
   useEffect(() => {
     if (dialogo !== 'atribuicao' || colaboradores !== null) {
       return
