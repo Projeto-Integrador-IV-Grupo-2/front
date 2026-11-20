@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { AvisoSucesso } from '../components/comum/AvisoSucesso.tsx'
+import { useNavigate } from 'react-router-dom'
 import { AssistenteTrilhas } from '../components/trilhas/AssistenteTrilhas.tsx'
 import { TrilhaCard } from '../components/trilhas/TrilhaCard.tsx'
+import { coresPorArea } from '../components/trilhas/coresDasAreas.ts'
 import { TrilhaFormulario } from '../components/trilhas/TrilhaFormulario.tsx'
 import {
   TrilhasFiltros,
@@ -11,12 +13,8 @@ import { useSugestoesTrilhas } from '../components/trilhas/useSugestoesTrilhas.t
 import { useAuth } from '../hooks/useAuth.ts'
 import { usePermissao } from '../hooks/usePermissao.ts'
 import { useValorAdiado } from '../hooks/useValorAdiado.ts'
-import { caminhoTrilha, ROTAS } from '../routes/paths.ts'
-import {
-  PERFIS_CRIAR_TRILHA,
-  PERFIS_ESTUDO,
-  PERFIS_GESTAO_PDI,
-} from '../routes/permissions.ts'
+import { caminhoTrilha } from '../routes/paths.ts'
+import { PERFIS_CRIAR_TRILHA, PERFIS_ESTUDO } from '../routes/permissions.ts'
 import {
   criarTrilha,
   listarAreasParaTrilha,
@@ -112,7 +110,6 @@ function mensagemDe(causa: unknown, padrao: string): string {
 export function TrilhasPage() {
   const { user } = useAuth()
   const podeCriar = usePermissao(PERFIS_CRIAR_TRILHA)
-  const gerePdi = usePermissao(PERFIS_GESTAO_PDI)
   // Gestão não cursa trilhas: fica só no catálogo, sem "Minhas trilhas".
   const estuda = usePermissao(PERFIS_ESTUDO)
   const areaDoUsuario = user?.area ?? null
@@ -147,6 +144,8 @@ export function TrilhasPage() {
   const [fieldErrors, setFieldErrors] = useState<ApiFieldError[]>([])
   const [areas, setAreas] = useState<RecursoResumo[] | null>(null)
   const [areasIndisponiveis, setAreasIndisponiveis] = useState(false)
+  // Uma cor fixa por área nos cartões, para qualquer perfil.
+  const coresDasAreas = useMemo(() => coresPorArea(areas ?? []), [areas])
   const [aviso, setAviso] = useState<string | null>(null)
   const novaTrilhaRef = useRef<HTMLButtonElement>(null)
 
@@ -347,14 +346,8 @@ export function TrilhasPage() {
           </p>
         </div>
         <div className={styles.acoesCabecalho}>
-          {/* O PDI vive dentro de Trilhas: sem item no menu, entra por aqui.
-              Fica fora das abas porque "Minhas trilhas" e "Catálogo" listam
-              trilhas, e o PDI tem rotas próprias (/trilhas/pdi). */}
-          <Link to={ROTAS.pdi} className={styles.linkPdi}>
-            {gerePdi ? 'PDI' : 'Meu PDI'}
-          </Link>
-          {/* A IA mora ao lado do PDI: sugestões e ajuda para montar trilhas
-              num painel, sem ocupar a tela da listagem. */}
+          {/* A IA fica no topo: sugestões e ajuda para montar trilhas num
+              painel, sem ocupar a tela da listagem. */}
           <button
             ref={iaRef}
             type="button"
@@ -413,11 +406,7 @@ export function TrilhasPage() {
         </div>
       </header>
 
-      {/* Live region única da página: o aviso de sucesso chega ao leitor de
-          tela sem tirar o foco de onde está. */}
-      <div role="status" aria-live="polite" className={styles.avisoRegiao}>
-        {aviso && <p className={styles.aviso}>{aviso}</p>}
-      </div>
+      <AvisoSucesso mensagem={aviso} onSumir={() => setAviso(null)} />
 
       <div id="painel-trilhas" className={styles.painel}>
         <TrilhasFiltros
@@ -468,6 +457,7 @@ export function TrilhasPage() {
                   key={trilha.id}
                   trilha={trilha}
                   mostrarProgresso={estuda}
+                  coresDasAreas={coresDasAreas}
                 />
               ))}
             </ul>

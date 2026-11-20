@@ -190,7 +190,10 @@ describe('AreasPage', () => {
     renderizar()
     await screen.findByRole('cell', { name: 'Atendimento' })
 
-    await user.click(screen.getByRole('button', { name: 'Editar Atendimento' }))
+    await user.click(
+      screen.getByRole('button', { name: 'Opções de Atendimento' }),
+    )
+    await user.click(screen.getByRole('menuitem', { name: 'Editar' }))
     const campoNome = screen.getByLabelText('Nome da área')
     await user.clear(campoNome)
     await user.type(campoNome, 'Suporte')
@@ -202,7 +205,7 @@ describe('AreasPage', () => {
     ).toBeInTheDocument()
   })
 
-  it('inativa uma área ativa a partir da listagem', async () => {
+  it('desativa uma área ativa pelo menu de opções', async () => {
     const user = userEvent.setup()
     server.use(
       http.get('*/api/areas', () =>
@@ -228,10 +231,11 @@ describe('AreasPage', () => {
     }
 
     await user.click(
-      within(linha).getByRole('button', { name: 'Inativar Atendimento' }),
+      within(linha).getByRole('button', { name: 'Opções de Atendimento' }),
     )
+    await user.click(screen.getByRole('menuitem', { name: 'Desativar' }))
 
-    expect(await screen.findByText('Área inativada.')).toBeInTheDocument()
+    expect(await screen.findByText('Área desativada.')).toBeInTheDocument()
   })
 
   describe('controle de acesso (Card 14 / issue #31)', () => {
@@ -252,11 +256,14 @@ describe('AreasPage', () => {
         expect(
           screen.getByRole('button', { name: '+ Nova área' }),
         ).toBeInTheDocument()
+        await userEvent.click(
+          screen.getByRole('button', { name: 'Opções de Atendimento' }),
+        )
         expect(
-          screen.getByRole('button', { name: 'Editar Atendimento' }),
+          screen.getByRole('menuitem', { name: 'Editar' }),
         ).toBeInTheDocument()
         expect(
-          screen.getByRole('button', { name: 'Inativar Atendimento' }),
+          screen.getByRole('menuitem', { name: 'Desativar' }),
         ).toBeInTheDocument()
       },
     )
@@ -286,8 +293,9 @@ describe('AreasPage', () => {
       }
 
       await user.click(
-        within(linha).getByRole('button', { name: 'Inativar Atendimento' }),
+        within(linha).getByRole('button', { name: 'Opções de Atendimento' }),
       )
+      await user.click(screen.getByRole('menuitem', { name: 'Desativar' }))
 
       expect(await screen.findByText('Sem permissão')).toBeInTheDocument()
     })

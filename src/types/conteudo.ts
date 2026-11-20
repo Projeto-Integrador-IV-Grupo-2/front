@@ -27,6 +27,13 @@ export interface CategoriaRequest {
 }
 
 /**
+ * Catálogos separados: `TRILHA` é o material das etapas das trilhas (tela
+ * "Conteúdos de trilha"); `CONHECIMENTO` é o acervo consultado pela IA (tela
+ * "Conhecimento"). Um não aparece na tela do outro.
+ */
+export type CatalogoConteudo = 'TRILHA' | 'CONHECIMENTO'
+
+/**
  * Conteúdo no formato do record `ConteudoResponse`. `duracaoSegundos` e
  * `miniaturaUrl` são preenchidos pela API a partir do Vimeo — nunca enviados
  * pelo front.
@@ -47,6 +54,9 @@ export interface Conteudo {
   criadoEm: string
   atualizadoEm: string
   publicadoEm: string | null
+  /** Visível só para a gestão (ex.: salários): o colaborador não o enxerga. */
+  apenasAdmin: boolean
+  catalogo: CatalogoConteudo
 }
 
 /**
@@ -64,6 +74,10 @@ export interface ConteudoRequest {
   videoUrl: string | null
   corpo: string | null
   linkUrl: string | null
+  /** Só a gestão enxerga. Ausente vale `false`. */
+  apenasAdmin?: boolean
+  /** Só vale no cadastro (padrão TRILHA); a edição mantém o de origem. */
+  catalogo?: CatalogoConteudo
 }
 
 /** Filtros de `GET /api/conteudos`, todos opcionais. */
@@ -72,6 +86,7 @@ export interface ConteudoFiltro {
   categoriaId?: string
   areaId?: string
   tipo?: TipoConteudo | ''
+  catalogo?: CatalogoConteudo
   /** Para colaborador a API força `PUBLICADO`, seja qual for o valor enviado. */
   status?: StatusConteudo | ''
 }

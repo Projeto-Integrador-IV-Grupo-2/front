@@ -49,7 +49,12 @@ describe('PerfilPage', () => {
       )
       const dados = screen.getByRole('region', { name: 'Dados pessoais' })
       expect(within(dados).getByText('ana@nexo.com')).toBeInTheDocument()
-      expect(within(dados).getByText('Tecnologia')).toBeInTheDocument()
+      // O admin não tem área: a linha nem aparece.
+      if (papel === 'ADMIN') {
+        expect(within(dados).queryByText('Área')).not.toBeInTheDocument()
+      } else {
+        expect(within(dados).getByText('Tecnologia')).toBeInTheDocument()
+      }
       // Empresa ainda não vem no MeResponse.
       expect(within(dados).getByText('Não informado')).toBeInTheDocument()
       expect(

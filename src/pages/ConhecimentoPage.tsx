@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
+import { AvisoSucesso } from '../components/comum/AvisoSucesso.tsx'
 import { useSearchParams } from 'react-router-dom'
 import { Paginacao } from '../components/areas/Paginacao.tsx'
 import { ConhecimentoFiltros } from '../components/conhecimento/ConhecimentoFiltros.tsx'
 import { DocumentosLista } from '../components/conhecimento/DocumentosLista.tsx'
 import { TIPOS_NO_FORMULARIO } from '../components/conhecimento/tiposDoDocumento.ts'
 import { ConteudoFormulario } from '../components/conteudos/ConteudoFormulario.tsx'
+import { cadastrarConteudo } from '../components/conteudos/salvarConteudo.ts'
 import {
   criarFiltroInicial,
   paraFiltroDaApi,
@@ -15,15 +17,10 @@ import { usePermissao } from '../hooks/usePermissao.ts'
 import { useValorAdiado } from '../hooks/useValorAdiado.ts'
 import { PERFIS_GESTAO_CONTEUDO } from '../routes/permissions.ts'
 import { listarAreas } from '../services/areaService.ts'
-import {
-  ArquivoServiceError,
-  enviarArquivo,
-} from '../services/arquivoService.ts'
 import { listarCategorias } from '../services/categoriaService.ts'
 import { aoMudarConteudos } from '../services/conteudoEvents.ts'
 import {
   ConteudoServiceError,
-  criarConteudo,
   listarConteudos,
 } from '../services/conteudoService.ts'
 import type { ApiFieldError } from '../types/api.ts'
@@ -51,10 +48,9 @@ interface ResultadoBusca {
  * publicados: a API filtra, e a tela nem envia status.
  */
 export function ConhecimentoPage() {
-  // Mesma lista de perfis para as duas coisas: quem enxerga rascunho é quem
-  // administra o acervo.
   const podeGerenciar = usePermissao(PERFIS_GESTAO_CONTEUDO)
-  const podeFiltrarStatus = podeGerenciar
+  // Salvar já publica: não há rascunho para filtrar nem status para mostrar.
+  const podeFiltrarStatus = false
 
   // `?titulo=` abre a tela já buscando um documento — é como as fontes do
   // assistente de IA trazem a pessoa até aqui.
@@ -97,8 +93,12 @@ export function ConhecimentoPage() {
   // render dispararia a busca de novo sem nada ter mudado.
   useEffect(() => {
     const controlador = new AbortController()
+    // Só o acervo do Conhecimento: o material das trilhas fica na outra tela.
     listarConteudos(
-      JSON.parse(chaveFiltro) as ReturnType<typeof paraFiltroDaApi>,
+      {
+        ...(JSON.parse(chaveFiltro) as ReturnType<typeof paraFiltroDaApi>),
+        catalogo: 'CONHECIMENTO',
+      },
       { page: pagina, size: TAMANHO_PAGINA },
       { signal: controlador.signal },
     )
@@ -149,9 +149,18 @@ export function ConhecimentoPage() {
     setSalvando(true)
     setErroFormulario(null)
     setFieldErrors([])
-    let documento: Conteudo
     try {
-      documento = await criarConteudo(request)
+      // Salvar e pronto: cria, envia os arquivos e já deixa disponível.
+      const { falha } = await cadastrarConteudo(
+        { ...request, catalogo: 'CONHECIMENTO' },
+        arquivos,
+      )
+      setFormularioAberto(false)
+      setAviso(
+        falha
+          ? `Documento salvo, mas "${falha.arquivo}" não foi enviado: ${falha.motivo} Envie de novo no detalhe do documento.`
+          : 'Documento salvo.',
+      )
     } catch (causa) {
       const erro =
         causa instanceof ConteudoServiceError
@@ -161,39 +170,9 @@ export function ConhecimentoPage() {
       // quando não há campo para apontar.
       setFieldErrors(erro.fieldErrors)
       setErroFormulario(erro.fieldErrors.length > 0 ? null : erro.message)
+    } finally {
       setSalvando(false)
-      return
     }
-
-    // O documento já existe: daqui em diante uma falha não pode reabrir o
-    // cadastro (salvar de novo duplicaria). Envia um arquivo por vez e, se
-    // algum falhar, avisa qual foi: o envio pode ser refeito no detalhe.
-    for (const arquivo of arquivos) {
-      try {
-        await enviarArquivo(documento.id, arquivo)
-      } catch (causa) {
-        const motivo =
-          causa instanceof ArquivoServiceError
-            ? causa.message
-            : 'Não foi possível enviar o arquivo.'
-        setSalvando(false)
-        setFormularioAberto(false)
-        setAviso(
-          `Documento cadastrado, mas "${arquivo.name}" não foi enviado: ${motivo} Envie de novo no detalhe do documento.`,
-        )
-        return
-      }
-    }
-
-    setSalvando(false)
-    setFormularioAberto(false)
-    setAviso(
-      arquivos.length > 0
-        ? `Documento cadastrado como rascunho com ${arquivos.length} ${arquivos.length === 1 ? 'arquivo' : 'arquivos'}.`
-        : request.tipo === 'DOCUMENTO'
-          ? 'Documento cadastrado como rascunho. Envie os arquivos dele no detalhe.'
-          : 'Documento cadastrado como rascunho.',
-    )
   }
 
   function limpar() {
@@ -229,9 +208,7 @@ export function ConhecimentoPage() {
         )}
       </header>
 
-      <div role="status" aria-live="polite" className={styles.avisoRegiao}>
-        {aviso && <p className={styles.aviso}>{aviso}</p>}
-      </div>
+      <AvisoSucesso mensagem={aviso} onSumir={() => setAviso(null)} />
 
       <ConhecimentoFiltros
         tituloDigitado={tituloDigitado}
@@ -307,9 +284,7 @@ export function ConhecimentoPage() {
           fieldErrors={fieldErrors}
           onSalvar={(request, arquivos) => void salvar(request, arquivos)}
           onFechar={() => setFormularioAberto(false)}
-          onCategoriaCriada={(categoria) =>
-            setCategorias((atuais) => [...atuais, categoria])
-          }
+          comRestricao
           tipos={TIPOS_NO_FORMULARIO}
           substantivo="documento"
         />

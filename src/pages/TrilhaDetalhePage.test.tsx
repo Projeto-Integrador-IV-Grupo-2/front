@@ -4,6 +4,7 @@ import { http, HttpResponse } from 'msw'
 import { describe, expect, it } from 'vitest'
 import {
   criarAtribuicao,
+  criarEtapa,
   criarPagina,
   criarPaginaTrilhas,
   criarPaginaUsuarios,
@@ -50,7 +51,14 @@ function responderColaboradores() {
   )
 }
 
-/** Etapas e "Sobre a trilha" ficam na segunda aba da visão de gestão. */
+/** Quem recebeu a trilha fica na segunda aba da visão de gestão. */
+async function abrirAbaColaboradores() {
+  await userEvent.click(
+    await screen.findByRole('tab', { name: 'Colaboradores' }),
+  )
+}
+
+/** Etapas e "Sobre a trilha" ficam na primeira aba (a que abre). */
 async function abrirAbaDaTrilha() {
   await userEvent.click(screen.getByRole('tab', { name: /informações/i }))
 }
@@ -66,7 +74,7 @@ const emAndamento = () =>
   })
 
 describe('TrilhaDetalhePage', () => {
-  it('mostra dados da trilha, jornada e progresso atual', async () => {
+  it('mostra dados da trilha, progresso atual e sem a antiga jornada', async () => {
     server.use(
       http.get('*/api/trilhas/:id', () => HttpResponse.json(emAndamento())),
     )
@@ -90,15 +98,10 @@ describe('TrilhaDetalhePage', () => {
       within(progresso).getByText('Prazo: 30 de outubro de 2026'),
     ).toBeInTheDocument()
 
-    const jornada = screen.getByRole('region', { name: 'Jornada' })
+    expect(screen.queryByRole('heading', { name: 'Jornada' })).toBeNull()
     expect(
-      within(jornada).getByText('Iniciada em 1 de setembro de 2026'),
+      screen.getByRole('region', { name: 'Etapas e conteúdos' }),
     ).toBeInTheDocument()
-    expect(
-      within(jornada)
-        .getAllByRole('listitem')
-        .find((item) => item.getAttribute('aria-current') === 'step'),
-    ).toHaveTextContent('Em andamento')
 
     const sobre = screen.getByRole('region', { name: 'Sobre a trilha' })
     expect(within(sobre).getByText('Tecnologia')).toBeInTheDocument()
@@ -286,6 +289,92 @@ describe('TrilhaDetalhePage', () => {
     expect(screen.queryByRole('link', { name: 'Estudar trilha' })).toBeNull()
   })
 
+  it('lista as etapas com seus conteúdos e marca um como feito', async () => {
+    let concluiu = false
+    server.use(
+      http.get('*/api/trilhas/:id', () => HttpResponse.json(emAndamento())),
+      http.get('*/api/trilhas/:id/etapas', () =>
+        HttpResponse.json([
+          criarEtapa({
+            id: 'e-1',
+            ordem: 1,
+            titulo: 'Boas-vindas',
+            concluida: true,
+          }),
+          criarEtapa({ id: 'e-2', ordem: 2, titulo: 'Leia o manual' }),
+        ]),
+      ),
+      http.post('*/api/trilhas/:id/etapas/:etapaId/concluir', ({ params }) => {
+        concluiu = params.etapaId === 'e-2'
+        return HttpResponse.json({
+          etapaId: 'e-2',
+          progresso: criarProgressoTrilha({
+            status: 'CONCLUIDA',
+            percentual: 100,
+          }),
+        })
+      }),
+    )
+
+    renderizarDetalhe()
+
+    const lista = await screen.findByRole('region', {
+      name: 'Etapas e conteúdos',
+    })
+    const feita = await within(lista).findByRole('checkbox', {
+      name: /Boas-vindas/,
+    })
+    expect(feita).toBeChecked()
+    expect(feita).toBeDisabled()
+    expect(
+      within(lista).getByText('1 de 2 conteúdos feitos'),
+    ).toBeInTheDocument()
+    expect(
+      within(lista).getByRole('link', { name: 'Abrir Leia o manual' }),
+    ).toHaveAttribute('href', `/trilhas/${ID}/estudar?etapa=e-2`)
+
+    await userEvent.click(
+      within(lista).getByRole('checkbox', { name: /Leia o manual/ }),
+    )
+
+    await waitFor(() =>
+      expect(
+        within(lista).getByRole('checkbox', { name: /Leia o manual/ }),
+      ).toBeChecked(),
+    )
+    expect(concluiu).toBe(true)
+    expect(
+      within(lista).getByText('2 de 2 conteúdos feitos'),
+    ).toBeInTheDocument()
+    const progresso = screen.getByRole('region', { name: 'Progresso geral' })
+    expect(within(progresso).getByRole('progressbar')).toHaveAttribute(
+      'aria-valuenow',
+      '100',
+    )
+  })
+
+  it('sem atribuição, os conteúdos aparecem mas não podem ser marcados', async () => {
+    server.use(
+      http.get('*/api/trilhas/:id', () =>
+        HttpResponse.json(
+          criarTrilhaDetalhe({
+            progresso: criarProgressoTrilha({ id: null, atribuidoEm: null }),
+          }),
+        ),
+      ),
+      http.get('*/api/trilhas/:id/etapas', () =>
+        HttpResponse.json([criarEtapa({ titulo: 'Leia o manual' })]),
+      ),
+    )
+
+    renderizarDetalhe()
+
+    expect(
+      await screen.findByRole('checkbox', { name: /Leia o manual/ }),
+    ).toBeDisabled()
+    expect(screen.queryByRole('link', { name: /^Abrir/ })).toBeNull()
+  })
+
   it('mostra o selo e o prazo vencido em destaque quando a trilha atrasa', async () => {
     server.use(
       http.get('*/api/trilhas/:id', () =>
@@ -328,7 +417,7 @@ describe('TrilhaDetalhePage', () => {
     ['ADMIN', admin],
     ['GESTOR', gestor],
   ] as const)(
-    '%s não vê jornada, progresso pessoal nem botões de estudo',
+    '%s não vê a lista de conteúdos, progresso pessoal nem botões de estudo',
     async (_papel, usuario) => {
       renderizarComo(usuario)
 
@@ -343,7 +432,9 @@ describe('TrilhaDetalhePage', () => {
         expect(screen.queryByRole('button', { name: nome })).toBeNull()
         expect(screen.queryByRole('link', { name: nome })).toBeNull()
       }
-      expect(screen.queryByRole('heading', { name: 'Jornada' })).toBeNull()
+      expect(
+        screen.queryByRole('heading', { name: 'Etapas e conteúdos' }),
+      ).toBeNull()
       expect(
         screen.queryByRole('heading', { name: 'Progresso geral' }),
       ).toBeNull()
@@ -784,6 +875,7 @@ describe('TrilhaDetalhePage', () => {
     )
 
     renderizarComo(admin)
+    await abrirAbaColaboradores()
 
     const painel = await screen.findByRole('region', {
       name: 'Colaboradores atribuídos',
@@ -799,7 +891,7 @@ describe('TrilhaDetalhePage', () => {
     ).toHaveAttribute('aria-valuenow', '20')
   })
 
-  it('gestão abre na lista de colaboradores, com Detalhes de cada um', async () => {
+  it('gestão abre em Etapas e informações; Colaboradores é a segunda aba', async () => {
     const usuario = userEvent.setup()
     server.use(
       http.get('*/api/atribuicoes', () =>
@@ -809,14 +901,18 @@ describe('TrilhaDetalhePage', () => {
 
     renderizarComo(gestor)
 
+    // A primeira aba é a das etapas e informações, e é a que abre.
+    const abas = await screen.findAllByRole('tab')
+    expect(abas.map((aba) => aba.textContent)).toEqual([
+      'Etapas e informações',
+      'Colaboradores',
+    ])
+    expect(abas[0]).toHaveAttribute('aria-selected', 'true')
+
+    await abrirAbaColaboradores()
     const painel = await screen.findByRole('region', {
       name: 'Colaboradores atribuídos',
     })
-    expect(screen.getByRole('tab', { name: 'Colaboradores' })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    )
-    // Etapas e dados da trilha ficam na outra aba.
     expect(
       screen.queryByRole('heading', { name: 'Sobre a trilha' }),
     ).not.toBeInTheDocument()
@@ -851,6 +947,7 @@ describe('TrilhaDetalhePage', () => {
     )
 
     renderizarComo(admin)
+    await abrirAbaColaboradores()
     await screen.findByRole('region', { name: 'Colaboradores atribuídos' })
 
     await waitFor(() => expect(url).not.toBeNull())
@@ -863,6 +960,7 @@ describe('TrilhaDetalhePage', () => {
     )
 
     renderizarComo(admin)
+    await abrirAbaColaboradores()
 
     const painel = await screen.findByRole('region', {
       name: 'Colaboradores atribuídos',
@@ -889,6 +987,7 @@ describe('TrilhaDetalhePage', () => {
     const usuario = userEvent.setup()
 
     renderizarComo(admin)
+    await abrirAbaColaboradores()
     const painel = await screen.findByRole('region', {
       name: 'Colaboradores atribuídos',
     })
@@ -937,6 +1036,7 @@ describe('TrilhaDetalhePage', () => {
     const usuario = userEvent.setup()
 
     renderizarComo(admin)
+    await abrirAbaColaboradores()
     const painel = await screen.findByRole('region', {
       name: 'Colaboradores atribuídos',
     })
@@ -1042,7 +1142,7 @@ describe('TrilhaDetalhePage — Adicionar ao PDI', () => {
       ).toBeInTheDocument(),
     )
     await user.selectOptions(competencia, 'Comunicação')
-    await user.type(within(dialogo).getByLabelText('Prazo'), '2026-11-30')
+    expect(within(dialogo).queryByLabelText('Prazo')).not.toBeInTheDocument()
     await user.click(
       within(dialogo).getByRole('button', { name: 'Adicionar ao PDI' }),
     )
@@ -1054,7 +1154,7 @@ describe('TrilhaDetalhePage — Adicionar ao PDI', () => {
     expect(caminho).toBe(
       '99999999-9999-9999-9999-999999999999/88888888-8888-8888-8888-888888888888',
     )
-    expect(corpo).toEqual({ tipo: 'TRILHA', trilhaId: ID, prazo: '2026-11-30' })
+    expect(corpo).toEqual({ tipo: 'TRILHA', trilhaId: ID })
   })
 
   it('mostra o erro da API sem fechar o diálogo', async () => {
@@ -1089,7 +1189,6 @@ describe('TrilhaDetalhePage — Adicionar ao PDI', () => {
       ).toBeInTheDocument(),
     )
     await user.selectOptions(competencia, 'Comunicação')
-    await user.type(within(dialogo).getByLabelText('Prazo'), '2026-11-30')
     await user.click(
       within(dialogo).getByRole('button', { name: 'Adicionar ao PDI' }),
     )

@@ -91,21 +91,16 @@ describe('ConhecimentoPage', () => {
     expect(buscas.every((busca) => !busca.has('status'))).toBe(true)
   })
 
-  it('gestor filtra por status', async () => {
+  it('gestor também não vê status: salvar já publica', async () => {
     const buscas = registrarBuscas()
-    const usuario = userEvent.setup()
 
     renderizar(gestor)
     await screen.findByRole('rowheader', { name: /Manual do colaborador/ })
+    expect(screen.queryByLabelText('Status')).not.toBeInTheDocument()
     expect(
-      screen.getByRole('columnheader', { name: 'Status' }),
-    ).toBeInTheDocument()
-
-    await usuario.selectOptions(screen.getByLabelText('Status'), 'Rascunho')
-
-    await waitFor(() =>
-      expect(buscas[buscas.length - 1].get('status')).toBe('RASCUNHO'),
-    )
+      screen.queryByRole('columnheader', { name: 'Status' }),
+    ).not.toBeInTheDocument()
+    expect(buscas.every((busca) => !busca.has('status'))).toBe(true)
   })
 
   it('os filtros combinam entre si e voltam para a página 1 ao mudar', async () => {
@@ -178,7 +173,6 @@ describe('ConhecimentoPage', () => {
     ).not.toBeInTheDocument()
 
     await usuario.selectOptions(screen.getByLabelText('Tipo'), 'Vídeo')
-    await usuario.selectOptions(screen.getByLabelText('Status'), 'Publicado')
     await usuario.click(screen.getByRole('button', { name: 'Limpar filtros' }))
 
     await waitFor(() => {
@@ -301,12 +295,21 @@ describe('ConhecimentoPage', () => {
       registrarBuscas()
       const usuario = userEvent.setup()
       let corpo: Record<string, unknown> = {}
+      const publicados: string[] = []
       server.use(
         http.post('*/api/conteudos', async ({ request }) => {
           corpo = (await request.json()) as Record<string, unknown>
-          return HttpResponse.json(criarConteudo({ tipo: 'DOCUMENTO' }), {
-            status: 201,
-          })
+          return HttpResponse.json(
+            criarConteudo({
+              id: '44444444-4444-4444-4444-444444444444',
+              tipo: 'DOCUMENTO',
+            }),
+            { status: 201 },
+          )
+        }),
+        http.patch('*/api/conteudos/:id/publicar', ({ params }) => {
+          publicados.push(String(params.id))
+          return HttpResponse.json(criarConteudo({ status: 'PUBLICADO' }))
         }),
       )
 
@@ -328,13 +331,90 @@ describe('ConhecimentoPage', () => {
         within(dialogo).getByRole('button', { name: 'Cadastrar documento' }),
       )
 
-      expect(
-        await screen.findByText(/Documento cadastrado como rascunho/),
-      ).toBeInTheDocument()
+      expect(await screen.findByText('Documento salvo.')).toBeInTheDocument()
+      // Salvar e pronto: o documento já é publicado.
+      expect(publicados).toEqual(['44444444-4444-4444-4444-444444444444'])
       expect(corpo).toMatchObject({
         titulo: 'Política de reembolso',
         tipo: 'DOCUMENTO',
       })
+    })
+
+    it('lista e cadastra só no catálogo do Conhecimento', async () => {
+      const buscas = registrarBuscas()
+      const usuario = userEvent.setup()
+      let corpo: Record<string, unknown> = {}
+      server.use(
+        http.post('*/api/conteudos', async ({ request }) => {
+          corpo = (await request.json()) as Record<string, unknown>
+          return HttpResponse.json(
+            criarConteudo({ tipo: 'DOCUMENTO', catalogo: 'CONHECIMENTO' }),
+            { status: 201 },
+          )
+        }),
+      )
+
+      const dialogo = await abrirCadastro(usuario)
+      expect(
+        buscas.every((busca) => busca.get('catalogo') === 'CONHECIMENTO'),
+      ).toBe(true)
+      await usuario.click(
+        within(dialogo).getByRole('button', { name: 'Cadastrar documento' }),
+      )
+
+      expect(await screen.findByText('Documento salvo.')).toBeInTheDocument()
+      expect(corpo).toMatchObject({ catalogo: 'CONHECIMENTO' })
+    })
+
+    it('marcar "visível apenas para administradores" envia a restrição', async () => {
+      registrarBuscas()
+      const usuario = userEvent.setup()
+      let corpo: Record<string, unknown> = {}
+      server.use(
+        http.post('*/api/conteudos', async ({ request }) => {
+          corpo = (await request.json()) as Record<string, unknown>
+          return HttpResponse.json(
+            criarConteudo({ tipo: 'DOCUMENTO', apenasAdmin: true }),
+            { status: 201 },
+          )
+        }),
+      )
+
+      renderizar(gestor)
+      await usuario.click(
+        await screen.findByRole('button', { name: '+ Novo documento' }),
+      )
+      const dialogo = await screen.findByRole('dialog', {
+        name: 'Novo documento',
+      })
+      await usuario.type(within(dialogo).getByLabelText('Título'), 'Salários')
+      const caixa = within(dialogo).getByLabelText(
+        'Visível apenas para administradores',
+      )
+      // Por padrão os colaboradores também veem.
+      expect(caixa).not.toBeChecked()
+      await usuario.click(caixa)
+      await usuario.click(
+        within(dialogo).getByRole('button', { name: 'Cadastrar documento' }),
+      )
+
+      expect(await screen.findByText('Documento salvo.')).toBeInTheDocument()
+      expect(corpo).toMatchObject({ titulo: 'Salários', apenasAdmin: true })
+    })
+
+    it('documento restrito aparece com o selo "Só admin"', async () => {
+      server.use(
+        http.get('*/api/conteudos', () =>
+          HttpResponse.json(criarPagina([{ ...manual, apenasAdmin: true }])),
+        ),
+      )
+
+      renderizar(gestor)
+
+      const linha = (
+        await screen.findByRole('rowheader', { name: /Manual do colaborador/ })
+      ).closest('tr') as HTMLElement
+      expect(within(linha).getByText('Só admin')).toBeInTheDocument()
     })
 
     /** Abre o cadastro e devolve o diálogo, com o título já preenchido. */
@@ -387,11 +467,7 @@ describe('ConhecimentoPage', () => {
         within(dialogo).getByRole('button', { name: 'Cadastrar documento' }),
       )
 
-      expect(
-        await screen.findByText(
-          'Documento cadastrado como rascunho com 2 arquivos.',
-        ),
-      ).toBeInTheDocument()
+      expect(await screen.findByText('Documento salvo.')).toBeInTheDocument()
       expect(enviados).toEqual(['doc-novo:%PDF', 'doc-novo:# Guia'])
     })
 
@@ -443,38 +519,25 @@ describe('ConhecimentoPage', () => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     })
 
-    it('"Cadastrar um link" troca o cadastro para o tipo Link', async () => {
+    it('o cadastro não tem o atalho "Cadastrar um link" nem "+ Nova categoria"', async () => {
       registrarBuscas()
       const usuario = userEvent.setup()
-      let corpo: Record<string, unknown> = {}
-      server.use(
-        http.post('*/api/conteudos', async ({ request }) => {
-          corpo = (await request.json()) as Record<string, unknown>
-          return HttpResponse.json(criarConteudo({ tipo: 'LINK' }), {
-            status: 201,
-          })
-        }),
-      )
 
       const dialogo = await abrirCadastro(usuario)
-      await usuario.click(
-        within(dialogo).getByRole('button', { name: 'Cadastrar um link' }),
-      )
-      expect(within(dialogo).getByLabelText('Tipo')).toHaveValue('LINK')
-      await usuario.type(
-        within(dialogo).getByLabelText('Link'),
-        'https://intranet.empresa.com/reembolso',
-      )
-      await usuario.click(
-        within(dialogo).getByRole('button', { name: 'Cadastrar documento' }),
-      )
 
-      await waitFor(() =>
-        expect(corpo).toMatchObject({
-          tipo: 'LINK',
-          linkUrl: 'https://intranet.empresa.com/reembolso',
-        }),
-      )
+      expect(
+        within(dialogo).queryByText(/material está na internet/),
+      ).toBeNull()
+      expect(
+        within(dialogo).queryByRole('button', { name: 'Cadastrar um link' }),
+      ).not.toBeInTheDocument()
+      expect(
+        within(dialogo).queryByRole('button', { name: '+ Nova categoria' }),
+      ).not.toBeInTheDocument()
+      // A restrição a administradores existe aqui, na tela de Conhecimento.
+      expect(
+        within(dialogo).getByLabelText('Visível apenas para administradores'),
+      ).toBeInTheDocument()
     })
   })
 })

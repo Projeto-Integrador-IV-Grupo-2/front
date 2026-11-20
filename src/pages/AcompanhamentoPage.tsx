@@ -1,4 +1,7 @@
 import { useEffect, useState } from 'react'
+import { AvisoSucesso } from '../components/comum/AvisoSucesso.tsx'
+import { useSearchParams } from 'react-router-dom'
+import { STATUS_PROGRESSO, type StatusProgresso } from '../types/trilha.ts'
 import {
   AcompanhamentoFiltros,
   type ValoresFiltroAcompanhamento,
@@ -59,8 +62,14 @@ function mensagemDe(causa: unknown, padrao: string): string {
  * só apresentam. Os filtros são selects: valem na hora e voltam à página 1.
  */
 export function AcompanhamentoPage() {
-  const [filtros, setFiltros] =
-    useState<ValoresFiltroAcompanhamento>(FILTRO_VAZIO)
+  // `?status=ATRASADA` vem do "Ver todas" do dashboard: a tela já abre filtrada.
+  const [parametros] = useSearchParams()
+  const [filtros, setFiltros] = useState<ValoresFiltroAcompanhamento>(() => {
+    const status = parametros.get('status')
+    return status && STATUS_PROGRESSO.some((item) => item === status)
+      ? { ...FILTRO_VAZIO, status: status as StatusProgresso }
+      : FILTRO_VAZIO
+  })
   const [pagina, setPagina] = useState(0)
   const [recarga, setRecarga] = useState(0)
   const [resultado, setResultado] = useState<ResultadoBusca | null>(null)
@@ -238,10 +247,7 @@ export function AcompanhamentoPage() {
         </button>
       </header>
 
-      {/* Live region única: avisos chegam ao leitor de tela sem mover o foco. */}
-      <div role="status" aria-live="polite" className={styles.avisoRegiao}>
-        {aviso && <p className={styles.aviso}>{aviso}</p>}
-      </div>
+      <AvisoSucesso mensagem={aviso} onSumir={() => setAviso(null)} />
 
       {erroExportacao && (
         <p className={styles.erro} role="alert">

@@ -126,18 +126,19 @@ describe('UsuariosPage', () => {
     renderizarGestao()
     await screen.findByText('Ana Souza')
 
-    await userEvent.type(screen.getByLabelText('Nome'), 'bruno')
+    // Os filtros de nome e e-mail saíram da tela: só área, perfil e situação.
+    expect(screen.queryByRole('searchbox')).not.toBeInTheDocument()
     await userEvent.selectOptions(screen.getByLabelText('Situação'), 'INATIVO')
     await userEvent.click(screen.getByRole('button', { name: 'Filtrar' }))
 
     await waitFor(() => expect(urls.length).toBeGreaterThan(1))
 
     const ultima = urls[urls.length - 1]
-    expect(ultima.searchParams.get('nome')).toBe('bruno')
     expect(ultima.searchParams.get('situacao')).toBe('INATIVO')
     expect(ultima.searchParams.get('page')).toBe('0')
-    // Campo em branco não vira filtro: `?email=` faria a API buscar string vazia.
-    expect(ultima.searchParams.has('email')).toBe(false)
+    // Campo em branco não vira filtro: `?perfil=` faria a API buscar string vazia.
+    expect(ultima.searchParams.has('perfil')).toBe(false)
+    expect(ultima.searchParams.has('nome')).toBe(false)
   })
 
   it('cadastra pela própria tela de gestão e recarrega a lista', async () => {

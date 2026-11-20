@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { AvisoSucesso } from '../components/comum/AvisoSucesso.tsx'
 import { ConfirmacaoSituacao } from '../components/usuarios/ConfirmacaoSituacao.tsx'
 import { Paginacao } from '../components/usuarios/Paginacao.tsx'
 import { UsuarioFormulario } from '../components/usuarios/UsuarioFormulario.tsx'
@@ -262,11 +263,7 @@ export function UsuariosPage() {
         </button>
       </header>
 
-      {/* Uma live region só para a página: avisos de sucesso e erro de
-          operação chegam a quem usa leitor de tela sem mover o foco. */}
-      <div role="status" aria-live="polite" className={styles.avisoRegiao}>
-        {aviso && <p className={styles.aviso}>{aviso}</p>}
-      </div>
+      <AvisoSucesso mensagem={aviso} onSumir={() => setAviso(null)} />
 
       {erroOperacao && (
         <p className={styles.erro} role="alert">

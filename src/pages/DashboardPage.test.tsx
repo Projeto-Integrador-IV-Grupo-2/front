@@ -2,7 +2,9 @@ import { screen, within } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, it, vi } from 'vitest'
 import {
+  criarAtribuicao,
   criarDashboardColaborador,
+  criarPagina,
   criarDashboardGestao,
   criarPaginaTrilhas,
   criarProgressoTrilha,
@@ -37,17 +39,25 @@ describe('DashboardPage', () => {
     // Mesmo arranjo do painel de gestão, só com os dados de quem entrou.
     for (const titulo of [
       'Seus indicadores',
-      'Precisa de atenção',
+      'Atrasadas e próximos prazos',
       'Minhas trilhas',
       'Suas trilhas por status',
     ]) {
       expect(screen.getByRole('heading', { name: titulo })).toBeInTheDocument()
     }
-    // O prazo da semana entra em "Precisa de atenção", com link para a trilha.
-    const atencao = screen.getByRole('region', { name: 'Precisa de atenção' })
+    // O prazo da semana aparece pelo nome da trilha, com link para ela.
+    const atencao = screen.getByRole('region', {
+      name: 'Atrasadas e próximos prazos',
+    })
     expect(
-      within(atencao).getByRole('link', { name: /Onboarding vence em/ }),
+      await within(atencao).findByRole('link', {
+        name: /Onboarding.*Vence em/,
+      }),
     ).toHaveAttribute('href', '/trilhas/44444444-4444-4444-4444-444444444444')
+    // O subtítulo usa os números da API, não um texto fixo.
+    expect(
+      screen.getByText(/Você tem 1 prazo nesta semana, 1 em andamento/),
+    ).toBeInTheDocument()
     expect(screen.getByText(/Você iniciou/)).toBeInTheDocument()
     expect(screen.getAllByText('Não iniciadas').length).toBeGreaterThan(0)
     expect(
@@ -61,12 +71,22 @@ describe('DashboardPage', () => {
     async (papel) => {
       const dashboard = criarDashboardGestao()
       const requisicaoColaborador = vi.fn()
+      let filtroStatus: string | null = null
       server.use(
         http.get('*/api/dashboard/colaborador', () => {
           requisicaoColaborador()
           return HttpResponse.json(criarDashboardColaborador())
         }),
         http.get('*/api/dashboard/gestao', () => HttpResponse.json(dashboard)),
+        http.get('*/api/atribuicoes', ({ request }) => {
+          filtroStatus = new URL(request.url).searchParams.get('status')
+          return HttpResponse.json(
+            criarPagina(
+              [criarAtribuicao({ status: 'ATRASADA', percentual: 40 })],
+              { totalElements: 6 },
+            ),
+          )
+        }),
       )
 
       renderizarComProvedores({
@@ -79,7 +99,7 @@ describe('DashboardPage', () => {
         screen.getByRole('heading', { name: 'Indicadores gerais' }),
       ).toBeInTheDocument()
       expect(screen.getAllByText('12').length).toBeGreaterThan(0)
-      expect(screen.getByText('30%')).toBeInTheDocument()
+      expect(screen.getAllByText('30%').length).toBeGreaterThan(0)
       expect(screen.getByText('Áreas com mais atraso')).toBeInTheDocument()
       expect(screen.getByText('Trilhas mais iniciadas')).toBeInTheDocument()
       expect(screen.getByText('18 inícios')).toBeInTheDocument()
@@ -87,24 +107,39 @@ describe('DashboardPage', () => {
         screen.queryByRole('heading', { name: 'Suas trilhas' }),
       ).not.toBeInTheDocument()
 
-      // "Precisa de atenção" junta atrasos, áreas e o que não começou.
-      const atencao = screen.getByRole('region', {
-        name: 'Precisa de atenção',
+      // Cada atribuição atrasada aparece com trilha e colaborador, levando
+      // ao andamento dela; o "Ver todas" abre o acompanhamento filtrado.
+      const atrasadas = screen.getByRole('region', {
+        name: 'Trilhas atrasadas',
       })
       expect(
-        within(atencao).getByText('6 atribuições estão atrasadas'),
-      ).toBeInTheDocument()
+        await within(atrasadas).findByRole('link', {
+          name: /Onboarding · Ana Souza.*40% concluído/,
+        }),
+      ).toHaveAttribute(
+        'href',
+        '/trilhas/44444444-4444-4444-4444-444444444444/colaboradores/66666666-6666-6666-6666-666666666666',
+      )
       expect(
-        within(atencao).getByText('Tecnologia tem 4 atribuições atrasadas'),
-      ).toBeInTheDocument()
+        within(atrasadas).getByRole('link', {
+          name: 'Ver todas as 6 atrasadas',
+        }),
+      ).toHaveAttribute('href', '/acompanhamento?status=ATRASADA')
+      expect(filtroStatus).toBe('ATRASADA')
+      expect(screen.getByText('6 trilhas atrasadas')).toBeInTheDocument()
+
+      const areas = screen.getByRole('region', {
+        name: 'Áreas com mais atraso',
+      })
       expect(
-        within(atencao).getByText('8 atribuições ainda não foram iniciadas'),
+        within(areas).getByText('4 atribuições atrasadas'),
       ).toBeInTheDocument()
 
       const grafico = screen.getByRole('group', {
         name: /Atribuições por status/,
       })
       expect(within(grafico).getByText('14')).toBeInTheDocument()
+      expect(within(grafico).getByText('35%')).toBeInTheDocument()
       expect(requisicaoColaborador).not.toHaveBeenCalled()
     },
   )
@@ -203,7 +238,7 @@ describe('DashboardPage', () => {
     expect(
       screen.getByRole('heading', { name: 'Indicadores gerais' }),
     ).toBeInTheDocument()
-    expect(screen.getByText(/precisa da sua atenção hoje/)).toBeInTheDocument()
+    expect(screen.getByText(/Resumo das trilhas da equipe/)).toBeInTheDocument()
   })
 
   it('isola erro de um bloco de gestão e mantém os outros indicadores', async () => {
@@ -248,6 +283,9 @@ describe('DashboardPage', () => {
           }),
         ),
       ),
+      http.get('*/api/atribuicoes', () =>
+        HttpResponse.json(criarPagina([], { totalElements: 0 })),
+      ),
     )
 
     renderizarComProvedores({
@@ -256,7 +294,12 @@ describe('DashboardPage', () => {
     })
 
     expect(
-      await screen.findByText('Nada precisa da sua atenção agora.'),
+      await screen.findByText(
+        'Nenhuma trilha atrasada. Todos os prazos estão em dia.',
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('Nenhuma área com atribuições atrasadas.'),
     ).toBeInTheDocument()
     expect(
       screen.getByText(
@@ -319,7 +362,9 @@ describe('DashboardPage', () => {
       await screen.findByText('Você ainda não tem trilhas atribuídas.'),
     ).toBeInTheDocument()
     expect(
-      screen.getByText('Nada precisa da sua atenção agora.'),
+      await screen.findByText(
+        'Nenhuma trilha atrasada e nenhum prazo nesta semana.',
+      ),
     ).toBeInTheDocument()
     expect(
       screen.getByText('Suas interações com as trilhas aparecerão aqui.'),

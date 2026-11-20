@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { AvisoSucesso } from '../components/comum/AvisoSucesso.tsx'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { AtribuirTrilha } from '../components/trilhas/AtribuirTrilha.tsx'
 import { ColaboradoresAtribuidos } from '../components/trilhas/ColaboradoresAtribuidos.tsx'
@@ -9,7 +10,7 @@ import {
 } from '../components/trilhas/formatacao.ts'
 import { EtapasGestao } from '../components/trilhas/EtapasGestao.tsx'
 import { AdicionarAoPdi } from '../components/pdi/AdicionarAoPdi.tsx'
-import { JornadaTrilha } from '../components/trilhas/JornadaTrilha.tsx'
+import { ConteudosDaTrilha } from '../components/trilhas/ConteudosDaTrilha.tsx'
 import {
   BarraProgresso,
   Selo,
@@ -159,7 +160,8 @@ export function TrilhaDetalhePage() {
   // Mesma permissão da tela de Acompanhamento, de onde vem o dado do painel.
   const podeVerAtribuidos = usePermissao(PERFIS_ACOMPANHAMENTO)
   const podeMontarEtapas = usePermissao(PERFIS_GESTAO_CONTEUDO)
-  // Jornada, progresso pessoal e botões de estudo são de quem cursa a trilha.
+  // Conteúdos com "feito", progresso pessoal e botões de estudo são de quem
+  // cursa a trilha.
   const estuda = usePermissao(PERFIS_ESTUDO)
 
   const [recarga, setRecarga] = useState(0)
@@ -177,7 +179,7 @@ export function TrilhaDetalhePage() {
 
   const [recargaAtribuidos, setRecargaAtribuidos] = useState(0)
   const [paginaAtribuidos, setPaginaAtribuidos] = useState(0)
-  const [aba, setAba] = useState<AbaGestao>('colaboradores')
+  const [aba, setAba] = useState<AbaGestao>('trilha')
   const [atribuidos, setAtribuidos] = useState<ResultadoAtribuidos | null>(null)
 
   const [dialogo, setDialogo] = useState<Dialogo | null>(null)
@@ -394,6 +396,23 @@ export function TrilhaDetalhePage() {
     }
   }
 
+  /** A conclusão de um conteúdo já traz o progresso recalculado pela API. */
+  function atualizarProgressoLocal(
+    detalhe: TrilhaDetalhe,
+    progresso: TrilhaDetalhe['progresso'],
+  ) {
+    setResultado({
+      chave: chaveBusca,
+      trilha: { ...detalhe, progresso },
+      erro: null,
+    })
+    setAviso(
+      progresso.status === 'CONCLUIDA'
+        ? 'Parabéns! Você concluiu a trilha.'
+        : `Conteúdo marcado como feito. Progresso: ${progresso.percentual}%.`,
+    )
+  }
+
   function registrarErroDoDialogo(causa: unknown, padrao: string) {
     const erro = erroDe(causa, padrao)
     setErroDialogo(erro.message)
@@ -504,11 +523,7 @@ export function TrilhaDetalhePage() {
         Voltar para trilhas
       </Link>
 
-      {/* Live region única da página, fora do bloco da trilha: o aviso de uma
-          escrita bem-sucedida continua na tela mesmo que a releitura falhe. */}
-      <div role="status" aria-live="polite" className={styles.avisoRegiao}>
-        {aviso && <p className={styles.aviso}>{aviso}</p>}
-      </div>
+      <AvisoSucesso mensagem={aviso} onSumir={() => setAviso(null)} />
 
       {carregando && <EsqueletoDetalhe />}
 
@@ -617,24 +632,13 @@ export function TrilhaDetalhePage() {
 
           {podeVerAtribuidos ? (
             <>
-              {/* Gestão não cursa a trilha: abre direto em quem a recebeu. A
-                  montagem das etapas e os dados ficam na outra aba. */}
+              {/* Etapas e informações vêm primeiro e abrem selecionadas; quem
+                  recebeu a trilha fica na segunda aba. */}
               <div
                 role="tablist"
                 aria-label="Seções da trilha"
                 className={styles.abas}
               >
-                <button
-                  type="button"
-                  role="tab"
-                  id="aba-colaboradores"
-                  aria-selected={aba === 'colaboradores'}
-                  aria-controls="painel-colaboradores"
-                  className={`${styles.aba} ${aba === 'colaboradores' ? styles.abaAtiva : ''}`}
-                  onClick={() => setAba('colaboradores')}
-                >
-                  Colaboradores
-                </button>
                 <button
                   type="button"
                   role="tab"
@@ -645,6 +649,17 @@ export function TrilhaDetalhePage() {
                   onClick={() => setAba('trilha')}
                 >
                   {podeMontarEtapas ? 'Etapas e informações' : 'Informações'}
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  id="aba-colaboradores"
+                  aria-selected={aba === 'colaboradores'}
+                  aria-controls="painel-colaboradores"
+                  className={`${styles.aba} ${aba === 'colaboradores' ? styles.abaAtiva : ''}`}
+                  onClick={() => setAba('colaboradores')}
+                >
+                  Colaboradores
                 </button>
               </div>
 
@@ -712,17 +727,24 @@ export function TrilhaDetalhePage() {
           ) : (
             <div className={styles.colunas}>
               <section
-                aria-labelledby={estuda ? 'titulo-jornada' : 'titulo-etapas'}
+                aria-labelledby={estuda ? 'titulo-conteudos' : 'titulo-etapas'}
               >
                 {estuda && (
                   <>
-                    <h2 id="titulo-jornada" className={styles.secao}>
-                      Jornada
+                    <h2 id="titulo-conteudos" className={styles.secao}>
+                      Etapas e conteúdos
                     </h2>
                     <div className={styles.painel}>
-                      <JornadaTrilha
-                        progresso={trilha.progresso}
-                        prazoDias={trilha.prazoDias}
+                      {/* Cada conteúdo marcado como feito conclui a etapa e
+                          atualiza o progresso geral ao lado. */}
+                      <ConteudosDaTrilha
+                        trilhaId={trilha.id}
+                        podeMarcar={
+                          trilha.progresso.id !== null && trilha.ativo
+                        }
+                        onProgresso={(progresso) =>
+                          atualizarProgressoLocal(trilha, progresso)
+                        }
                       />
                       {/* Sem atribuição (`progresso.id` nulo), não há o que
                           estudar: quem coloca o colaborador na trilha é a
@@ -795,6 +817,13 @@ export function TrilhaDetalhePage() {
                         rotulo={`Progresso em ${trilha.nome}`}
                         semValor
                       />
+                      {trilha.progresso.status === 'CONCLUIDA' &&
+                        trilha.progresso.concluidoEm && (
+                          <p className={styles.prazo}>
+                            Concluída em{' '}
+                            {formatarInstante(trilha.progresso.concluidoEm)}
+                          </p>
+                        )}
                       {trilha.progresso.prazo && (
                         <p
                           className={

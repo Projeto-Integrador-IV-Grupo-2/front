@@ -1,4 +1,5 @@
 import { useRef, useState, type ChangeEvent } from 'react'
+import { AvisoSucesso } from '../comum/AvisoSucesso.tsx'
 import { useAuth } from '../../hooks/useAuth.ts'
 import { useFotoPerfil } from '../../hooks/useFotoPerfil.ts'
 import {
@@ -116,11 +117,7 @@ export function CabecalhoPerfil({ perfil }: CabecalhoPerfilProps) {
             {erro}
           </p>
         )}
-        {aviso && (
-          <p className={styles.aviso} role="status">
-            {aviso}
-          </p>
-        )}
+        <AvisoSucesso mensagem={aviso} onSumir={() => setAviso(null)} />
       </div>
     </section>
   )

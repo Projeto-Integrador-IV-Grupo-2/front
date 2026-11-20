@@ -143,7 +143,7 @@ describe('SinoNotificacoes', () => {
     )
   })
 
-  it('abre o painel com as mais recentes, destacando as não lidas', async () => {
+  it('o painel mostra só as não lidas; as lidas ficam em "Ver todas"', async () => {
     const [nova, antiga] = notificacoes(2)
     servidorDeNotificacoes([nova, { ...antiga, lida: true }])
     renderizar()
@@ -156,12 +156,10 @@ describe('SinoNotificacoes', () => {
         name: /^Não lida, Trilha atribuída: Aviso 1/,
       }),
     ).toBeInTheDocument()
+    expect(within(painel).queryByText('Aviso 2')).not.toBeInTheDocument()
     expect(
-      within(painel).getByRole('button', {
-        name: /^Lida, Trilha atribuída: Aviso 2/,
-      }),
+      within(painel).getByRole('link', { name: 'Ver todas' }),
     ).toBeInTheDocument()
-    expect(within(painel).getByText('há 1 hora')).toBeInTheDocument()
     expect(await sino()).toHaveAttribute('aria-expanded', 'true')
   })
 
@@ -185,7 +183,7 @@ describe('SinoNotificacoes', () => {
     await waitFor(() => expect(chamadas.lidas).toEqual(['n-1']))
   })
 
-  it('"Marcar todas como lidas" zera o contador e tira o destaque', async () => {
+  it('"Marcar todas como lidas" zera o contador e esvazia o painel', async () => {
     servidorDeNotificacoes(notificacoes(3))
     renderizar()
     await sino('Notificações, 3 não lidas')
@@ -199,9 +197,9 @@ describe('SinoNotificacoes', () => {
     expect(await sino('Notificações, nenhuma não lida')).not.toHaveTextContent(
       /\d/,
     )
-    expect(
-      within(painel).queryAllByRole('button', { name: /^Não lida/ }),
-    ).toHaveLength(0)
+    // Lidas saem do painel na hora: sobra só o aviso de que está tudo em dia.
+    expect(within(painel).queryByText(/Aviso \d/)).not.toBeInTheDocument()
+    expect(within(painel).getByText('Tudo em dia')).toBeInTheDocument()
     expect(
       within(painel).getByRole('button', { name: 'Marcar todas como lidas' }),
     ).toBeDisabled()

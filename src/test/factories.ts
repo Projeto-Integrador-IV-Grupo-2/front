@@ -314,6 +314,8 @@ export function criarConteudo(overrides: Partial<Conteudo> = {}): Conteudo {
     criadoEm: '2026-09-01T12:00:00Z',
     atualizadoEm: '2026-09-01T12:00:00Z',
     publicadoEm: '2026-09-02T12:00:00Z',
+    apenasAdmin: false,
+    catalogo: 'TRILHA',
     ...overrides,
   }
 }

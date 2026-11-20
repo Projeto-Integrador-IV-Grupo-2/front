@@ -23,6 +23,8 @@ export const MENSAGENS_DE_ERRO = {
   SEM_PERMISSAO: 'Você não tem permissão para esta operação.',
   ERRO_DO_SERVIDOR:
     'O servidor não conseguiu concluir a operação. Tente novamente em instantes.',
+  SEM_CONEXAO:
+    'Não foi possível falar com o servidor. Confira se ele está no ar e tente novamente em instantes.',
 } as const
 
 /** Texto de um service para um status; em `INTERNAL_SERVER_ERROR`, vale para todo 5xx. */
@@ -85,6 +87,11 @@ export function normalizarErro(
 ): ErroNormalizado {
   if (!axios.isAxiosError<ApiErrorResponse>(error)) {
     return { message: fallbackMessage, fieldErrors: [] }
+  }
+  // Sem resposta nenhuma: o servidor está fora do ar ou reiniciando. Dizer
+  // isso evita parecer que o problema é o que a pessoa tentou fazer.
+  if (!error.response && error.code !== 'ERR_CANCELED') {
+    return { message: MENSAGENS_DE_ERRO.SEM_CONEXAO, fieldErrors: [] }
   }
   const status = error.response?.status
   const dados = corpo ?? error.response?.data

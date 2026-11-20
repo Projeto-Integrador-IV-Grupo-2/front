@@ -57,8 +57,10 @@ export function SinoNotificacoes() {
     controladorRef.current = controlador
     const carregadaEm = marcoAtual()
     setLista({ status: 'carregando' })
+    // O painel é das novidades: só as não lidas. O histórico fica em "Ver todas".
     listarNotificacoes({
       size: TAMANHO_PAINEL_NOTIFICACOES,
+      naoLidas: true,
       signal: controlador.signal,
     })
       .then((pagina) => {
@@ -155,6 +157,14 @@ export function SinoNotificacoes() {
 
   const temNaoLidas = total !== null && total > 0
 
+  // Lida some do painel na hora: ao abrir uma, ou todas de uma vez com
+  // "Marcar todas como lidas".
+  const visiveis =
+    lista.status === 'pronto'
+      ? lista.itens.filter(
+          (notificacao) => !estaLida(notificacao, lista.carregadaEm),
+        )
+      : []
   return (
     <div
       ref={raizRef}
@@ -224,20 +234,20 @@ export function SinoNotificacoes() {
               </div>
             )}
 
-            {lista.status === 'pronto' && lista.itens.length === 0 && (
+            {lista.status === 'pronto' && visiveis.length === 0 && (
               <div className={styles.vazio}>
                 <p className={styles.vazioTitulo}>Tudo em dia</p>
-                <p>Você não tem notificações por enquanto.</p>
+                <p>Você não tem notificações novas.</p>
               </div>
             )}
 
-            {lista.status === 'pronto' && lista.itens.length > 0 && (
+            {lista.status === 'pronto' && visiveis.length > 0 && (
               <ul className={styles.lista}>
-                {lista.itens.map((notificacao) => (
+                {visiveis.map((notificacao) => (
                   <li key={notificacao.id}>
                     <NotificacaoItem
                       notificacao={notificacao}
-                      lida={estaLida(notificacao, lista.carregadaEm)}
+                      lida={false}
                       onAbrir={aoAbrirNotificacao}
                     />
                   </li>

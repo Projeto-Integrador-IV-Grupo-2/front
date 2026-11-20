@@ -39,6 +39,9 @@
 }
 
 .sinoLateral {
+  display: flex;
+  align-items: center;
+  gap: 2px;
   margin-left: auto;
 }
 
@@ -105,35 +108,22 @@
 }
 
 /* Tema e usuário em blocos com borda, como no layout de referência. */
-.temaRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  padding: 6px 6px 6px var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  color: var(--color-text-muted);
-  background: var(--color-surface-2);
-  font-size: 0.85rem;
-}
-
 .botaoTema {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   padding: 0;
   color: var(--color-text-muted);
-  background: transparent;
-  border: 1px solid var(--color-border);
+  background: none;
+  border: none;
   border-radius: var(--radius-sm);
 }
 
 .botaoTema:hover {
   color: var(--color-text);
-  background: var(--color-bg);
+  background: var(--color-primary-soft);
 }
 
 .userCard {

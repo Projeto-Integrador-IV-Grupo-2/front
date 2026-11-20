@@ -30,8 +30,8 @@ export function TelaDeAcesso({
           </h1>
           <p className={styles.brandDescription}>
             Documentos, códigos, processos, trilhas e planos de desenvolvimento
-            em um só lugar — com um assistente de IA que responde qualquer
-            dúvida sobre a empresa.
+            em um só lugar, com um assistente de IA que responde qualquer dúvida
+            sobre a empresa.
           </p>
         </div>
 

@@ -1,6 +1,6 @@
 import { useEffect, useId, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { caminhoPdi } from '../../routes/paths.ts'
+import { ROTAS, caminhoPdi } from '../../routes/paths.ts'
 import {
   buscarPdi,
   ligarTrilha,
@@ -25,7 +25,7 @@ function mensagemDe(causa: unknown, padrao: string): string {
 
 /**
  * "Adicionar ao PDI" do detalhe da trilha (ADMIN e GESTOR): escolhe o PDI
- * ativo de um colaborador, a competência desse PDI e o prazo. A API liga a
+ * ativo de um colaborador e a competência desse PDI; o prazo é o da trilha. A API liga a
  * trilha à competência e a atribui ao colaborador.
  */
 export function AdicionarAoPdi({
@@ -38,7 +38,6 @@ export function AdicionarAoPdi({
   const [pdiId, setPdiId] = useState('')
   const [pdi, setPdi] = useState<PdiDetalhe | null>(null)
   const [itemId, setItemId] = useState('')
-  const [prazo, setPrazo] = useState('')
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<ApiFieldError[]>([])
@@ -110,9 +109,6 @@ export function AdicionarAoPdi({
     if (itemId === '') {
       erros.itemId = 'Escolha a competência.'
     }
-    if (prazo === '') {
-      erros.prazo = 'Informe o prazo.'
-    }
     setErrosLocais(erros)
     if (Object.keys(erros).length > 0) {
       return
@@ -125,7 +121,6 @@ export function AdicionarAoPdi({
       await ligarTrilha(pdiId, itemId, {
         tipo: 'TRILHA',
         trilhaId: trilha.id,
-        prazo,
       })
       const colaborador = pdis?.find((item) => item.id === pdiId)?.colaborador
       onAdicionada(
@@ -141,14 +136,13 @@ export function AdicionarAoPdi({
   const ids = {
     pdi: `${idBase}-pdi`,
     item: `${idBase}-item`,
-    prazo: `${idBase}-prazo`,
   }
   const semCompetencias = pdi !== null && pdi.itens.length === 0
 
   return (
     <Dialogo
       titulo="Adicionar ao PDI"
-      subtitulo={`Ligue “${trilha.nome}” a uma competência do PDI de um colaborador. A trilha é atribuída a ele com o prazo escolhido.`}
+      subtitulo={`Ligue “${trilha.nome}” a uma competência do PDI de um colaborador. A trilha é atribuída a ele com o prazo definido na trilha.`}
       ocupado={salvando}
       onFechar={onFechar}
     >
@@ -180,7 +174,9 @@ export function AdicionarAoPdi({
           </select>
           {pdis !== null && pdis.length === 0 && (
             <p className={styles.dica}>
-              Nenhum PDI ativo disponível para você.
+              Nenhum PDI ativo ainda.{' '}
+              <Link to={`${ROTAS.pdi}?aba=equipe&novo=1`}>Criar um PDI</Link>{' '}
+              para um colaborador e depois volte aqui.
             </p>
           )}
         </Campo>
@@ -215,19 +211,6 @@ export function AdicionarAoPdi({
               <Link to={caminhoPdi(pdiId)}>Abrir o editor do PDI</Link>
             </p>
           )}
-        </Campo>
-
-        <Campo id={ids.prazo} rotulo="Prazo" erro={erroDoCampo('prazo')} cheio>
-          <input
-            id={ids.prazo}
-            name="prazo"
-            type="date"
-            value={prazo}
-            onChange={(evento) => setPrazo(evento.target.value)}
-            disabled={salvando}
-            aria-required="true"
-            {...ariaDoCampo(ids.prazo, erroDoCampo('prazo'))}
-          />
         </Campo>
 
         <div className={styles.rodape}>

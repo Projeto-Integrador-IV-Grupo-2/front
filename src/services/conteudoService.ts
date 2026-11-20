@@ -118,6 +118,16 @@ export async function publicarConteudo(id: string): Promise<Conteudo> {
  * Volta o conteúdo para rascunho. Conteúdo usado em etapa de trilha responde
  * 409, e a mensagem da API é a que a tela mostra.
  */
+/** Exclui de vez. Conteúdo usado em etapa de trilha responde 409. */
+export async function excluirConteudo(id: string): Promise<void> {
+  try {
+    await api.delete(`/api/conteudos/${id}`)
+    avisarConteudosMudaram()
+  } catch (error) {
+    throw toServiceError(error, 'Não foi possível excluir o conteúdo.')
+  }
+}
+
 export async function despublicarConteudo(id: string): Promise<Conteudo> {
   try {
     const { data } = await api.patch<Conteudo>(

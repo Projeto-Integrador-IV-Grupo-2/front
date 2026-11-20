@@ -86,4 +86,6 @@ export const ROTULOS_SITUACAO: Record<SituacaoUsuario, string> = {
 }
 
 export const PERFIS: UserRole[] = ['ADMIN', 'GESTOR', 'COLABORADOR']
+/** Perfis oferecidos no filtro de Usuários: a empresa só usa admin e colaborador. */
+export const PERFIS_NO_FILTRO: UserRole[] = ['ADMIN', 'COLABORADOR']
 export const SITUACOES: SituacaoUsuario[] = ['ATIVO', 'INATIVO']

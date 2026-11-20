@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { caminhoPdi } from '../../routes/paths.ts'
 import {
   criarPdi,
@@ -44,7 +44,11 @@ export function PdisEquipe() {
   const [carregandoMais, setCarregandoMais] = useState(false)
   const [erroMais, setErroMais] = useState<string | null>(null)
 
-  const [formularioAberto, setFormularioAberto] = useState(false)
+  // `?novo=1` vem do "Criar um PDI" do diálogo da trilha: já abre o cadastro.
+  const [parametros] = useSearchParams()
+  const [formularioAberto, setFormularioAberto] = useState(
+    () => parametros.get('novo') === '1',
+  )
   const [colaboradores, setColaboradores] = useState<ColaboradorOpcao[] | null>(
     null,
   )

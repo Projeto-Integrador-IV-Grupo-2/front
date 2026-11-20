@@ -18,8 +18,9 @@ interface LigarTrilhaFormProps {
 }
 
 /**
- * Liga uma trilha a uma competência do PDI, com prazo. A API atribui a trilha
- * ao colaborador com esse prazo (sem duplicar se ele já tiver a trilha).
+ * Liga uma trilha a uma competência do PDI e salva na hora. O prazo não é
+ * pedido aqui: vale o que a trilha define (a API atribui a trilha ao
+ * colaborador com esse prazo, sem duplicar se ele já tiver a trilha).
  */
 export function LigarTrilhaForm({
   competencia,
@@ -31,7 +32,6 @@ export function LigarTrilhaForm({
 }: LigarTrilhaFormProps) {
   const idBase = useId()
   const [trilhaId, setTrilhaId] = useState('')
-  const [prazo, setPrazo] = useState('')
   const [errosLocais, setErrosLocais] = useState<Record<string, string>>({})
 
   function erroDoCampo(campo: string): string | undefined {
@@ -47,17 +47,14 @@ export function LigarTrilhaForm({
     if (trilhaId === '') {
       erros.trilhaId = 'Escolha a trilha.'
     }
-    if (prazo === '') {
-      erros.prazo = 'Informe o prazo.'
-    }
     setErrosLocais(erros)
     if (Object.keys(erros).length > 0) {
       return
     }
-    onLigar({ tipo: 'TRILHA', trilhaId, prazo })
+    onLigar({ tipo: 'TRILHA', trilhaId })
   }
 
-  const ids = { trilha: `${idBase}-trilha`, prazo: `${idBase}-prazo` }
+  const ids = { trilha: `${idBase}-trilha` }
 
   return (
     <form
@@ -94,25 +91,13 @@ export function LigarTrilhaForm({
         </select>
       </Campo>
 
-      <Campo id={ids.prazo} rotulo="Prazo" erro={erroDoCampo('prazo')}>
-        <input
-          id={ids.prazo}
-          name="prazo"
-          type="date"
-          value={prazo}
-          onChange={(evento) => {
-            setPrazo(evento.target.value)
-            setErrosLocais(({ prazo: _removido, ...resto }) => resto)
-          }}
-          disabled={salvando}
-          aria-required="true"
-          {...ariaDoCampo(ids.prazo, erroDoCampo('prazo'))}
-        />
-      </Campo>
-
       <div className={styles.acoes}>
-        <button type="submit" className={dialogo.cancelar} disabled={salvando}>
-          {salvando ? 'Ligando…' : 'Ligar trilha'}
+        <button
+          type="submit"
+          className={dialogo.criar}
+          disabled={salvando || trilhaId === ''}
+        >
+          {salvando ? 'Salvando…' : 'Salvar trilha'}
         </button>
       </div>
     </form>

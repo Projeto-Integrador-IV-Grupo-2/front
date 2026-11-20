@@ -29,6 +29,7 @@ import {
   TopoDashboard,
   TrilhaIcon,
 } from './PecasDashboard.tsx'
+import { formatarData, plural, textoDoAtraso } from './datas.ts'
 import lista from './ListaDashboard.module.css'
 import styles from './DashboardColaborador.module.css'
 
@@ -42,7 +43,11 @@ type AtividadeDeTrilha = HistoricoInteracaoDashboard & {
   tipo: keyof typeof ROTULOS_INTERACAO
 }
 
-export function DashboardColaborador({ saudacao }: { saudacao: ReactNode }) {
+export function DashboardColaborador({
+  saudacao,
+}: {
+  saudacao: (descricao: string) => ReactNode
+}) {
   const estado = useDashboardRequest<DashboardColaboradorResponse>(
     carregarDashboardColaborador,
   )
@@ -113,26 +118,33 @@ export function DashboardColaborador({ saudacao }: { saudacao: ReactNode }) {
 
   // Mesmo arranjo do painel de gestão, com os dados de quem está logado:
   // o que pede atenção, as trilhas com o progresso e o resumo por status.
-  const atencoes = montarAtencoes(
-    resumoOk ? resumo : undefined,
-    prazosValidos ? prazos : [],
-  )
-  const estadoAtencoes: EstadoPainel = carregando
-    ? 'carregando'
-    : erroPrazos
-      ? 'erro'
-      : atencoes.length > 0
-        ? 'pronto'
-        : 'vazio'
+  // Cada trilha atrasada aparece pelo nome, seguida das que vencem na semana.
+  const atencoes = montarAtencoes(minhas.trilhas, prazosValidos ? prazos : [])
+  const estadoAtencoes: EstadoPainel =
+    carregando || minhas.status === 'carregando'
+      ? 'carregando'
+      : erroPrazos && minhas.status === 'erro'
+        ? 'erro'
+        : atencoes.length > 0
+          ? 'pronto'
+          : 'vazio'
 
+  const totalAtrasadas = resumoOk
+    ? resumo.atrasadas
+    : atencoes.filter((item) => item.tom === 'perigo').length
   const selo =
-    atencoes.length > 0
-      ? `${atencoes.length} ${atencoes.length === 1 ? 'item precisa' : 'itens precisam'} de atenção`
+    totalAtrasadas > 0
+      ? `${totalAtrasadas} ${plural(totalAtrasadas, 'trilha atrasada', 'trilhas atrasadas')}`
       : null
+  const descricao = descricaoColaborador(
+    resumoOk ? resumo : undefined,
+    percentualMedioValido ? dados!.percentualMedio : undefined,
+    prazosValidos ? prazos.filter((p) => p.status !== 'CONCLUIDA').length : 0,
+  )
 
   return (
     <div className={lista.coluna}>
-      <TopoDashboard saudacao={saudacao} selo={selo} />
+      <TopoDashboard saudacao={saudacao(descricao)} selo={selo} />
 
       <GradeIndicadores
         titulo="Seus indicadores"
@@ -170,13 +182,13 @@ export function DashboardColaborador({ saudacao }: { saudacao: ReactNode }) {
         )}
       </GradeIndicadores>
 
-      <div className={`${lista.colunas} ${lista.colunasIguais}`}>
+      <div className={lista.colunas}>
         <div className={lista.coluna}>
           <PainelDashboard
-            titulo="Precisa de atenção"
+            titulo="Atrasadas e próximos prazos"
             estado={estadoAtencoes}
             mensagemErro={erroPrazos}
-            mensagemVazia="Nada precisa da sua atenção agora."
+            mensagemVazia="Nenhuma trilha atrasada e nenhum prazo nesta semana."
             semCartao
           >
             <ul className={lista.atencoes}>
@@ -221,7 +233,6 @@ export function DashboardColaborador({ saudacao }: { saudacao: ReactNode }) {
             titulo="Suas trilhas por status"
             estado={estadoResumo}
             mensagemErro={erroResumo}
-            esticar
           >
             {resumoOk && <ResumoTrilhas resumo={resumo} />}
           </PainelDashboard>
@@ -241,44 +252,73 @@ interface Atencao {
   para: string
 }
 
-/** Atrasos, depois os prazos da semana, depois o que ainda não começou. */
+/**
+ * Cada trilha atrasada pelo nome (da que venceu há mais tempo), depois as
+ * que vencem nos próximos sete dias.
+ */
 function montarAtencoes(
-  resumo: ResumoStatusDashboard | undefined,
+  trilhas: TrilhaResumo[],
   prazos: ProximoPrazoDashboard[],
 ): Atencao[] {
-  const itens: Atencao[] = []
-  if (resumo && resumo.atrasadas > 0) {
-    itens.push({
-      chave: 'atrasadas',
+  const atrasadas = trilhas
+    .filter((trilha) => trilha.progresso?.status === 'ATRASADA')
+    .sort((a, b) =>
+      (a.progresso?.prazo ?? '').localeCompare(b.progresso?.prazo ?? ''),
+    )
+  const itens: Atencao[] = atrasadas.map((trilha) => {
+    const prazo = trilha.progresso?.prazo ?? null
+    const partes = [textoDoAtraso(prazo)]
+    if (prazo) partes.push(`prazo ${formatarData(prazo)}`)
+    partes.push(`${trilha.progresso?.percentual ?? 0}% concluído`)
+    return {
+      chave: `atrasada-${trilha.id}`,
       tom: 'perigo',
       icone: <AlertaIcon />,
-      texto: `${resumo.atrasadas} ${resumo.atrasadas === 1 ? 'trilha está atrasada' : 'trilhas estão atrasadas'}`,
-      etiqueta: 'Atraso',
-      para: ROTAS.trilhas,
-    })
-  }
+      texto: trilha.nome,
+      etiqueta: partes.join(' · '),
+      para: caminhoTrilha(trilha.id),
+    }
+  })
+  const jaListadas = new Set(atrasadas.map((trilha) => trilha.id))
   for (const prazo of prazos) {
-    if (prazo.status === 'CONCLUIDA') continue
+    if (prazo.status === 'CONCLUIDA' || jaListadas.has(prazo.trilhaId)) continue
     itens.push({
       chave: `prazo-${prazo.atribuicaoId}`,
       tom: prazo.status === 'ATRASADA' ? 'perigo' : 'alerta',
       icone: <RelogioIcon />,
-      texto: `${prazo.trilhaNome} vence em ${formatarData(prazo.prazo)} · ${prazo.percentual}% concluído`,
-      etiqueta: 'Prazo nesta semana',
+      texto: prazo.trilhaNome,
+      etiqueta: `Vence em ${formatarData(prazo.prazo)} · ${prazo.percentual}% concluído`,
       para: caminhoTrilha(prazo.trilhaId),
     })
   }
-  if (resumo && resumo.naoIniciadas > 0) {
-    itens.push({
-      chave: 'nao-iniciadas',
-      tom: 'alerta',
-      icone: <PlayIconIndicador />,
-      texto: `${resumo.naoIniciadas} ${resumo.naoIniciadas === 1 ? 'trilha ainda não foi iniciada' : 'trilhas ainda não foram iniciadas'}`,
-      etiqueta: 'Não iniciadas',
-      para: ROTAS.trilhas,
-    })
-  }
   return itens
+}
+
+/** Subtítulo da saudação com os números de quem está logado. */
+function descricaoColaborador(
+  resumo: ResumoStatusDashboard | undefined,
+  percentualMedio: number | undefined,
+  prazosDaSemana: number,
+): string {
+  if (!resumo) return 'Veja seu progresso e o que você precisa fazer agora.'
+  if (resumo.total === 0) return 'Você ainda não recebeu nenhuma trilha.'
+  const partes: string[] = []
+  if (resumo.atrasadas > 0) {
+    partes.push(
+      `${resumo.atrasadas} ${plural(resumo.atrasadas, 'trilha atrasada', 'trilhas atrasadas')}`,
+    )
+  }
+  if (prazosDaSemana > 0) {
+    partes.push(
+      `${prazosDaSemana} ${plural(prazosDaSemana, 'prazo', 'prazos')} nesta semana`,
+    )
+  }
+  partes.push(`${resumo.emAndamento} em andamento`)
+  const media =
+    percentualMedio !== undefined
+      ? ` Progresso médio: ${formatarPercentual(percentualMedio)}%.`
+      : ''
+  return `Você tem ${partes.join(', ')}.${media}`
 }
 
 /** As trilhas recebidas, com o progresso de cada uma — como o ranking da gestão. */
@@ -505,27 +545,6 @@ function formatarPercentual(valor: number): string {
   return new Intl.NumberFormat('pt-BR', {
     maximumFractionDigits: 2,
   }).format(valor)
-}
-
-function formatarData(valor: string): string {
-  const partes = valor.split('-').map(Number)
-  if (
-    partes.length !== 3 ||
-    partes.some((parte) => !Number.isFinite(parte)) ||
-    !/^\d{4}-\d{2}-\d{2}$/.test(valor)
-  ) {
-    return 'Data indisponível'
-  }
-  const [ano, mes, dia] = partes
-  const data = new Date(ano, mes - 1, dia)
-  if (
-    data.getFullYear() !== ano ||
-    data.getMonth() !== mes - 1 ||
-    data.getDate() !== dia
-  ) {
-    return 'Data indisponível'
-  }
-  return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium' }).format(data)
 }
 
 function formatarDataHora(valor: string): string {

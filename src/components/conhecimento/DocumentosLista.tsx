@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { SeloSoAdmin } from '../conteudos/SeloSoAdmin.tsx'
 import { caminhoDocumento } from '../../routes/paths.ts'
 import {
   ROTULOS_STATUS_CONTEUDO,
@@ -51,6 +52,7 @@ export function DocumentosLista({
                 >
                   {documento.titulo}
                 </Link>
+                {documento.apenasAdmin && <SeloSoAdmin />}
                 {documento.descricao && (
                   <span className={styles.descricao}>
                     {documento.descricao}

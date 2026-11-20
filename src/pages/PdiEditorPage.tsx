@@ -1,10 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
+import { AvisoSucesso } from '../components/comum/AvisoSucesso.tsx'
 import { Link, useParams } from 'react-router-dom'
 import { AdicionarCompetenciaForm } from '../components/pdi/AdicionarCompetenciaForm.tsx'
 import { CompetenciaFormulario } from '../components/pdi/CompetenciaFormulario.tsx'
 import { CompetenciaPdi } from '../components/pdi/CompetenciaPdi.tsx'
 import { LigarTrilhaForm } from '../components/pdi/LigarTrilhaForm.tsx'
 import { PdiResumoPainel } from '../components/pdi/PdiResumoPainel.tsx'
+import { ColaboradorPainel } from '../components/acompanhamento/ColaboradorPainel.tsx'
+import {
+  AtribuicaoServiceError,
+  buscarAcompanhamentoDoColaborador,
+} from '../services/atribuicaoService.ts'
+import type { ColaboradorAcompanhamento } from '../types/atribuicao.ts'
 import estados from '../components/pdi/Estados.module.css'
 import { ROTAS } from '../routes/paths.ts'
 import {
@@ -51,7 +58,7 @@ function erroDe(causa: unknown, padrao: string): ErroFormulario {
 }
 
 /**
- * Editor do PDI (`/trilhas/pdi/:id`, ADMIN e GESTOR): competências com nível
+ * Editor do PDI (`/pdi/:id`, ADMIN e GESTOR): competências com nível
  * de 1 a 5 e observação e, em cada competência, as trilhas ligadas com prazo.
  * A competência que não existe pode ser criada aqui mesmo, num diálogo.
  *
@@ -85,6 +92,15 @@ export function PdiEditorPage() {
     null,
   )
   const tituloRef = useRef<HTMLHeadingElement>(null)
+
+  // "Ver trilhas": painel lateral com todas as trilhas do colaborador.
+  const [trilhasAbertas, setTrilhasAbertas] = useState(false)
+  const [recargaTrilhas, setRecargaTrilhas] = useState(0)
+  const [trilhasDoColaborador, setTrilhasDoColaborador] = useState<{
+    chave: string
+    dados: ColaboradorAcompanhamento | null
+    erro: string | null
+  } | null>(null)
 
   const chaveBusca = `${id}:${recarga}`
   const carregando = resultado?.chave !== chaveBusca
@@ -142,6 +158,36 @@ export function PdiEditorPage() {
       })
     return () => controlador.abort()
   }, [])
+
+  const colaboradorId = pdi?.colaborador.id
+  const chaveTrilhas = `${colaboradorId}:${recargaTrilhas}`
+  useEffect(() => {
+    if (!trilhasAbertas || !colaboradorId) {
+      return
+    }
+    const controlador = new AbortController()
+    buscarAcompanhamentoDoColaborador(colaboradorId, {
+      signal: controlador.signal,
+    })
+      .then((dados) => {
+        if (!controlador.signal.aborted) {
+          setTrilhasDoColaborador({ chave: chaveTrilhas, dados, erro: null })
+        }
+      })
+      .catch((causa: unknown) => {
+        if (!controlador.signal.aborted) {
+          setTrilhasDoColaborador({
+            chave: chaveTrilhas,
+            dados: null,
+            erro:
+              causa instanceof AtribuicaoServiceError
+                ? causa.message
+                : 'Não foi possível carregar as trilhas do colaborador.',
+          })
+        }
+      })
+    return () => controlador.abort()
+  }, [trilhasAbertas, colaboradorId, chaveTrilhas])
 
   const idCarregado = pdi?.id
   useEffect(() => {
@@ -265,21 +311,43 @@ export function PdiEditorPage() {
 
       {pdi && (
         <>
-          <header>
-            <h1 ref={tituloRef} tabIndex={-1} className={styles.titulo}>
-              PDI de {pdi.colaborador.nomeCompleto}
-            </h1>
-            <p className={styles.hint}>
-              Defina as competências e ligue a cada uma as trilhas que o
-              colaborador deve fazer.
-            </p>
+          <header className={styles.cabecalho}>
+            <div>
+              <h1 ref={tituloRef} tabIndex={-1} className={styles.titulo}>
+                PDI de {pdi.colaborador.nomeCompleto}
+              </h1>
+              <p className={styles.hint}>
+                Defina as competências e ligue a cada uma as trilhas que o
+                colaborador deve fazer.
+              </p>
+            </div>
+            <button
+              type="button"
+              className={styles.botaoPrincipal}
+              onClick={() => {
+                setErroCompetencia(null)
+                setDialogoAberto(true)
+              }}
+            >
+              + Cadastrar competência
+            </button>
           </header>
 
-          <div role="status" aria-live="polite" className={estados.avisoRegiao}>
-            {aviso && <p className={estados.aviso}>{aviso}</p>}
-          </div>
+          <AvisoSucesso mensagem={aviso} onSumir={() => setAviso(null)} />
 
-          <PdiResumoPainel pdi={pdi} mostrar="colaborador" />
+          <PdiResumoPainel
+            pdi={pdi}
+            mostrar="colaborador"
+            acao={
+              <button
+                type="button"
+                className={styles.botaoSecundario}
+                onClick={() => setTrilhasAbertas(true)}
+              >
+                Ver trilhas de {pdi.colaborador.nomeCompleto.split(' ')[0]}
+              </button>
+            }
+          />
 
           {erroOpcoes && (
             <p className={estados.erro} role="alert">
@@ -337,6 +405,28 @@ export function PdiEditorPage() {
             />
           </section>
         </>
+      )}
+
+      {trilhasAbertas && pdi && (
+        <ColaboradorPainel
+          colaborador={{
+            id: pdi.colaborador.id,
+            nomeCompleto: pdi.colaborador.nomeCompleto,
+            email: trilhasDoColaborador?.dados?.colaborador.email ?? '',
+          }}
+          dados={
+            trilhasDoColaborador?.chave === chaveTrilhas
+              ? trilhasDoColaborador.dados
+              : null
+          }
+          erro={
+            trilhasDoColaborador?.chave === chaveTrilhas
+              ? trilhasDoColaborador.erro
+              : null
+          }
+          onTentarDeNovo={() => setRecargaTrilhas((n) => n + 1)}
+          onFechar={() => setTrilhasAbertas(false)}
+        />
       )}
 
       {dialogoAberto && (

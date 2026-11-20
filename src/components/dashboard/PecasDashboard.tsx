@@ -120,6 +120,9 @@ export function ResumoStatus({
       }
       className={lista.resumo}
     >
+      <p className={lista.resumoTotal} aria-hidden="true">
+        <strong>{resumo.total}</strong> no total
+      </p>
       <div className={lista.segmentos} aria-hidden="true">
         {resumo.total === 0 ? (
           <span className={lista.segmentoVazio} />
@@ -141,6 +144,11 @@ export function ResumoStatus({
               aria-hidden="true"
             />
             <span className={lista.legendaRotulo}>{rotulos[item.status]}</span>
+            <span className={lista.legendaPercentual}>
+              {resumo.total > 0
+                ? `${Math.round((resumo[item.chave] / resumo.total) * 100)}%`
+                : '0%'}
+            </span>
             <strong>{resumo[item.chave]}</strong>
           </li>
         ))}
@@ -177,7 +185,22 @@ export function ItemAtencao({
   )
 }
 
-/** Selo do cabeçalho: "1 item precisa de atenção". Some quando é zero. */
+/** Link "Ver todas" no pé de uma lista do dashboard. */
+export function VerTodas({
+  para,
+  children,
+}: {
+  para: string
+  children: ReactNode
+}) {
+  return (
+    <Link to={para} className={lista.verTodas}>
+      {children}
+    </Link>
+  )
+}
+
+/** Selo do cabeçalho: "2 trilhas atrasadas". Some quando é zero. */
 export function SeloCabecalho({ texto }: { texto: string | null }) {
   if (!texto) return null
   return (

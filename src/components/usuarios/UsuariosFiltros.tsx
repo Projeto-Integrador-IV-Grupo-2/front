@@ -1,6 +1,6 @@
 import { useId, type FormEvent } from 'react'
 import {
-  PERFIS,
+  PERFIS_NO_FILTRO,
   ROTULOS_PERFIL,
   ROTULOS_SITUACAO,
   SITUACOES,
@@ -50,26 +50,6 @@ export function UsuariosFiltros({
       aria-label="Filtros de usuários"
     >
       <div className={styles.campo}>
-        <label htmlFor={`${idBase}-nome`}>Nome</label>
-        <input
-          id={`${idBase}-nome`}
-          type="search"
-          value={valores.nome ?? ''}
-          onChange={(evento) => alterar('nome', evento.target.value)}
-        />
-      </div>
-
-      <div className={styles.campo}>
-        <label htmlFor={`${idBase}-email`}>E-mail</label>
-        <input
-          id={`${idBase}-email`}
-          type="search"
-          value={valores.email ?? ''}
-          onChange={(evento) => alterar('email', evento.target.value)}
-        />
-      </div>
-
-      <div className={styles.campo}>
         <label htmlFor={`${idBase}-area`}>Área</label>
         <select
           id={`${idBase}-area`}
@@ -93,7 +73,7 @@ export function UsuariosFiltros({
           onChange={(evento) => alterar('perfil', evento.target.value)}
         >
           <option value="">Todos</option>
-          {PERFIS.map((perfil) => (
+          {PERFIS_NO_FILTRO.map((perfil) => (
             <option key={perfil} value={perfil}>
               {ROTULOS_PERFIL[perfil]}
             </option>

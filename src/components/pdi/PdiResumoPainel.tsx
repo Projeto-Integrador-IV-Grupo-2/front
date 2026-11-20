@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import {
   ROTULOS_STATUS_PDI,
   type PdiDetalhe,
@@ -28,10 +29,16 @@ interface PdiResumoPainelProps {
   pdi: PdiDetalhe
   /** No "Meu PDI" o colaborador é quem está vendo: mostra o gestor. */
   mostrar: 'gestor' | 'colaborador'
+  /** Botão no pé do cartão (ex.: "Ver trilhas" no editor). */
+  acao?: ReactNode
 }
 
-/** Ciclo, período, status e percentual do PDI (ações concluídas / total). */
-export function PdiResumoPainel({ pdi, mostrar }: PdiResumoPainelProps) {
+/**
+ * Ciclo, período, status e percentual do PDI. O percentual acompanha o
+ * colaborador: é a média do progresso dele em cada trilha ligada (a API
+ * calcula), então sobe a cada etapa concluída, não só no fim da trilha.
+ */
+export function PdiResumoPainel({ pdi, mostrar, acao }: PdiResumoPainelProps) {
   const pessoa = mostrar === 'gestor' ? pdi.gestor : pdi.colaborador
   return (
     <div className={styles.painel}>
@@ -45,8 +52,11 @@ export function PdiResumoPainel({ pdi, mostrar }: PdiResumoPainelProps) {
         semValor
       />
       <p className={styles.contagem}>
-        {pdi.acoesConcluidas} de {pdi.totalAcoes}{' '}
-        {pdi.totalAcoes === 1 ? 'ação concluída' : 'ações concluídas'}
+        {pdi.totalAcoes === 0
+          ? 'Nenhuma trilha ligada ainda'
+          : `Progresso médio nas trilhas · ${pdi.acoesConcluidas} de ${pdi.totalAcoes} ${
+              pdi.totalAcoes === 1 ? 'concluída' : 'concluídas'
+            }`}
       </p>
       <dl className={styles.dados}>
         <div>
@@ -64,6 +74,7 @@ export function PdiResumoPainel({ pdi, mostrar }: PdiResumoPainelProps) {
           <dd>{pessoa.nomeCompleto}</dd>
         </div>
       </dl>
+      {acao && <div className={styles.acao}>{acao}</div>}
     </div>
   )
 }

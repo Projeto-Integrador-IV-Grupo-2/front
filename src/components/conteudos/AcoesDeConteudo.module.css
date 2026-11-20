@@ -1,0 +1,33 @@
+.acoes {
+  display: flex;
+  justify-content: flex-end;
+  gap: 2px;
+}
+
+.botao {
+  display: inline-flex;
+  width: 30px;
+  height: 30px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: var(--color-text-faint);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+}
+
+.botao:hover {
+  color: var(--color-text);
+  background: var(--color-surface-2);
+}
+
+.botao:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.perigo:hover {
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
+}

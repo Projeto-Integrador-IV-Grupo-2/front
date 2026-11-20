@@ -276,6 +276,12 @@
   border-color: var(--color-primary);
 }
 
+/* Lápis e lixeira no pé do cartão (ver AcoesDeConteudo). */
+.acoesIcone {
+  margin-top: auto;
+  padding-top: 4px;
+}
+
 /* Se a tabela não couber, a rolagem horizontal fica aqui dentro — a página
    nunca rola de lado. */
 .rolagemTabela {

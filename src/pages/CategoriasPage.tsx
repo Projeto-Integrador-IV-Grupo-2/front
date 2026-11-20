@@ -1,4 +1,5 @@
 import { AbasAreas } from '../components/areas/AbasAreas.tsx'
+import { AvisoSucesso } from '../components/comum/AvisoSucesso.tsx'
 import { useEffect, useState } from 'react'
 import { CategoriaFormulario } from '../components/conteudos/CategoriaFormulario.tsx'
 import { usePermissao } from '../hooks/usePermissao.ts'
@@ -125,9 +126,7 @@ export function CategoriasPage() {
 
       <AbasAreas />
 
-      <div role="status" aria-live="polite" className={styles.avisoRegiao}>
-        {aviso && <p className={styles.aviso}>{aviso}</p>}
-      </div>
+      <AvisoSucesso mensagem={aviso} onSumir={() => setAviso(null)} />
 
       {carregando && (
         <p role="status" className={styles.estado}>

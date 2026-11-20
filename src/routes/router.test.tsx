@@ -148,7 +148,7 @@ describe('router', () => {
     ).toBe(true)
   })
 
-  it('leva o usuário ao destino que ele tentou abrir antes do login', async () => {
+  it('depois do login vai para o Dashboard, mesmo tendo aberto outra tela', async () => {
     const user = userEvent.setup()
     server.use(
       http.post('*/api/auth/login', () =>
@@ -171,7 +171,7 @@ describe('router', () => {
     await user.click(screen.getByRole('button', { name: 'Entrar' }))
 
     expect(
-      await screen.findByRole('heading', { name: 'Usuários' }),
+      await screen.findByRole('heading', { name: 'Dashboard' }),
     ).toBeInTheDocument()
   })
 

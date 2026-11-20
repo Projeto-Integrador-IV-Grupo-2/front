@@ -81,10 +81,10 @@ describe('DocumentoDetalhePage', () => {
     ).toBeInTheDocument()
 
     await user.upload(
-      screen.getByLabelText('Enviar arquivo'),
+      screen.getByLabelText('Adicionar arquivos'),
       arquivoLocal('politica-de-ferias.pdf', 'application/pdf'),
     )
-    await user.click(screen.getByRole('button', { name: 'Enviar' }))
+    await user.click(screen.getByRole('button', { name: 'Salvar arquivos' }))
 
     // A barra se inscreve no progresso do upload: ela aparece enquanto envia.
     expect(await screen.findByRole('progressbar')).toBeInTheDocument()
@@ -116,14 +116,16 @@ describe('DocumentoDetalhePage', () => {
 
     await tituloCarregado()
     await user.upload(
-      screen.getByLabelText('Enviar arquivo'),
+      screen.getByLabelText('Adicionar arquivos'),
       arquivoLocal('planilha.xlsx', 'application/vnd.ms-excel'),
     )
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       /Formato não aceito/,
     )
-    expect(screen.getByRole('button', { name: 'Enviar' })).toBeDisabled()
+    expect(
+      screen.getByRole('button', { name: 'Salvar arquivos' }),
+    ).toBeDisabled()
     expect(enviou).not.toHaveBeenCalled()
   })
 
@@ -137,7 +139,7 @@ describe('DocumentoDetalhePage', () => {
 
     await tituloCarregado()
     await user.upload(
-      screen.getByLabelText('Enviar arquivo'),
+      screen.getByLabelText('Adicionar arquivos'),
       arquivoLocal('enorme.pdf', 'application/pdf', 11 * 1024 * 1024),
     )
 
@@ -164,10 +166,10 @@ describe('DocumentoDetalhePage', () => {
 
     await tituloCarregado()
     await user.upload(
-      screen.getByLabelText('Enviar arquivo'),
+      screen.getByLabelText('Adicionar arquivos'),
       arquivoLocal('politica-de-ferias.pdf', 'application/pdf'),
     )
-    await user.click(screen.getByRole('button', { name: 'Enviar' }))
+    await user.click(screen.getByRole('button', { name: 'Salvar arquivos' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Falha ao gravar o arquivo',
@@ -198,10 +200,10 @@ describe('DocumentoDetalhePage', () => {
 
     await tituloCarregado()
     await user.upload(
-      screen.getByLabelText('Enviar arquivo'),
+      screen.getByLabelText('Adicionar arquivos'),
       arquivoLocal('politica.pdf', 'application/pdf'),
     )
-    await user.click(screen.getByRole('button', { name: 'Enviar' }))
+    await user.click(screen.getByRole('button', { name: 'Salvar arquivos' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Você não tem permissão para esta operação.',
@@ -295,46 +297,29 @@ describe('DocumentoDetalhePage', () => {
     ).toBeInTheDocument()
   })
 
-  it('publicar pede confirmação antes de mudar a situação', async () => {
-    const user = userEvent.setup()
-    let publicou = false
+  it('não tem publicar nem despublicar: só lápis e lixeira', async () => {
     server.use(
       http.get('*/api/conteudos/:id', () =>
         HttpResponse.json(
-          criarConteudo({
-            tipo: 'DOCUMENTO',
-            status: publicou ? 'PUBLICADO' : 'RASCUNHO',
-          }),
+          criarConteudo({ tipo: 'DOCUMENTO', status: 'RASCUNHO' }),
         ),
       ),
       http.get('*/api/conteudos/:id/arquivos', () => HttpResponse.json([])),
-      http.patch('*/api/conteudos/:id/publicar', () => {
-        publicou = true
-        return HttpResponse.json(
-          criarConteudo({ tipo: 'DOCUMENTO', status: 'PUBLICADO' }),
-        )
-      }),
     )
 
     renderizar(criarUsuario({ papel: 'ADMIN' }))
 
     await tituloCarregado()
-    await user.click(screen.getByRole('button', { name: 'Publicar' }))
-
-    const dialogo = await screen.findByRole('dialog', {
-      name: 'Publicar documento',
-    })
-    expect(publicou).toBe(false)
-    await user.click(within(dialogo).getByRole('button', { name: 'Publicar' }))
-
-    expect(await screen.findByText('Documento publicado.')).toBeInTheDocument()
-    expect(publicou).toBe(true)
+    expect(screen.getByRole('button', { name: /^Editar / })).toBeInTheDocument()
     expect(
-      await screen.findByRole('button', { name: 'Despublicar' }),
+      screen.getByRole('button', { name: /^Excluir / }),
     ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /Publicar|Despublicar/ }),
+    ).not.toBeInTheDocument()
   })
 
-  it('despublicar em uso numa trilha mostra o 409 da API', async () => {
+  it('excluir em uso numa trilha mostra o 409 da API', async () => {
     const user = userEvent.setup()
     server.use(
       http.get('*/api/conteudos/:id', () =>
@@ -343,11 +328,12 @@ describe('DocumentoDetalhePage', () => {
         ),
       ),
       http.get('*/api/conteudos/:id/arquivos', () => HttpResponse.json([])),
-      http.patch('*/api/conteudos/:id/despublicar', () =>
+      http.delete('*/api/conteudos/:id', () =>
         HttpResponse.json(
           {
             status: 409,
-            message: 'Conteúdo usado em etapa de trilha não pode sair do ar',
+            message:
+              'Remova o conteúdo das etapas de trilha antes de excluí-lo',
           },
           { status: 409 },
         ),
@@ -357,37 +343,22 @@ describe('DocumentoDetalhePage', () => {
     renderizar(criarUsuario({ papel: 'ADMIN' }))
 
     await tituloCarregado()
-    await user.click(screen.getByRole('button', { name: 'Despublicar' }))
+    await user.click(screen.getByRole('button', { name: /^Excluir / }))
     const dialogo = await screen.findByRole('dialog', {
-      name: 'Despublicar documento',
+      name: 'Excluir documento',
     })
-    await user.click(
-      within(dialogo).getByRole('button', { name: 'Despublicar' }),
-    )
+    await user.click(within(dialogo).getByRole('button', { name: 'Excluir' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Conteúdo usado em etapa de trilha não pode sair do ar',
+      'Remova o conteúdo das etapas de trilha',
     )
   })
 
-  it('cadastra uma categoria pelo modal do formulário e já a seleciona', async () => {
+  it('a edição escolhe entre as categorias que existem, sem criar nova', async () => {
     const user = userEvent.setup()
-    let categoriaIdSalva: unknown = null
+    let categoriaIdSalva: unknown = 'nada'
     server.use(
       http.get('*/api/conteudos/:id/arquivos', () => HttpResponse.json([])),
-      http.post('*/api/categorias', () =>
-        HttpResponse.json(
-          {
-            id: '99999999-9999-9999-9999-999999999999',
-            nome: 'Jurídico',
-            descricao: null,
-            ativo: true,
-            criadoEm: '2026-09-01T12:00:00Z',
-            atualizadoEm: '2026-09-01T12:00:00Z',
-          },
-          { status: 201 },
-        ),
-      ),
       http.put('*/api/conteudos/:id', async ({ request }) => {
         const corpo = (await request.json()) as Record<string, unknown>
         categoriaIdSalva = corpo.categoriaId
@@ -398,36 +369,52 @@ describe('DocumentoDetalhePage', () => {
     renderizar(criarUsuario({ papel: 'ADMIN' }))
 
     await tituloCarregado()
-    await user.click(screen.getByRole('button', { name: 'Editar' }))
+    await user.click(screen.getByRole('button', { name: /^Editar / }))
+    const modal = await screen.findByRole('dialog', {
+      name: 'Editar documento',
+    })
+    expect(
+      within(modal).queryByRole('button', { name: '+ Nova categoria' }),
+    ).not.toBeInTheDocument()
     await user.click(
-      await screen.findByRole('button', { name: '+ Nova categoria' }),
+      within(modal).getByRole('button', { name: 'Salvar alterações' }),
     )
 
-    const modalCategoria = await screen.findByRole('dialog', {
-      name: 'Nova categoria',
-    })
-    await user.type(within(modalCategoria).getByLabelText('Nome'), 'Jurídico')
-    await user.click(
-      within(modalCategoria).getByRole('button', {
-        name: 'Cadastrar categoria',
+    expect(await screen.findByText('Salvo.')).toBeInTheDocument()
+    expect(categoriaIdSalva).toBeNull()
+  })
+
+  it('escolher arquivos em vezes separadas acumula na lista antes de salvar', async () => {
+    const user = userEvent.setup()
+    server.use(
+      http.get('*/api/conteudos/:id', () =>
+        HttpResponse.json(criarConteudo({ tipo: 'DOCUMENTO' })),
+      ),
+      http.get('*/api/conteudos/:id/arquivos', () => HttpResponse.json([])),
+    )
+
+    renderizar(criarUsuario({ papel: 'ADMIN' }))
+
+    await tituloCarregado()
+    const campo = screen.getByLabelText('Adicionar arquivos')
+    await user.upload(
+      campo,
+      new File(['%PDF'], 'contrato.pdf', { type: 'application/pdf' }),
+    )
+    await user.upload(
+      campo,
+      new File(['PK'], 'politica.docx', {
+        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       }),
     )
 
-    const modalConteudo = await screen.findByRole('dialog', {
-      name: 'Editar documento',
-    })
-    await waitFor(() =>
-      expect(within(modalConteudo).getByLabelText('Categoria')).toHaveValue(
-        '99999999-9999-9999-9999-999999999999',
-      ),
-    )
-
-    await user.click(
-      within(modalConteudo).getByRole('button', { name: 'Salvar alterações' }),
-    )
-
-    expect(await screen.findByText('Documento atualizado.')).toBeInTheDocument()
-    expect(categoriaIdSalva).toBe('99999999-9999-9999-9999-999999999999')
+    // Os dois continuam na tela, prontos para salvar juntos.
+    const lista = screen.getByRole('list', { name: 'Arquivos escolhidos' })
+    expect(within(lista).getByText('contrato.pdf')).toBeInTheDocument()
+    expect(within(lista).getByText('politica.docx')).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Salvar arquivos (2)' }),
+    ).toBeEnabled()
   })
 
   it('envia vários arquivos de uma vez, um por um', async () => {
@@ -452,14 +439,18 @@ describe('DocumentoDetalhePage', () => {
     renderizar(criarUsuario({ papel: 'GESTOR' }))
 
     await tituloCarregado()
-    await user.upload(screen.getByLabelText('Enviar arquivo'), [
+    await user.upload(screen.getByLabelText('Adicionar arquivos'), [
       arquivoLocal('primeiro.pdf', 'application/pdf', 10),
       arquivoLocal('segundo.md', 'text/markdown', 20),
     ])
     // Os dois entram na fila antes de qualquer envio.
-    expect(screen.getByRole('button', { name: 'Enviar (2)' })).toBeEnabled()
+    expect(
+      screen.getByRole('button', { name: 'Salvar arquivos (2)' }),
+    ).toBeEnabled()
 
-    await user.click(screen.getByRole('button', { name: 'Enviar (2)' }))
+    await user.click(
+      screen.getByRole('button', { name: 'Salvar arquivos (2)' }),
+    )
 
     expect(
       await screen.findByText('"documento-2.pdf" enviado.'),
@@ -481,7 +472,7 @@ describe('DocumentoDetalhePage', () => {
     renderizar(criarUsuario({ papel: 'ADMIN' }))
 
     await tituloCarregado()
-    await user.upload(screen.getByLabelText('Enviar arquivo'), [
+    await user.upload(screen.getByLabelText('Adicionar arquivos'), [
       arquivoLocal('bom.pdf', 'application/pdf'),
       arquivoLocal('planilha.xlsx', 'application/vnd.ms-excel'),
     ])
@@ -490,7 +481,7 @@ describe('DocumentoDetalhePage', () => {
       /planilha\.xlsx.*Formato não aceito/,
     )
     // Sobrou um só na fila, então o botão não mostra contagem.
-    await user.click(screen.getByRole('button', { name: 'Enviar' }))
+    await user.click(screen.getByRole('button', { name: 'Salvar arquivos' }))
 
     expect(
       await screen.findByText('"politica-de-ferias.pdf" enviado.'),
@@ -527,11 +518,13 @@ describe('DocumentoDetalhePage', () => {
     renderizar(criarUsuario({ papel: 'ADMIN' }))
 
     await tituloCarregado()
-    await user.upload(screen.getByLabelText('Enviar arquivo'), [
+    await user.upload(screen.getByLabelText('Adicionar arquivos'), [
       arquivoLocal('primeiro.pdf', 'application/pdf', 10),
       arquivoLocal('segundo.pdf', 'application/pdf', 20),
     ])
-    await user.click(screen.getByRole('button', { name: 'Enviar (2)' }))
+    await user.click(
+      screen.getByRole('button', { name: 'Salvar arquivos (2)' }),
+    )
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Falha ao gravar o arquivo',

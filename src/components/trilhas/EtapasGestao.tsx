@@ -75,7 +75,7 @@ export function EtapasGestao({ trilhaId, onAlterou }: EtapasGestaoProps) {
 
   useEffect(() => {
     let ativo = true
-    listarConteudos({ status: 'PUBLICADO' }, { size: 100 })
+    listarConteudos({ status: 'PUBLICADO', catalogo: 'TRILHA' }, { size: 100 })
       .then((pagina) => {
         if (ativo) {
           setConteudos(pagina.content)

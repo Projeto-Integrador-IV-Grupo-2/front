@@ -1,43 +1,47 @@
-import type { ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useDashboardRequest } from '../../hooks/useDashboardRequest.ts'
+import { listarAtribuicoes } from '../../services/atribuicaoService.ts'
 import { carregarDashboardGestao } from '../../services/dashboardService.ts'
+import type { AtribuicaoAcompanhamento } from '../../types/atribuicao.ts'
 import type {
   DashboardGestaoResponse,
   ResumoStatusDashboard,
 } from '../../types/dashboard.ts'
 import { ROTULOS_STATUS_PROGRESSO } from '../../types/trilha.ts'
-import { ROTAS, caminhoTrilha } from '../../routes/paths.ts'
+import {
+  ACOMPANHAMENTO_ATRASADAS,
+  caminhoColaboradorNaTrilha,
+  caminhoTrilha,
+} from '../../routes/paths.ts'
 import { PainelDashboard, type EstadoPainel } from './PainelDashboard.tsx'
 import {
   AlertaIcon,
-  AreaIcon,
   CartaoIndicador,
   CheckIcon,
   GradeIndicadores,
   ItemAtencao,
   ListaIcon,
   PlayIcon,
-  RelogioIcon,
   ResumoStatus,
   TopoDashboard,
   TrilhaIcon,
+  VerTodas,
 } from './PecasDashboard.tsx'
+import { formatarData, plural, textoDoAtraso } from './datas.ts'
 import lista from './ListaDashboard.module.css'
 
 const MENSAGEM_VAZIA_TRILHAS =
   'Ainda não há eventos de início de trilhas registrados.'
 
-/** Item de "Precisa de atenção" já montado a partir da resposta da API. */
-interface Atencao {
-  chave: string
-  tom: 'perigo' | 'alerta'
-  icone: ReactNode
-  texto: string
-  etiqueta: string
-}
+/** Quantas atribuições atrasadas o dashboard mostra (as de prazo mais antigo). */
+const LIMITE_ATRASADAS = 5
 
-export function DashboardGestao({ saudacao }: { saudacao: ReactNode }) {
+export function DashboardGestao({
+  saudacao,
+}: {
+  saudacao: (descricao: string) => ReactNode
+}) {
   const estado = useDashboardRequest<DashboardGestaoResponse>(
     carregarDashboardGestao,
   )
@@ -76,20 +80,29 @@ export function DashboardGestao({ saudacao }: { saudacao: ReactNode }) {
       : erro
   const resumo = resumoValido ? dados!.atribuicoesPorStatus : undefined
 
-  // "Precisa de atenção" junta os atrasos, as áreas que mais atrasam e o que
-  // ainda não começou: tudo vem da mesma resposta da API.
+  // As atribuições atrasadas de verdade (trilha, colaborador, prazo), das
+  // que venceram há mais tempo para as mais recentes.
+  const atrasadas = useAtribuicoesAtrasadas()
+  const estadoAtrasadas: EstadoPainel =
+    atrasadas.status === 'carregando'
+      ? 'carregando'
+      : atrasadas.status === 'erro'
+        ? 'erro'
+        : atrasadas.itens.length > 0
+          ? 'pronto'
+          : 'vazio'
+
   const areas = dados?.areasComMaisAtraso
   const areasValidas = listaDeAreasValida(areas)
   const erroAreas =
     dados && !areasValidas
       ? 'A API retornou uma lista de áreas inválida.'
       : erro
-  const atencoes = montarAtencoes(resumo, areasValidas ? areas : [])
   const estadoAreas: EstadoPainel = carregando
     ? 'carregando'
     : erroAreas
       ? 'erro'
-      : atencoes.length > 0
+      : areasValidas && areas.length > 0
         ? 'pronto'
         : 'vazio'
 
@@ -107,14 +120,24 @@ export function DashboardGestao({ saudacao }: { saudacao: ReactNode }) {
         ? 'pronto'
         : 'vazio'
 
+  const totalAtrasadas =
+    atrasadas.status === 'pronto' ? atrasadas.total : (resumo?.atrasadas ?? 0)
   const selo =
-    atencoes.length > 0
-      ? `${atencoes.length} ${plural(atencoes.length, 'item precisa', 'itens precisam')} de atenção`
+    totalAtrasadas > 0
+      ? `${totalAtrasadas} ${plural(totalAtrasadas, 'trilha atrasada', 'trilhas atrasadas')}`
       : null
 
   return (
     <div className={lista.coluna}>
-      <TopoDashboard saudacao={saudacao} selo={selo} />
+      <TopoDashboard
+        saudacao={saudacao(
+          descricaoGestao(
+            resumo,
+            taxaValida ? dados!.taxaConclusao : undefined,
+          ),
+        )}
+        selo={selo}
+      />
 
       <GradeIndicadores
         titulo="Indicadores gerais"
@@ -152,29 +175,32 @@ export function DashboardGestao({ saudacao }: { saudacao: ReactNode }) {
         )}
       </GradeIndicadores>
 
-      {/* Colunas da mesma altura: o cartão de status acompanha as duas
-          seções da esquerda juntas. */}
-      <div className={`${lista.colunas} ${lista.colunasIguais}`}>
+      <div className={lista.colunas}>
         <div className={lista.coluna}>
           <PainelDashboard
-            titulo="Precisa de atenção"
-            estado={estadoAreas}
-            mensagemErro={erroAreas}
-            mensagemVazia="Nada precisa da sua atenção agora."
+            titulo="Trilhas atrasadas"
+            estado={estadoAtrasadas}
+            mensagemErro="Não foi possível carregar as trilhas atrasadas."
+            mensagemVazia="Nenhuma trilha atrasada. Todos os prazos estão em dia."
             semCartao
           >
             <ul className={lista.atencoes}>
-              {atencoes.map((item) => (
+              {atrasadas.itens.map((item) => (
                 <ItemAtencao
-                  key={item.chave}
-                  tom={item.tom}
-                  icone={item.icone}
-                  texto={item.texto}
-                  etiqueta={item.etiqueta}
-                  para={ROTAS.acompanhamento}
+                  key={item.id}
+                  tom="perigo"
+                  icone={<AlertaIcon />}
+                  texto={`${item.trilha.nome} · ${item.colaborador.nomeCompleto}`}
+                  etiqueta={etiquetaDoAtraso(item)}
+                  para={caminhoColaboradorNaTrilha(item.trilha.id, item.id)}
                 />
               ))}
             </ul>
+            {atrasadas.total > atrasadas.itens.length && (
+              <VerTodas para={ACOMPANHAMENTO_ATRASADAS}>
+                Ver todas as {atrasadas.total} atrasadas
+              </VerTodas>
+            )}
           </PainelDashboard>
 
           <PainelDashboard
@@ -192,22 +218,28 @@ export function DashboardGestao({ saudacao }: { saudacao: ReactNode }) {
             titulo="Atribuições por status"
             estado={estadoResumo}
             mensagemErro={erroResumo}
-            esticar
           >
-            {resumo && (
-              <>
+            {resumo &&
+              (resumo.total === 0 ? (
+                <p className={lista.nota}>
+                  Ainda não há atribuições para resumir.
+                </p>
+              ) : (
                 <ResumoStatus
                   resumo={resumo}
                   rotulos={ROTULOS_STATUS_PROGRESSO}
                   descricao="Atribuições por status"
                 />
-                {resumo.total === 0 && (
-                  <p className={lista.nota}>
-                    Ainda não há atribuições para resumir.
-                  </p>
-                )}
-              </>
-            )}
+              ))}
+          </PainelDashboard>
+
+          <PainelDashboard
+            titulo="Áreas com mais atraso"
+            estado={estadoAreas}
+            mensagemErro={erroAreas}
+            mensagemVazia="Nenhuma área com atribuições atrasadas."
+          >
+            <AreasComAtraso itens={areasValidas ? areas : []} />
           </PainelDashboard>
         </div>
       </div>
@@ -215,40 +247,110 @@ export function DashboardGestao({ saudacao }: { saudacao: ReactNode }) {
   )
 }
 
-/** Atrasos no geral, depois as áreas que mais atrasam, depois o que não começou. */
-function montarAtencoes(
+/** Subtítulo da saudação com os números do dia. */
+function descricaoGestao(
   resumo: ResumoStatusDashboard | undefined,
-  areas: DashboardGestaoResponse['areasComMaisAtraso'],
-): Atencao[] {
-  const itens: Atencao[] = []
-  if (resumo && resumo.atrasadas > 0) {
-    itens.push({
-      chave: 'atrasadas',
-      tom: 'perigo',
-      icone: <AlertaIcon />,
-      texto: `${resumo.atrasadas} ${plural(resumo.atrasadas, 'atribuição está atrasada', 'atribuições estão atrasadas')}`,
-      etiqueta: 'Atraso · todas as áreas',
-    })
+  taxa: number | undefined,
+): string {
+  const hoje = new Intl.DateTimeFormat('pt-BR', {
+    day: 'numeric',
+    month: 'long',
+  }).format(new Date())
+  if (!resumo) return `Resumo das trilhas da equipe em ${hoje}.`
+  if (resumo.total === 0) {
+    return `Hoje, ${hoje}, ainda não há trilhas atribuídas à equipe.`
   }
-  for (const area of areas) {
-    itens.push({
-      chave: `area-${area.areaId}`,
-      tom: 'alerta',
-      icone: <AreaIcon />,
-      texto: `${area.areaNome} tem ${area.atribuicoesAtrasadas} ${plural(area.atribuicoesAtrasadas, 'atribuição atrasada', 'atribuições atrasadas')}`,
-      etiqueta: 'Áreas com mais atraso',
-    })
-  }
-  if (resumo && resumo.naoIniciadas > 0) {
-    itens.push({
-      chave: 'nao-iniciadas',
-      tom: 'alerta',
-      icone: <RelogioIcon />,
-      texto: `${resumo.naoIniciadas} ${plural(resumo.naoIniciadas, 'atribuição ainda não foi iniciada', 'atribuições ainda não foram iniciadas')}`,
-      etiqueta: 'Não iniciadas',
-    })
-  }
-  return itens
+  const partes = [
+    resumo.atrasadas > 0
+      ? `${resumo.atrasadas} ${plural(resumo.atrasadas, 'atribuição atrasada', 'atribuições atrasadas')}`
+      : 'nenhuma atribuição atrasada',
+    `${resumo.emAndamento} em andamento`,
+  ]
+  const conclusao =
+    taxa !== undefined ? ` e ${formatarPercentual(taxa)}% de conclusão` : ''
+  return `Hoje, ${hoje}: ${partes.join(', ')}${conclusao}.`
+}
+
+function etiquetaDoAtraso(item: AtribuicaoAcompanhamento): string {
+  const partes = [textoDoAtraso(item.prazo)]
+  if (item.prazo) partes.push(`prazo ${formatarData(item.prazo)}`)
+  partes.push(`${item.percentual}% concluído`)
+  if (item.area) partes.push(item.area.nome)
+  return partes.join(' · ')
+}
+
+interface AtrasadasEstado {
+  status: 'carregando' | 'pronto' | 'erro'
+  itens: AtribuicaoAcompanhamento[]
+  total: number
+}
+
+/** As atribuições atrasadas, da que venceu há mais tempo para a mais recente. */
+function useAtribuicoesAtrasadas(): AtrasadasEstado {
+  const [estado, setEstado] = useState<AtrasadasEstado>({
+    status: 'carregando',
+    itens: [],
+    total: 0,
+  })
+  useEffect(() => {
+    const controlador = new AbortController()
+    listarAtribuicoes(
+      { status: 'ATRASADA' },
+      { page: 0, size: LIMITE_ATRASADAS, sort: 'prazo,asc' },
+      { signal: controlador.signal },
+    )
+      .then((pagina) => {
+        if (controlador.signal.aborted) return
+        const itens = Array.isArray(pagina?.content) ? pagina.content : []
+        const total =
+          typeof pagina?.page?.totalElements === 'number'
+            ? pagina.page.totalElements
+            : itens.length
+        setEstado({ status: 'pronto', itens, total })
+      })
+      .catch(() => {
+        if (!controlador.signal.aborted) {
+          setEstado({ status: 'erro', itens: [], total: 0 })
+        }
+      })
+    return () => controlador.abort()
+  }, [])
+  return estado
+}
+
+function AreasComAtraso({
+  itens,
+}: {
+  itens: DashboardGestaoResponse['areasComMaisAtraso']
+}) {
+  const maior = Math.max(0, ...itens.map((item) => item.atribuicoesAtrasadas))
+  return (
+    <ul className={lista.lista}>
+      {itens.map((area) => (
+        <li key={area.areaId} className={lista.linha}>
+          <span className={lista.linhaCorpo}>
+            <span className={lista.linhaTitulo}>{area.areaNome}</span>
+            <span className={lista.linhaMeta}>
+              {area.atribuicoesAtrasadas}{' '}
+              {plural(
+                area.atribuicoesAtrasadas,
+                'atribuição atrasada',
+                'atribuições atrasadas',
+              )}
+            </span>
+          </span>
+          <span className={lista.miniBarra} aria-hidden="true">
+            <span
+              className={`${lista.barraPreenchida} ${lista.barraPerigo}`}
+              style={{
+                width: `${maior > 0 ? (area.atribuicoesAtrasadas / maior) * 100 : 0}%`,
+              }}
+            />
+          </span>
+        </li>
+      ))}
+    </ul>
+  )
 }
 
 function TrilhasIniciadas({
@@ -292,10 +394,6 @@ function TrilhasIniciadas({
       })}
     </ol>
   )
-}
-
-function plural(valor: number, singular: string, varios: string): string {
-  return valor === 1 ? singular : varios
 }
 
 function resumoDeStatusValido(valor: unknown): valor is ResumoStatusDashboard {

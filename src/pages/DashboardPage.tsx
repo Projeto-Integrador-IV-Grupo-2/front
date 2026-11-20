@@ -25,20 +25,15 @@ export function DashboardPage() {
   const podeVerPainelColaborador = usePermissao(['COLABORADOR'])
   const podeVerPainelGestao = usePermissao(['ADMIN', 'GESTOR'])
   const primeiroNome = user?.nomeCompleto.split(' ')[0] ?? ''
-  // Textos do protótipo: a gestão vê o que pede atenção; o colaborador, o
-  // que tem para fazer.
-  const descricaoPainel = podeVerPainelGestao
-    ? `Aqui está o que precisa da sua atenção hoje, ${dataDeHoje()}.`
-    : 'Veja seu progresso e o que você precisa fazer agora.'
 
-  // A saudação entra no topo de cada painel, ao lado do selo de pendências
-  // que só o painel conhece.
-  const saudacao = (
+  // A saudação entra no topo de cada painel; o subtítulo é montado pelo
+  // painel com os números que ele carregou (nada fixo).
+  const saudacao = (descricao: string) => (
     <header className={styles.greeting}>
       <h2 className={styles.greetingTitle}>
         {saudacaoPeloHorario()}, {primeiroNome}
       </h2>
-      <p className={styles.hint}>{descricaoPainel}</p>
+      <p className={styles.hint}>{descricao}</p>
     </header>
   )
 
@@ -50,7 +45,7 @@ export function DashboardPage() {
       {podeVerPainelGestao && <DashboardGestao saudacao={saudacao} />}
       {!podeVerPainelColaborador && !podeVerPainelGestao && (
         <>
-          {saudacao}
+          {saudacao(`Hoje é ${dataDeHoje()}.`)}
           <p className={styles.roleError} role="alert">
             Não foi possível identificar um perfil autorizado para esta visão
             geral.

@@ -84,7 +84,8 @@ export interface PdiItemRequest {
 export interface LigarTrilhaRequest {
   tipo: 'TRILHA'
   trilhaId: string
-  prazo: string
+  /** Opcional: sem ele vale o prazo definido na trilha. */
+  prazo?: string
   descricao?: string | null
 }
 

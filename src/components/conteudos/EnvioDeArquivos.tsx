@@ -1,28 +1,16 @@
-import { useId, useRef, useState, type ChangeEvent } from 'react'
+import { useState } from 'react'
 import {
   ArquivoServiceError,
   enviarArquivo,
-  validarArquivo,
 } from '../../services/arquivoService.ts'
-import {
-  ACCEPT_ARQUIVOS,
-  FORMATOS_ACEITOS,
-  TAMANHO_MAXIMO_BYTES,
-  formatarTamanho,
-  type Arquivo,
-} from '../../types/arquivo.ts'
+import type { Arquivo } from '../../types/arquivo.ts'
+import { EscolhaDeArquivos } from './EscolhaDeArquivos.tsx'
 import styles from './EnvioDeArquivos.module.css'
 
 interface EnvioDeArquivosProps {
   conteudoId: string
   /** Chamado a cada arquivo que a API aceitou, um por vez. */
   onEnviado: (arquivo: Arquivo) => void
-}
-
-/** Arquivo recusado na escolha, com o motivo para mostrar ao usuário. */
-interface Recusado {
-  nome: string
-  motivo: string
 }
 
 /**
@@ -32,10 +20,9 @@ interface Recusado {
  * inscreve no progresso de cada upload: o service repassa o
  * `onUploadProgress` do Axios e cada aviso vira um novo valor aqui.</p>
  *
- * <p>Tipo e tamanho são conferidos <strong>antes</strong> de enviar — a API
- * também confere, mas recusar na hora poupa o usuário de esperar um upload
- * que vai falhar. Os recusados saem da fila com o motivo ao lado; os demais
- * seguem.</p>
+ * <p>Cada escolha <strong>acumula</strong> na lista (com × para tirar), igual
+ * ao cadastro: dá para escolher um PDF, depois um DOCX, e salvar tudo junto.
+ * Tipo e tamanho são conferidos na escolha (ver EscolhaDeArquivos).</p>
  *
  * <p>Se um envio falhar, a fila para naquele arquivo e o botão vira "Tentar
  * novamente": quem já subiu não sobe de novo, e ninguém precisa reescolher o
@@ -45,32 +32,17 @@ export function EnvioDeArquivos({
   conteudoId,
   onEnviado,
 }: EnvioDeArquivosProps) {
-  const campoId = useId()
-  const entrada = useRef<HTMLInputElement>(null)
   const [fila, setFila] = useState<File[]>([])
-  const [recusados, setRecusados] = useState<Recusado[]>([])
   const [enviando, setEnviando] = useState(false)
   const [progresso, setProgresso] = useState(0)
   const [rodada, setRodada] = useState({ atual: 0, total: 0 })
   const [erro, setErro] = useState<string | null>(null)
   const [falhou, setFalhou] = useState(false)
 
-  function escolher(evento: ChangeEvent<HTMLInputElement>) {
-    const escolhidos = Array.from(evento.target.files ?? [])
+  function alterarFila(arquivos: File[]) {
+    setFila(arquivos)
     setFalhou(false)
     setErro(null)
-    const aceitos: File[] = []
-    const negados: Recusado[] = []
-    for (const arquivo of escolhidos) {
-      const problema = validarArquivo(arquivo)
-      if (problema) {
-        negados.push({ nome: arquivo.name, motivo: problema })
-      } else {
-        aceitos.push(arquivo)
-      }
-    }
-    setFila(aceitos)
-    setRecusados(negados)
   }
 
   async function enviar() {
@@ -107,70 +79,29 @@ export function EnvioDeArquivos({
     }
 
     setEnviando(false)
-    if (restantes.length === 0) {
-      limparEntrada()
-    }
   }
 
   function limpar() {
     setFila([])
-    setRecusados([])
     setErro(null)
     setFalhou(false)
-    limparEntrada()
-  }
-
-  function limparEntrada() {
-    if (entrada.current) {
-      entrada.current.value = ''
-    }
   }
 
   const rotuloDoBotao = enviando
     ? 'Enviando…'
-    : `${falhou ? 'Tentar novamente' : 'Enviar'}${
+    : `${falhou ? 'Tentar novamente' : 'Salvar arquivos'}${
         fila.length > 1 ? ` (${fila.length})` : ''
       }`
 
   return (
     <div className={styles.envio}>
-      <div className={styles.campo}>
-        <label htmlFor={campoId}>Enviar arquivo</label>
-        <input
-          id={campoId}
-          ref={entrada}
-          type="file"
-          multiple
-          accept={ACCEPT_ARQUIVOS}
-          onChange={escolher}
-          disabled={enviando}
-          aria-invalid={recusados.length > 0}
-          aria-describedby={`${campoId}-ajuda`}
+      {/* Durante o envio a lista some: a barra de progresso diz o que sobe. */}
+      {enviando ? null : (
+        <EscolhaDeArquivos
+          arquivos={fila}
+          onAlterar={alterarFila}
+          rotulo="Adicionar arquivos"
         />
-        <span id={`${campoId}-ajuda`} className={styles.ajuda}>
-          {FORMATOS_ACEITOS.map(({ extensao }) => extensao).join(', ')} — até{' '}
-          {formatarTamanho(TAMANHO_MAXIMO_BYTES)} cada. Dá para escolher vários.
-        </span>
-      </div>
-
-      {fila.length > 0 && !enviando && (
-        <ul className={styles.fila}>
-          {fila.map((arquivo) => (
-            <li key={`${arquivo.name}-${arquivo.size}`}>
-              {arquivo.name} ({formatarTamanho(arquivo.size)})
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {recusados.length > 0 && (
-        <ul className={styles.recusados} role="alert">
-          {recusados.map((recusado) => (
-            <li key={recusado.nome}>
-              <strong>{recusado.nome}</strong>: {recusado.motivo}
-            </li>
-          ))}
-        </ul>
       )}
 
       {enviando && (

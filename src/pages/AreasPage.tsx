@@ -1,4 +1,5 @@
 import { AbasAreas } from '../components/areas/AbasAreas.tsx'
+import { AvisoSucesso } from '../components/comum/AvisoSucesso.tsx'
 import { useEffect, useState, type FormEvent } from 'react'
 import { AreaFormulario } from '../components/areas/AreaFormulario.tsx'
 import { AreaTrilhasPainel } from '../components/areas/AreaTrilhasPainel.tsx'
@@ -240,7 +241,7 @@ export function AreasPage() {
     try {
       if (area.ativo) {
         await inativarArea(area.id)
-        setAviso('Área inativada.')
+        setAviso('Área desativada.')
       } else {
         await ativarArea(area.id)
         setAviso('Área reativada.')
@@ -281,11 +282,7 @@ export function AreasPage() {
 
       <AbasAreas />
 
-      {/* Live region só da página: avisos de sucesso chegam a quem usa leitor
-          de tela sem mover o foco. */}
-      <div role="status" aria-live="polite" className={styles.avisoRegiao}>
-        {aviso && <p className={styles.aviso}>{aviso}</p>}
-      </div>
+      <AvisoSucesso mensagem={aviso} onSumir={() => setAviso(null)} />
 
       {erroOperacao && (
         <p className={styles.erro} role="alert">

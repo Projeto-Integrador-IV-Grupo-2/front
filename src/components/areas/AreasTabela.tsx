@@ -1,4 +1,5 @@
 import type { Area } from '../../types/area.ts'
+import { MenuOpcoes } from '../comum/MenuOpcoes.tsx'
 import styles from './AreasTabela.module.css'
 
 interface AreasTabelaProps {
@@ -81,30 +82,20 @@ export function AreasTabela({
                     backend: um 403 vindo da API ainda seria tratado pela
                     página, mesmo que a UI já devesse ter escondido isto. */}
                   {podeGerenciar && (
-                    <>
-                      {/* O nome entra no aria-label porque "Editar" se repete
-                        em cada linha: sem ele a lista de botões do leitor de
-                        tela não diz qual área cada ação afeta. */}
-                      <button
-                        type="button"
-                        className={styles.secundario}
-                        onClick={() => onEditar(area)}
-                        aria-label={`Editar ${area.nome}`}
-                      >
-                        Editar
-                      </button>
-                      <button
-                        type="button"
-                        className={
-                          area.ativo ? styles.perigo : styles.secundario
-                        }
-                        onClick={() => onAlterarSituacao(area)}
-                        disabled={emAndamento}
-                        aria-label={`${area.ativo ? 'Inativar' : 'Reativar'} ${area.nome}`}
-                      >
-                        {area.ativo ? 'Inativar' : 'Reativar'}
-                      </button>
-                    </>
+                    // O nome entra no rótulo do "⋯" porque ele se repete em
+                    // cada linha: o leitor de tela diz de qual área é.
+                    <MenuOpcoes
+                      rotulo={`Opções de ${area.nome}`}
+                      opcoes={[
+                        { rotulo: 'Editar', aoEscolher: () => onEditar(area) },
+                        {
+                          rotulo: area.ativo ? 'Desativar' : 'Reativar',
+                          aoEscolher: () => onAlterarSituacao(area),
+                          perigo: area.ativo,
+                          desabilitada: emAndamento,
+                        },
+                      ]}
+                    />
                   )}
                 </td>
               </tr>

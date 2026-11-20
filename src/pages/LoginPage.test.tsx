@@ -46,11 +46,11 @@ describe('LoginPage', () => {
   })
 
   it.each([
-    ['outra pessoa', 'id-do-admin', 'o Dashboard'],
-    ['a mesma pessoa', mockUser.id, 'o Perfil'],
+    ['outra pessoa', 'id-do-admin'],
+    ['a mesma pessoa', mockUser.id],
   ])(
-    'quando %s entra depois que a sessão caiu no Perfil, vai para $2',
-    async (_quem, usuarioIdDaSessao, _destino) => {
+    'quando %s entra depois que a sessão caiu no Perfil, vai para o Dashboard',
+    async (_quem, usuarioIdDaSessao) => {
       const user = userEvent.setup()
       vi.spyOn(authService, 'login').mockResolvedValueOnce({
         token: 'abc123',
@@ -83,9 +83,7 @@ describe('LoginPage', () => {
       await user.click(screen.getByRole('button', { name: 'Entrar' }))
 
       await waitFor(() =>
-        expect(memoryRouter.state.location.pathname).toBe(
-          usuarioIdDaSessao === mockUser.id ? '/perfil' : '/dashboard',
-        ),
+        expect(memoryRouter.state.location.pathname).toBe('/dashboard'),
       )
     },
   )

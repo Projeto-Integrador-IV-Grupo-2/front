@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { AvisoSucesso } from '../components/comum/AvisoSucesso.tsx'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { formatarDuracao } from '../components/conteudos/vimeo.ts'
 import { PlayerVimeo } from '../components/estudo/PlayerVimeo.tsx'
 import {
@@ -45,6 +46,9 @@ function mensagemDe(causa: unknown, padrao: string): string {
  */
 export function TrilhaEstudoPage() {
   const { id = '' } = useParams()
+  // Vindo do detalhe da trilha (botão "Abrir"), já abre na etapa escolhida.
+  const [busca] = useSearchParams()
+  const etapaPedida = busca.get('etapa')
   const [recarga, setRecarga] = useState(0)
   const [carregado, setCarregado] = useState<Carregado | null>(null)
   const [selecionada, setSelecionada] = useState<string | null>(null)
@@ -76,6 +80,7 @@ export function TrilhaEstudoPage() {
           setSelecionada(
             (anterior) =>
               anterior ??
+              etapas.find((etapa) => etapa.id === etapaPedida)?.id ??
               (etapas.find((etapa) => !etapa.concluida) ?? etapas[0])?.id ??
               null,
           )
@@ -92,7 +97,7 @@ export function TrilhaEstudoPage() {
         }
       })
     return () => controlador.abort()
-  }, [id, chave])
+  }, [id, chave, etapaPedida])
 
   const etapas = etapasLocais ?? atual?.etapas ?? []
   const progresso = progressoLocal ?? atual?.trilha?.progresso ?? null
@@ -170,9 +175,7 @@ export function TrilhaEstudoPage() {
         )}
       </header>
 
-      <div role="status" aria-live="polite" className={styles.avisoRegiao}>
-        {aviso && <p className={styles.aviso}>{aviso}</p>}
-      </div>
+      <AvisoSucesso mensagem={aviso} onSumir={() => setAviso(null)} />
 
       {etapas.length === 0 ? (
         <p className={styles.estado}>Esta trilha ainda não tem etapas.</p>

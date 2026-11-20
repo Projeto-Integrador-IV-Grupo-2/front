@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { SeloSoAdmin } from '../components/conteudos/SeloSoAdmin.tsx'
+import { AvisoSucesso } from '../components/comum/AvisoSucesso.tsx'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { AcoesDeConteudo } from '../components/conteudos/AcoesDeConteudo.tsx'
 import { ConfirmacaoModal } from '../components/conteudos/ConfirmacaoModal.tsx'
 import { ConteudoFormulario } from '../components/conteudos/ConteudoFormulario.tsx'
 import { EnvioDeArquivos } from '../components/conteudos/EnvioDeArquivos.tsx'
@@ -20,14 +23,12 @@ import {
   atualizarConteudo,
   buscarConteudo,
   ConteudoServiceError,
-  despublicarConteudo,
-  publicarConteudo,
+  excluirConteudo,
 } from '../services/conteudoService.ts'
 import type { ApiFieldError } from '../types/api.ts'
 import type { Arquivo } from '../types/arquivo.ts'
 import { TIPOS_NO_FORMULARIO } from '../components/conhecimento/tiposDoDocumento.ts'
 import {
-  ROTULOS_STATUS_CONTEUDO,
   ROTULOS_TIPO_CONTEUDO,
   TIPOS_CONTEUDO,
   type Categoria,
@@ -35,9 +36,8 @@ import {
   type ConteudoRequest,
 } from '../types/conteudo.ts'
 import type { RecursoResumo } from '../types/usuario.ts'
+import { garantirVisivel } from '../components/conteudos/salvarConteudo.ts'
 import styles from './DocumentoDetalhePage.module.css'
-
-type Confirmacao = 'publicar' | 'despublicar' | null
 
 /** Resultado da carga, carimbado com a busca a que pertence. */
 interface Carga {
@@ -63,12 +63,13 @@ function mensagemDe(causa: unknown, padrao: string): string {
  *
  * Qualquer usuário autenticado abre a tela; a API decide o que ele pode ver
  * (colaborador só alcança documento publicado, e rascunho responde 404). As
- * ações de gestão — editar, enviar arquivo, publicar e despublicar — ficam
+ * ações de gestão — editar, enviar arquivo e excluir — ficam
  * atrás de `usePermissao`, igual ao resto do Conhecimento.
  */
 export function DocumentoDetalhePage() {
   const { id = '' } = useParams<{ id: string }>()
   const podeGerenciar = usePermissao(PERFIS_GESTAO_CONTEUDO)
+  const navigate = useNavigate()
 
   const [recarga, setRecarga] = useState(0)
   const [carga, setCarga] = useState<Carga | null>(null)
@@ -78,8 +79,8 @@ export function DocumentoDetalhePage() {
   const [aviso, setAviso] = useState<string | null>(null)
   const [erroOperacao, setErroOperacao] = useState<string | null>(null)
 
-  const [confirmacao, setConfirmacao] = useState<Confirmacao>(null)
-  const [confirmando, setConfirmando] = useState(false)
+  const [confirmandoExclusao, setConfirmandoExclusao] = useState(false)
+  const [excluindo, setExcluindo] = useState(false)
 
   const [editando, setEditando] = useState(false)
   const [salvando, setSalvando] = useState(false)
@@ -157,9 +158,11 @@ export function DocumentoDetalhePage() {
     setErroFormulario(null)
     setFieldErrors([])
     try {
-      definirConteudo(await atualizarConteudo(id, request))
+      const salvo = await atualizarConteudo(id, request)
+      await garantirVisivel(salvo)
+      definirConteudo({ ...salvo, status: 'PUBLICADO' })
       setEditando(false)
-      setAviso('Documento atualizado.')
+      setAviso('Salvo.')
     } catch (causa) {
       const erro =
         causa instanceof ConteudoServiceError
@@ -172,30 +175,25 @@ export function DocumentoDetalhePage() {
     }
   }
 
-  async function confirmar() {
-    if (!confirmacao || !conteudo) {
+  async function excluir() {
+    if (!conteudo) {
       return
     }
-    const publicando = confirmacao === 'publicar'
-    setConfirmando(true)
+    setExcluindo(true)
     setErroOperacao(null)
     try {
-      definirConteudo(
-        publicando ? await publicarConteudo(id) : await despublicarConteudo(id),
+      await excluirConteudo(id)
+      // Volta para a lista de onde o conteúdo veio.
+      navigate(
+        conteudo.catalogo === 'TRILHA' && podeGerenciar
+          ? ROTAS.conteudos
+          : ROTAS.conhecimento,
+        { replace: true },
       )
-      setAviso(publicando ? 'Documento publicado.' : 'Documento despublicado.')
     } catch (causa) {
-      setErroOperacao(
-        mensagemDe(
-          causa,
-          publicando
-            ? 'Não foi possível publicar o documento.'
-            : 'Não foi possível despublicar o documento.',
-        ),
-      )
-    } finally {
-      setConfirmando(false)
-      setConfirmacao(null)
+      setErroOperacao(mensagemDe(causa, 'Não foi possível excluir.'))
+      setExcluindo(false)
+      setConfirmandoExclusao(false)
     }
   }
 
@@ -232,11 +230,10 @@ export function DocumentoDetalhePage() {
     )
   }
 
-  const publicado = conteudo.status === 'PUBLICADO'
-  // A mesma tela abre qualquer conteúdo: o documento volta para o
-  // Conhecimento; vídeo, texto e link, para o catálogo de Conteúdos.
-  const ehDocumento = conteudo.tipo === 'DOCUMENTO'
-  // O catálogo de Conteúdos é tela de gestão: o colaborador volta ao
+  // A mesma tela abre os dois catálogos: o do Conhecimento volta para lá; o
+  // das trilhas, para "Conteúdos de trilha".
+  const ehDocumento = conteudo.catalogo === 'CONHECIMENTO'
+  // "Conteúdos de trilha" é tela de gestão: o colaborador volta ao
   // Conhecimento, que é a tela dele.
   const voltaParaConteudos = !ehDocumento && podeGerenciar
 
@@ -246,7 +243,8 @@ export function DocumentoDetalhePage() {
         to={voltaParaConteudos ? ROTAS.conteudos : ROTAS.conhecimento}
         className={styles.voltar}
       >
-        ← Voltar para {voltaParaConteudos ? 'Conteúdos' : 'Conhecimento'}
+        ← Voltar para{' '}
+        {voltaParaConteudos ? 'Conteúdos de trilha' : 'Conhecimento'}
       </Link>
 
       <header className={styles.cabecalho}>
@@ -256,15 +254,7 @@ export function DocumentoDetalhePage() {
             <span className={styles.selo}>
               {ROTULOS_TIPO_CONTEUDO[conteudo.tipo]}
             </span>
-            {podeGerenciar && (
-              <span
-                className={`${styles.selo} ${
-                  publicado ? styles.seloPublicado : styles.seloRascunho
-                }`}
-              >
-                {ROTULOS_STATUS_CONTEUDO[conteudo.status]}
-              </span>
-            )}
+            {conteudo.apenasAdmin && <SeloSoAdmin />}
             {conteudo.categoria && <span>{conteudo.categoria.nome}</span>}
             {conteudo.area && <span>{conteudo.area.nome}</span>}
             {formatarDuracao(conteudo.duracaoSegundos) && (
@@ -273,26 +263,15 @@ export function DocumentoDetalhePage() {
           </div>
         </div>
         {podeGerenciar && (
-          <div className={styles.acoes}>
-            <button type="button" onClick={() => setEditando(true)}>
-              Editar
-            </button>
-            <button
-              type="button"
-              className={styles.primaria}
-              onClick={() =>
-                setConfirmacao(publicado ? 'despublicar' : 'publicar')
-              }
-            >
-              {publicado ? 'Despublicar' : 'Publicar'}
-            </button>
-          </div>
+          <AcoesDeConteudo
+            titulo={conteudo.titulo}
+            onEditar={() => setEditando(true)}
+            onExcluir={() => setConfirmandoExclusao(true)}
+          />
         )}
       </header>
 
-      <div role="status" aria-live="polite" className={styles.avisoRegiao}>
-        {aviso && <p className={styles.aviso}>{aviso}</p>}
-      </div>
+      <AvisoSucesso mensagem={aviso} onSumir={() => setAviso(null)} />
 
       {erroOperacao && (
         <p className={styles.erro} role="alert">
@@ -329,7 +308,7 @@ export function DocumentoDetalhePage() {
       )}
 
       {/* Arquivo é o material do documento; os outros tipos não têm. */}
-      {(ehDocumento || arquivos.length > 0) && (
+      {(conteudo.tipo === 'DOCUMENTO' || arquivos.length > 0) && (
         <section className={styles.secao}>
           <h2>Arquivos</h2>
           {podeGerenciar && (
@@ -360,33 +339,27 @@ export function DocumentoDetalhePage() {
           fieldErrors={fieldErrors}
           onSalvar={(request) => void salvar(request)}
           onFechar={() => setEditando(false)}
-          onCategoriaCriada={(categoria) =>
-            setCategorias((atuais) => [...atuais, categoria])
+          comRestricao={ehDocumento}
+          tipos={
+            ehDocumento ? TIPOS_NO_FORMULARIO : [...TIPOS_CONTEUDO, 'DOCUMENTO']
           }
-          tipos={ehDocumento ? TIPOS_NO_FORMULARIO : TIPOS_CONTEUDO}
           comCategoria={ehDocumento}
-          substantivo={ehDocumento ? 'documento' : 'conteúdo'}
+          substantivo={conteudo.tipo === 'DOCUMENTO' ? 'documento' : 'conteúdo'}
         />
       )}
 
-      {confirmacao && (
+      {confirmandoExclusao && (
         <ConfirmacaoModal
           titulo={
-            confirmacao === 'publicar'
-              ? 'Publicar documento'
-              : 'Despublicar documento'
+            conteudo.tipo === 'DOCUMENTO'
+              ? 'Excluir documento'
+              : 'Excluir conteúdo'
           }
-          mensagem={
-            confirmacao === 'publicar'
-              ? `"${conteudo.titulo}" passa a aparecer para todos os colaboradores. Confirmar?`
-              : `"${conteudo.titulo}" volta a ser rascunho e some para os colaboradores. Confirmar?`
-          }
-          rotuloConfirmar={
-            confirmacao === 'publicar' ? 'Publicar' : 'Despublicar'
-          }
-          confirmando={confirmando}
-          onConfirmar={() => void confirmar()}
-          onFechar={() => setConfirmacao(null)}
+          mensagem={`"${conteudo.titulo}" será excluído de vez, junto com os arquivos dele. Confirmar?`}
+          rotuloConfirmar="Excluir"
+          confirmando={excluindo}
+          onConfirmar={() => void excluir()}
+          onFechar={() => setConfirmandoExclusao(false)}
         />
       )}
     </div>

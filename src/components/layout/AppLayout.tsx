@@ -38,6 +38,7 @@ const ICONE_POR_ROTA: Record<string, ReactNode> = {
   [ROTAS.areas]: <LayersIcon />,
   [ROTAS.conteudos]: <PlayIcon />,
   [ROTAS.acompanhamento]: <ChartIcon />,
+  [ROTAS.pdi]: <AlvoIcon />,
   [ROTAS.conhecimento]: <BookIcon />,
   [ROTAS.assistente]: <SparkleIcon />,
   [ROTAS.historico]: <ClockIcon />,
@@ -121,6 +122,22 @@ function LayoutBase() {
     navigate(ROTAS.login, { replace: true })
   }
 
+  // Só o ícone (sol ou lua), ao lado do sino: sem cartão de "Tema".
+  const botaoTema = (
+    <button
+      type="button"
+      className={styles.botaoTema}
+      onClick={alternarTema}
+      aria-label={
+        tema === 'escuro'
+          ? 'Mudar para o tema claro'
+          : 'Mudar para o tema escuro'
+      }
+      title="Alternar tema"
+    >
+      {tema === 'escuro' ? <MoonIcon /> : <SunIcon />}
+    </button>
+  )
   return (
     <div className={styles.layout}>
       {/* Com o menu crescendo por perfil, navegar por teclado custaria vários
@@ -139,6 +156,7 @@ function LayoutBase() {
               por vez, para não buscar o total em dobro. */}
           {!isMobile && (
             <span className={styles.sinoLateral}>
+              {botaoTema}
               <SinoNotificacoes />
             </span>
           )}
@@ -169,23 +187,6 @@ function LayoutBase() {
         </nav>
 
         <div className={styles.sidebarFooter}>
-          <div className={styles.temaRow}>
-            <span>Tema</span>
-            <button
-              type="button"
-              className={styles.botaoTema}
-              onClick={alternarTema}
-              aria-label={
-                tema === 'escuro'
-                  ? 'Mudar para o tema claro'
-                  : 'Mudar para o tema escuro'
-              }
-              title="Alternar tema"
-            >
-              {tema === 'escuro' ? <MoonIcon /> : <SunIcon />}
-            </button>
-          </div>
-
           {user && (
             // O cartão do usuário é o atalho para "Meu perfil".
             <NavLink
@@ -252,7 +253,12 @@ function LayoutBase() {
           </p>
 
           <div className={styles.topbarActions}>
-            {isMobile && <SinoNotificacoes />}
+            {isMobile && (
+              <>
+                {botaoTema}
+                <SinoNotificacoes />
+              </>
+            )}
             {user && (
               <Link
                 to={ROTAS.perfil}
@@ -477,6 +483,22 @@ function ChartIcon() {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
+    </svg>
+  )
+}
+
+function AlvoIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 20 20"
+      fill="none"
+      aria-hidden="true"
+    >
+      <circle cx="10" cy="10" r="7" stroke="currentColor" strokeWidth="1.5" />
+      <circle cx="10" cy="10" r="3.5" stroke="currentColor" strokeWidth="1.5" />
+      <circle cx="10" cy="10" r="0.9" fill="currentColor" />
     </svg>
   )
 }

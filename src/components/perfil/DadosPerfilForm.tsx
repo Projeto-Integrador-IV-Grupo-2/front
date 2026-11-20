@@ -1,4 +1,5 @@
 import { useId, useState, type FormEvent } from 'react'
+import { AvisoSucesso } from '../comum/AvisoSucesso.tsx'
 import { useAuth } from '../../hooks/useAuth.ts'
 import {
   atualizarPerfil,
@@ -104,11 +105,10 @@ export function DadosPerfilForm({ perfil }: DadosPerfilFormProps) {
             {erro}
           </p>
         )}
-        {sucesso && (
-          <p className={styles.sucesso} role="status">
-            Nome atualizado.
-          </p>
-        )}
+        <AvisoSucesso
+          mensagem={sucesso ? 'Nome atualizado.' : null}
+          onSumir={() => setSucesso(false)}
+        />
 
         <form
           className={styles.form}
@@ -140,7 +140,11 @@ export function DadosPerfilForm({ perfil }: DadosPerfilFormProps) {
           </div>
 
           <dl className={styles.leitura}>
-            {LINHAS_LEITURA.map(({ campo, rotulo }) => (
+            {LINHAS_LEITURA.filter(
+              // O admin não pertence a uma área: a linha some em vez de dizer
+              // "Não informado".
+              ({ campo }) => campo !== 'area' || perfil.papel !== 'ADMIN',
+            ).map(({ campo, rotulo }) => (
               <div key={campo} className={styles.linha}>
                 <dt>{rotulo}</dt>
                 <dd

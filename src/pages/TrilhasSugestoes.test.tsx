@@ -76,7 +76,7 @@ async function abrirPainel(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe('TrilhasPage — IA (sugestões e ajuda)', () => {
-  it('o botão IA fica ao lado do PDI e mostra quantas sugestões há', async () => {
+  it('o botão IA mostra quantas sugestões há (sem atalho de PDI ao lado)', async () => {
     responderSugestoes(SUGESTOES)
     abrir()
 
@@ -84,8 +84,9 @@ describe('TrilhasPage — IA (sugestões e ajuda)', () => {
       () => expect(botaoIa()).toHaveAccessibleName('IA 2 sugestões de trilha'),
       ESPERA,
     )
-    const pdi = screen.getByRole('link', { name: 'Meu PDI' })
-    expect(pdi.nextElementSibling).toBe(botaoIa())
+    expect(
+      screen.queryByRole('link', { name: /Meu PDI/ }),
+    ).not.toBeInTheDocument()
   })
 
   it('o painel mostra as sugestões com o motivo, e cada uma leva ao detalhe', async () => {

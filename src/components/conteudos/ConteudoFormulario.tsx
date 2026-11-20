@@ -1,20 +1,14 @@
 import { useId, useState, type FormEvent } from 'react'
-import {
-  CategoriaServiceError,
-  criarCategoria,
-} from '../../services/categoriaService.ts'
 import type { ApiFieldError } from '../../types/api.ts'
 import {
   ROTULOS_TIPO_CONTEUDO,
   TIPOS_CONTEUDO,
   type Categoria,
-  type CategoriaRequest,
   type Conteudo,
   type ConteudoRequest,
   type TipoConteudo,
 } from '../../types/conteudo.ts'
 import type { RecursoResumo } from '../../types/usuario.ts'
-import { CategoriaFormulario } from './CategoriaFormulario.tsx'
 import { EscolhaDeArquivos } from './EscolhaDeArquivos.tsx'
 import { erroDoCampo } from './erroDoCampo.ts'
 import { Modal } from './Modal.tsx'
@@ -36,11 +30,6 @@ interface ConteudoFormularioProps {
   onSalvar: (request: ConteudoRequest, arquivos: File[]) => void
   onFechar: () => void
   /**
-   * Categoria cadastrada aqui dentro, pelo modal. Quem abriu o formulário
-   * acrescenta à própria lista para ela aparecer em outras telas também.
-   */
-  onCategoriaCriada?: (categoria: Categoria) => void
-  /**
    * Tipos oferecidos no select, em ordem. O primeiro é o padrão no cadastro.
    * A tela de Conhecimento passa a lista começando em `DOCUMENTO`; o catálogo
    * de estudo usa o padrão `TIPOS_CONTEUDO`.
@@ -52,6 +41,11 @@ interface ConteudoFormularioProps {
    * o conteúdo já tiver é mantida.
    */
   comCategoria?: boolean
+  /**
+   * Mostra "Visível apenas para administradores". Só a tela de Conhecimento
+   * (documentos) oferece; nas outras, o valor que o conteúdo já tem é mantido.
+   */
+  comRestricao?: boolean
   /**
    * Como a tela chama o que está sendo cadastrado — vira "Novo documento",
    * "Editar documento", "Cadastrar documento". O catálogo de estudo fala em
@@ -74,10 +68,10 @@ export function ConteudoFormulario({
   fieldErrors,
   onSalvar,
   onFechar,
-  onCategoriaCriada,
   tipos = TIPOS_CONTEUDO,
   substantivo = 'conteúdo',
   comCategoria = true,
+  comRestricao = false,
 }: ConteudoFormularioProps) {
   const ids = {
     titulo: useId(),
@@ -88,6 +82,7 @@ export function ConteudoFormulario({
     videoUrl: useId(),
     corpo: useId(),
     linkUrl: useId(),
+    apenasAdmin: useId(),
   }
   const [titulo, setTitulo] = useState(conteudo?.titulo ?? '')
   const [descricao, setDescricao] = useState(conteudo?.descricao ?? '')
@@ -97,24 +92,11 @@ export function ConteudoFormulario({
   const [videoUrl, setVideoUrl] = useState(conteudo?.videoUrl ?? '')
   const [corpo, setCorpo] = useState(conteudo?.corpo ?? '')
   const [linkUrl, setLinkUrl] = useState(conteudo?.linkUrl ?? '')
+  const [apenasAdmin, setApenasAdmin] = useState(conteudo?.apenasAdmin ?? false)
   const [arquivos, setArquivos] = useState<File[]>([])
   const [errosLocais, setErrosLocais] = useState<Record<string, string>>({})
-  // As categorias vêm da tela e podem chegar depois de o formulário abrir:
-  // por isso a lista é derivada da prop a cada render, e o estado guarda só
-  // as cadastradas aqui dentro, até a tela recebê-las.
-  const [criadasAqui, setCriadasAqui] = useState<Categoria[]>([])
-  const opcoesDeCategoria = [
-    ...categorias,
-    ...criadasAqui.filter(
-      (criada) => !categorias.some((categoria) => categoria.id === criada.id),
-    ),
-  ]
-  const [criandoCategoria, setCriandoCategoria] = useState(false)
-  const [salvandoCategoria, setSalvandoCategoria] = useState(false)
-  const [erroCategoria, setErroCategoria] = useState<string | null>(null)
-  const [fieldErrorsCategoria, setFieldErrorsCategoria] = useState<
-    ApiFieldError[]
-  >([])
+  // A categoria já gravada continua na lista mesmo se estiver inativa.
+  const opcoesDeCategoria = categorias
 
   function validar(): Record<string, string> {
     const erros: Record<string, string> = {}
@@ -155,33 +137,10 @@ export function ConteudoFormulario({
         videoUrl: tipo === 'VIDEO' ? videoUrl.trim() : null,
         corpo: tipo === 'TEXTO' ? corpo.trim() : null,
         linkUrl: tipo === 'LINK' ? linkUrl.trim() : null,
+        apenasAdmin,
       },
       tipo === 'DOCUMENTO' && !conteudo ? arquivos : [],
     )
-  }
-
-  async function salvarCategoria(request: CategoriaRequest) {
-    setSalvandoCategoria(true)
-    setErroCategoria(null)
-    setFieldErrorsCategoria([])
-    try {
-      const nova = await criarCategoria(request)
-      setCriadasAqui((atuais) => [...atuais, nova])
-      setCategoriaId(nova.id)
-      setCriandoCategoria(false)
-      onCategoriaCriada?.(nova)
-    } catch (causa) {
-      const erroDaApi =
-        causa instanceof CategoriaServiceError
-          ? causa
-          : new CategoriaServiceError('Não foi possível cadastrar a categoria.')
-      setFieldErrorsCategoria(erroDaApi.fieldErrors)
-      setErroCategoria(
-        erroDaApi.fieldErrors.length > 0 ? null : erroDaApi.message,
-      )
-    } finally {
-      setSalvandoCategoria(false)
-    }
   }
 
   function mensagem(campo: string): string | undefined {
@@ -225,7 +184,7 @@ export function ConteudoFormulario({
     <>
       <Modal
         titulo={`${conteudo ? 'Editar' : 'Novo'} ${substantivo}`}
-        subtitulo="O cadastro nasce como rascunho e só aparece para os colaboradores depois de publicado."
+        subtitulo="Ao salvar, já fica disponível para os colaboradores."
         largo
         onFechar={onFechar}
       >
@@ -277,14 +236,6 @@ export function ConteudoFormulario({
                       </option>
                     ))}
                   </select>
-                  <button
-                    type="button"
-                    className={styles.acaoSecundaria}
-                    onClick={() => setCriandoCategoria(true)}
-                    disabled={salvando}
-                  >
-                    + Nova categoria
-                  </button>
                 </div>
               ) : (
                 campoArea
@@ -335,9 +286,6 @@ export function ConteudoFormulario({
                 arquivos={arquivos}
                 onAlterar={setArquivos}
                 desabilitado={salvando}
-                onUsarLink={
-                  tipos.includes('LINK') ? () => setTipo('LINK') : undefined
-                }
               />
             )}
             {tipo === 'DOCUMENTO' && conteudo && (
@@ -374,6 +322,35 @@ export function ConteudoFormulario({
               />
             </div>
 
+            {/* Ex.: tabela de salários. A API esconde do colaborador em todo
+                lugar: lista, detalhe, arquivos e respostas da IA. */}
+            {comRestricao && (
+              <div className={styles.opcaoMarcar}>
+                <input
+                  id={ids.apenasAdmin}
+                  type="checkbox"
+                  checked={apenasAdmin}
+                  onChange={(event) => setApenasAdmin(event.target.checked)}
+                  disabled={salvando}
+                  aria-describedby={`${ids.apenasAdmin}-ajuda`}
+                />
+                <div>
+                  <label htmlFor={ids.apenasAdmin}>
+                    Visível apenas para administradores
+                  </label>
+                  <span
+                    id={`${ids.apenasAdmin}-ajuda`}
+                    className={styles.ajuda}
+                  >
+                    Desmarcado, os colaboradores também veem. Marcado, eles não
+                    encontram{' '}
+                    {substantivo === 'documento' ? 'o documento' : 'o conteúdo'}{' '}
+                    nem recebem respostas do assistente com base nele.
+                  </span>
+                </div>
+              </div>
+            )}
+
             {erro && (
               <p className={styles.erroFormulario} role="alert">
                 {erro}
@@ -404,16 +381,6 @@ export function ConteudoFormulario({
           </form>
         )}
       </Modal>
-      {criandoCategoria && (
-        <CategoriaFormulario
-          categoria={null}
-          salvando={salvandoCategoria}
-          erro={erroCategoria}
-          fieldErrors={fieldErrorsCategoria}
-          onSalvar={(request) => void salvarCategoria(request)}
-          onFechar={() => setCriandoCategoria(false)}
-        />
-      )}
     </>
   )
 }

@@ -53,12 +53,13 @@ export const routes: RouteObject[] = [
           { path: ROTAS.notificacoes, element: <NotificacoesPage /> },
           { path: ROTAS.trilhas, element: <TrilhasPage /> },
           { path: ROTAS.trilhaDetalhe, element: <TrilhaDetalhePage /> },
-          // Rota estática: o router a prefere a /trilhas/:id.
-          { path: ROTAS.pdi, element: <PdiPage /> },
           {
-            // O editor é de quem monta PDIs; o colaborador fica em "Meu PDI".
+            // PDI é tela de gestão: o colaborador recebe "Acesso negado".
             element: <ProtectedRoute perfis={PERFIS_GESTAO_PDI} />,
-            children: [{ path: ROTAS.pdiDetalhe, element: <PdiEditorPage /> }],
+            children: [
+              { path: ROTAS.pdi, element: <PdiPage /> },
+              { path: ROTAS.pdiDetalhe, element: <PdiEditorPage /> },
+            ],
           },
           { path: ROTAS.conhecimento, element: <ConhecimentoPage /> },
           { path: ROTAS.assistente, element: <AssistentePage /> },

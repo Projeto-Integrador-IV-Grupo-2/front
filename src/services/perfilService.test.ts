@@ -83,13 +83,14 @@ describe('perfilService', () => {
     expect(JSON.stringify(erro)).not.toContain('Errada123')
   })
 
-  it('usa a mensagem padrão quando a rede falha', async () => {
+  it('sem resposta do servidor, diz que ele está fora do ar', async () => {
     server.use(http.put('*/api/auth/me', () => HttpResponse.error()))
 
     await expect(
       atualizarPerfil({ nomeCompleto: 'Ana Lima' }),
     ).rejects.toMatchObject({
-      message: 'Não foi possível salvar o seu nome.',
+      message:
+        'Não foi possível falar com o servidor. Confira se ele está no ar e tente novamente em instantes.',
     })
   })
 })

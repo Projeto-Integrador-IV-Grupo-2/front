@@ -1,4 +1,5 @@
 import { useId, useState, type FormEvent } from 'react'
+import { AvisoSucesso } from '../comum/AvisoSucesso.tsx'
 import {
   PerfilServiceError,
   trocarSenha,
@@ -118,11 +119,14 @@ export function TrocaSenhaForm() {
             {erro}
           </p>
         )}
-        {sucesso && (
-          <p className={styles.sucesso} role="status">
-            Senha alterada. Use a nova senha no próximo acesso.
-          </p>
-        )}
+        <AvisoSucesso
+          mensagem={
+            sucesso
+              ? 'Senha alterada. Use a nova senha no próximo acesso.'
+              : null
+          }
+          onSumir={() => setSucesso(false)}
+        />
 
         <form
           className={styles.form}

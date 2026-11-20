@@ -18,6 +18,8 @@
 }
 
 .logo {
+  width: 44px;
+  height: 44px;
   color: #ffffff;
 }
 
@@ -66,16 +68,17 @@
 
 .formCard {
   width: 100%;
-  max-width: 400px;
+  max-width: 500px;
 }
 
 .formCard h2 {
-  font-size: 1.75rem;
+  font-size: 2rem;
   font-weight: 700;
 }
 
 .subtitle {
   margin-top: var(--space-2);
+  font-size: 1.0625rem;
   color: var(--color-text-muted);
 }
 

@@ -15,7 +15,7 @@ import { server } from '../test/msw/server.ts'
 import { renderizarComProvedores } from '../test/renderWithProviders.tsx'
 
 const gestor = criarUsuario({ papel: 'GESTOR' })
-const ROTA = '/trilhas/pdi/99999999-9999-9999-9999-999999999999'
+const ROTA = '/pdi/99999999-9999-9999-9999-999999999999'
 
 const LIDERANCA = criarCompetencia({
   id: 'lideranca',
@@ -208,7 +208,7 @@ describe('PdiEditorPage', () => {
     )
   })
 
-  it('liga uma trilha à competência com prazo', async () => {
+  it('liga uma trilha à competência e salva, sem pedir prazo', async () => {
     let corpo: unknown = null
     server.use(
       http.get('*/api/trilhas', () =>
@@ -237,24 +237,46 @@ describe('PdiEditorPage', () => {
         within(trilha).getByRole('option', { name: 'Vendas' }),
       ).toBeInTheDocument(),
     )
-    await user.click(within(form).getByRole('button', { name: 'Ligar trilha' }))
-    expect(within(form).getByText('Escolha a trilha.')).toBeInTheDocument()
-    expect(within(form).getByText('Informe o prazo.')).toBeInTheDocument()
+    // O prazo vem da trilha: o formulário nem pergunta.
+    expect(within(form).queryByLabelText('Prazo')).not.toBeInTheDocument()
+    const salvar = within(form).getByRole('button', { name: 'Salvar trilha' })
+    expect(salvar).toBeDisabled()
 
     await user.selectOptions(trilha, 'Vendas')
-    await user.type(within(form).getByLabelText('Prazo'), '2026-12-15')
-    await user.click(within(form).getByRole('button', { name: 'Ligar trilha' }))
+    expect(salvar).toBeEnabled()
+    await user.click(salvar)
 
     expect(
       await screen.findByText(
         'Trilha “Vendas” ligada e atribuída a Ana Souza.',
       ),
     ).toBeInTheDocument()
-    expect(corpo).toEqual({
-      tipo: 'TRILHA',
-      trilhaId: 'vendas',
-      prazo: '2026-12-15',
-    })
+    expect(corpo).toEqual({ tipo: 'TRILHA', trilhaId: 'vendas' })
+  })
+
+  it('o botão "Cadastrar competência" do topo abre o cadastro', async () => {
+    const user = userEvent.setup()
+    renderizarComProvedores({ rota: ROTA, usuario: gestor })
+
+    await user.click(
+      await screen.findByRole('button', { name: '+ Cadastrar competência' }),
+    )
+
+    expect(
+      await screen.findByRole('dialog', { name: 'Nova competência' }),
+    ).toBeInTheDocument()
+  })
+
+  it('"Ver trilhas" abre as trilhas do colaborador no painel lateral', async () => {
+    const user = userEvent.setup()
+    renderizarComProvedores({ rota: ROTA, usuario: gestor })
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Ver trilhas de Ana' }),
+    )
+
+    const painel = await screen.findByRole('dialog', { name: 'Ana Souza' })
+    expect(await within(painel).findByText('Onboarding')).toBeInTheDocument()
   })
 
   it('PDI fora do alcance mostra que não foi encontrado', async () => {
@@ -295,6 +317,8 @@ describe('PdiEditorPage', () => {
     expect(
       await screen.findByRole('progressbar', { name: 'Progresso do PDI 2026' }),
     ).toHaveAttribute('aria-valuenow', '50')
-    expect(screen.getByText('1 de 2 ações concluídas')).toBeInTheDocument()
+    expect(
+      screen.getByText('Progresso médio nas trilhas · 1 de 2 concluídas'),
+    ).toBeInTheDocument()
   })
 })

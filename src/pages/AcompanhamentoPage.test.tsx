@@ -346,12 +346,13 @@ describe('AcompanhamentoPage', () => {
     expect(consultou).toBe(false)
   })
 
-  it('aparece no menu do gestor', async () => {
+  it('saiu do menu do gestor: o acompanhamento fica dentro de cada trilha', async () => {
     renderizarComProvedores({ rota: '/dashboard', usuario: gestor })
     const menu = await screen.findByRole('navigation')
+    await within(menu).findByRole('link', { name: /Trilhas/ })
     expect(
-      within(menu).getByRole('link', { name: /Acompanhamento/ }),
-    ).toHaveAttribute('href', '/acompanhamento')
+      within(menu).queryByRole('link', { name: /Acompanhamento/ }),
+    ).toBeNull()
   })
 
   it('não aparece no menu do colaborador', async () => {

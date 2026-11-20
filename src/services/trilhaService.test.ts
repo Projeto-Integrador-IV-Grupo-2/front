@@ -206,11 +206,12 @@ describe('trilhaService (API)', () => {
     })
   })
 
-  it('usa o texto padrão quando a rede falha', async () => {
+  it('sem resposta do servidor, diz que ele está fora do ar', async () => {
     server.use(http.get('*/api/trilhas', () => HttpResponse.error()))
 
     await expect(listarTrilhas()).rejects.toMatchObject({
-      message: 'Não foi possível carregar as trilhas.',
+      message:
+        'Não foi possível falar com o servidor. Confira se ele está no ar e tente novamente em instantes.',
     })
   })
 

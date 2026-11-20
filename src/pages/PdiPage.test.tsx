@@ -4,12 +4,8 @@ import { http, HttpResponse } from 'msw'
 import { describe, expect, it } from 'vitest'
 import {
   criarPagina,
-  criarPdiAcao,
   criarPdiDetalhe,
-  criarPdiItem,
   criarPdiResumo,
-  criarProgressoTrilha,
-  criarTrilhaDetalhe,
   criarUsuario,
 } from '../test/factories.ts'
 import { server } from '../test/msw/server.ts'
@@ -23,194 +19,49 @@ const gestor = criarUsuario({
 })
 const admin = criarUsuario({ papel: 'ADMIN' })
 
-describe('PdiPage — Meu PDI', () => {
-  it('mostra competências, níveis e a trilha ligada com status, prazo e percentual', async () => {
-    server.use(
-      http.get('*/api/pdis/meu', () =>
-        HttpResponse.json(
-          criarPdiDetalhe({
-            percentual: 0,
-            itens: [
-              criarPdiItem({
-                acoes: [
-                  criarPdiAcao({
-                    progressoTrilha: criarProgressoTrilha({
-                      status: 'EM_ANDAMENTO',
-                      percentual: 50,
-                      prazo: '2026-11-30',
-                    }),
-                  }),
-                ],
-              }),
-            ],
-          }),
-        ),
-      ),
-    )
+describe('PdiPage — colaborador', () => {
+  it('o colaborador não vê o PDI: nem no menu, nem pela URL', async () => {
+    renderizarComProvedores({ rota: '/pdi', usuario: colaborador })
 
-    renderizarComProvedores({ rota: '/trilhas/pdi', usuario: colaborador })
-
-    const competencia = await screen.findByRole('region', {
-      name: 'Comunicação',
-    })
-    expect(competencia).toHaveTextContent('Nível atual 2 → alvo 4')
-    expect(within(competencia).getByText('Comportamental')).toBeInTheDocument()
     expect(
-      within(competencia).getByText('Apresentar com mais segurança.'),
+      await screen.findByRole('heading', { name: 'Acesso negado' }),
     ).toBeInTheDocument()
+    const menu = screen.getByRole('navigation')
     expect(
-      within(competencia).getByRole('link', { name: 'Onboarding' }),
-    ).toHaveAttribute('href', '/trilhas/44444444-4444-4444-4444-444444444444')
-    expect(within(competencia).getByText('Em andamento')).toBeInTheDocument()
-    expect(
-      within(competencia).getByText('Prazo: 30 de novembro de 2026'),
-    ).toBeInTheDocument()
-    expect(
-      within(competencia).getByRole('progressbar', {
-        name: 'Progresso em Onboarding',
-      }),
-    ).toHaveAttribute('aria-valuenow', '50')
-
-    expect(
-      screen.getByRole('progressbar', { name: 'Progresso do PDI 2026' }),
-    ).toHaveAttribute('aria-valuenow', '0')
-    expect(screen.getByText('Bruno Lima')).toBeInTheDocument()
+      within(menu).queryByRole('link', { name: 'PDI' }),
+    ).not.toBeInTheDocument()
   })
 
-  it('colaborador não vê a aba "PDIs da equipe", nem pela URL', async () => {
+  it('o colaborador também não abre o editor de um PDI', async () => {
     renderizarComProvedores({
-      rota: '/trilhas/pdi?aba=equipe',
+      rota: '/pdi/99999999-9999-9999-9999-999999999999',
       usuario: colaborador,
     })
 
     expect(
-      await screen.findByRole('region', { name: 'Comunicação' }),
-    ).toBeInTheDocument()
-    expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
-    expect(screen.queryByText('PDIs da equipe')).not.toBeInTheDocument()
-    expect(
-      screen.queryByRole('button', { name: 'Novo PDI' }),
-    ).not.toBeInTheDocument()
-  })
-
-  it('sem PDI ativo mostra o estado vazio', async () => {
-    server.use(
-      http.get('*/api/pdis/meu', () =>
-        HttpResponse.json(
-          { message: 'Você não tem PDI ativo' },
-          { status: 404 },
-        ),
-      ),
-    )
-
-    renderizarComProvedores({ rota: '/trilhas/pdi', usuario: colaborador })
-
-    expect(
-      await screen.findByText('Você ainda não tem um PDI ativo'),
+      await screen.findByRole('heading', { name: 'Acesso negado' }),
     ).toBeInTheDocument()
   })
+})
 
-  it('falha ao carregar permite tentar de novo', async () => {
-    let tentativas = 0
-    server.use(
-      http.get('*/api/pdis/meu', () => {
-        tentativas += 1
-        return tentativas === 1
-          ? HttpResponse.json({}, { status: 500 })
-          : HttpResponse.json(criarPdiDetalhe())
-      }),
-    )
+describe('PdiPage — gestão no menu', () => {
+  it('o PDI tem item próprio no menu da gestão', async () => {
     const user = userEvent.setup()
-
-    renderizarComProvedores({ rota: '/trilhas/pdi', usuario: colaborador })
-
-    const alerta = await screen.findByRole('alert')
-    expect(alerta).toHaveTextContent('O servidor não conseguiu concluir')
-    await user.click(
-      within(alerta).getByRole('button', { name: 'Tentar novamente' }),
-    )
-    expect(
-      await screen.findByRole('region', { name: 'Comunicação' }),
-    ).toBeInTheDocument()
-  })
-
-  it('o PDI é acessado por Trilhas, sem item próprio no menu', async () => {
-    const user = userEvent.setup()
-    renderizarComProvedores({ rota: '/trilhas', usuario: colaborador })
+    renderizarComProvedores({ rota: '/trilhas', usuario: gestor })
 
     const navegacao = await screen.findByRole('navigation')
+    const item = within(navegacao).getByRole('link', { name: 'PDI' })
+    expect(item).toHaveAttribute('href', '/pdi')
+    // O atalho antigo no topo de Trilhas saiu: o menu já leva ao PDI.
     expect(
-      within(navegacao).queryByRole('link', { name: /PDI/ }),
+      screen.queryByRole('link', { name: /Meu PDI/ }),
     ).not.toBeInTheDocument()
 
-    await user.click(await screen.findByRole('link', { name: 'Meu PDI' }))
+    await user.click(item)
 
     expect(
       await screen.findByRole('heading', { level: 1, name: 'PDI' }),
     ).toBeInTheDocument()
-    // O topo continua com o título da seção.
-    expect(screen.getAllByRole('banner')[0]).toHaveTextContent('Trilhas')
-  })
-
-  it('concluir a trilha ligada atualiza o percentual ao voltar para a aba', async () => {
-    let concluida = false
-    const progresso = () =>
-      criarProgressoTrilha({
-        status: concluida ? 'CONCLUIDA' : 'EM_ANDAMENTO',
-        percentual: concluida ? 100 : 50,
-      })
-    server.use(
-      http.get('*/api/pdis/meu', () =>
-        HttpResponse.json(
-          criarPdiDetalhe({
-            percentual: concluida ? 100 : 0,
-            acoesConcluidas: concluida ? 1 : 0,
-            itens: [
-              criarPdiItem({
-                acoes: [
-                  criarPdiAcao({
-                    status: concluida ? 'CONCLUIDA' : 'PENDENTE',
-                    progressoTrilha: progresso(),
-                  }),
-                ],
-              }),
-            ],
-          }),
-        ),
-      ),
-      http.get('*/api/trilhas/:id', () =>
-        HttpResponse.json(criarTrilhaDetalhe({ progresso: progresso() })),
-      ),
-      http.patch('*/api/trilhas/:id/progresso', () => {
-        concluida = true
-        return HttpResponse.json(progresso())
-      }),
-    )
-    const user = userEvent.setup()
-
-    renderizarComProvedores({ rota: '/trilhas/pdi', usuario: colaborador })
-
-    const barraPdi = await screen.findByRole('progressbar', {
-      name: 'Progresso do PDI 2026',
-    })
-    expect(barraPdi).toHaveAttribute('aria-valuenow', '0')
-
-    // Clicar na trilha abre o detalhe dela.
-    await user.click(screen.getByRole('link', { name: 'Onboarding' }))
-    await user.click(
-      await screen.findByRole('button', { name: 'Marcar como concluída' }),
-    )
-    await screen.findByText('Trilha concluída. Parabéns!')
-
-    await user.click(screen.getByRole('link', { name: 'Voltar para trilhas' }))
-    await user.click(await screen.findByRole('link', { name: 'Meu PDI' }))
-
-    await waitFor(() =>
-      expect(
-        screen.getByRole('progressbar', { name: 'Progresso do PDI 2026' }),
-      ).toHaveAttribute('aria-valuenow', '100'),
-    )
-    expect(screen.getByText('1 de 1 ação concluída')).toBeInTheDocument()
   })
 })
 
@@ -232,7 +83,7 @@ describe('PdiPage — PDIs da equipe', () => {
         ),
       ),
     )
-    renderizarComProvedores({ rota: '/trilhas/pdi', usuario: gestor })
+    renderizarComProvedores({ rota: '/pdi', usuario: gestor })
 
     // Gestão não tem "Meu PDI": a tela já abre nos PDIs da equipe.
     expect(screen.queryByRole('tab', { name: 'Meu PDI' })).toBeNull()
@@ -250,10 +101,7 @@ describe('PdiPage — PDIs da equipe', () => {
     expect(linhas[1]).toHaveTextContent('Concluído')
     expect(
       within(linhas[0]).getByRole('link', { name: 'Ana Souza' }),
-    ).toHaveAttribute(
-      'href',
-      '/trilhas/pdi/99999999-9999-9999-9999-999999999999',
-    )
+    ).toHaveAttribute('href', '/pdi/99999999-9999-9999-9999-999999999999')
   })
 
   it('admin cria um PDI e cai no editor', async () => {
@@ -269,7 +117,7 @@ describe('PdiPage — PDIs da equipe', () => {
     )
     const user = userEvent.setup()
 
-    renderizarComProvedores({ rota: '/trilhas/pdi?aba=equipe', usuario: admin })
+    renderizarComProvedores({ rota: '/pdi?aba=equipe', usuario: admin })
 
     await user.click(await screen.findByRole('button', { name: 'Novo PDI' }))
     const dialogo = screen.getByRole('dialog', { name: 'Novo PDI' })
@@ -313,7 +161,7 @@ describe('PdiPage — PDIs da equipe', () => {
     const user = userEvent.setup()
 
     renderizarComProvedores({
-      rota: '/trilhas/pdi?aba=equipe',
+      rota: '/pdi?aba=equipe',
       usuario: gestor,
     })
 
@@ -339,7 +187,7 @@ describe('PdiPage — PDIs da equipe', () => {
     const user = userEvent.setup()
 
     renderizarComProvedores({
-      rota: '/trilhas/pdi?aba=equipe',
+      rota: '/pdi?aba=equipe',
       usuario: gestor,
     })
 

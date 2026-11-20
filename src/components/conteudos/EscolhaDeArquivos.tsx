@@ -14,6 +14,8 @@ interface EscolhaDeArquivosProps {
   desabilitado?: boolean
   /** Troca o cadastro para o tipo Link, para quem tem só o endereço. */
   onUsarLink?: () => void
+  /** Nome do campo (padrão: "Arquivos do documento"). */
+  rotulo?: string
 }
 
 interface Recusado {
@@ -34,6 +36,7 @@ export function EscolhaDeArquivos({
   onAlterar,
   desabilitado = false,
   onUsarLink,
+  rotulo = 'Arquivos do documento',
 }: EscolhaDeArquivosProps) {
   const campoId = useId()
   const entrada = useRef<HTMLInputElement>(null)
@@ -72,7 +75,7 @@ export function EscolhaDeArquivos({
   return (
     <div className={styles.escolha}>
       <span className={styles.rotulo} id={`${campoId}-rotulo`}>
-        Arquivos do documento
+        {rotulo}
       </span>
       <div
         className={`${styles.area} ${arrastando ? styles.areaAtiva : ''}`}

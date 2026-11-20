@@ -49,6 +49,12 @@ export const PERFIS_GESTAO_AREA: UserRole[] = ['ADMIN', 'GESTOR']
  */
 export const PERFIS_ESTUDO: UserRole[] = ['COLABORADOR']
 
+/**
+ * Quem monta PDIs (e o único que vê o PDI): item do menu, lista da equipe,
+ * editor e o botão "Adicionar ao PDI" no detalhe da trilha.
+ */
+export const PERFIS_GESTAO_PDI: UserRole[] = ['ADMIN', 'GESTOR']
+
 export const ITENS_MENU: ItemMenu[] = [
   { to: ROTAS.dashboard, rotulo: 'Dashboard' },
   { to: ROTAS.trilhas, rotulo: 'Trilhas' },
@@ -59,18 +65,17 @@ export const ITENS_MENU: ItemMenu[] = [
   { to: ROTAS.areas, rotulo: 'Áreas', perfis: PERFIS_GESTAO_AREA },
   {
     to: ROTAS.conteudos,
-    rotulo: 'Conteúdos',
+    rotulo: 'Conteúdos de trilha',
     perfis: PERFIS_GESTAO_CONTEUDO,
   },
   // Base de documentos da empresa: todos os perfis entram (colaborador vê só
   // os publicados — a API filtra).
   { to: ROTAS.conhecimento, rotulo: 'Conhecimento' },
   { to: ROTAS.assistente, rotulo: 'Assistente' },
-  {
-    to: ROTAS.acompanhamento,
-    rotulo: 'Acompanhamento',
-    perfis: PERFIS_ACOMPANHAMENTO,
-  },
+  // PDI é de quem monta os planos (ADMIN e GESTOR); o colaborador não o vê.
+  // O acompanhamento das trilhas fica dentro de cada trilha (aba
+  // Colaboradores): a tela continua no ar, só sem item no menu.
+  { to: ROTAS.pdi, rotulo: 'PDI', perfis: PERFIS_GESTAO_PDI },
   // O histórico vale para qualquer autenticado: cada um vê as próprias
   // atividades.
   { to: ROTAS.historico, rotulo: 'Histórico' },
@@ -94,12 +99,6 @@ export const PERFIS_GESTAO_TRILHA: UserRole[] = ['ADMIN']
  * (`POST /api/trilhas/{id}/atribuicoes`). O gestor atribui, mas não edita.
  */
 export const PERFIS_ATRIBUIR_TRILHA: UserRole[] = ['ADMIN', 'GESTOR']
-
-/**
- * Quem monta PDIs: vê a aba "PDIs da equipe", abre o editor e usa o botão
- * "Adicionar ao PDI" no detalhe da trilha. Colaborador só vê "Meu PDI".
- */
-export const PERFIS_GESTAO_PDI: UserRole[] = ['ADMIN', 'GESTOR']
 
 /** `perfis` indefinido ou vazio = liberado para qualquer perfil autenticado. */
 export function temPermissao(
