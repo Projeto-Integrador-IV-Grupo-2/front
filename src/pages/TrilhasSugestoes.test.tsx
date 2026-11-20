@@ -50,7 +50,8 @@ function responderSugestoes(corpo: SugestoesTrilhas) {
   )
 }
 
-function abrir(papel: 'ADMIN' | 'COLABORADOR' = 'COLABORADOR') {
+// A IA é da gestão: o gestor vê o botão, mas não cria trilhas.
+function abrir(papel: 'ADMIN' | 'GESTOR' | 'COLABORADOR' = 'GESTOR') {
   return renderizarComProvedores({
     rota: '/trilhas',
     usuario: criarUsuario({ papel }),
@@ -427,7 +428,7 @@ describe('TrilhasPage — IA (sugestões e ajuda)', () => {
     ).toBeInTheDocument()
   })
 
-  it('colaborador conversa com a IA, mas não recebe o botão de criar', async () => {
+  it('gestor conversa com a IA, mas não recebe o botão de criar', async () => {
     const user = userEvent.setup()
     server.use(
       http.post('*/api/trilhas/sugestoes/ajuda', () =>
@@ -443,7 +444,7 @@ describe('TrilhasPage — IA (sugestões e ajuda)', () => {
         }),
       ),
     )
-    abrir('COLABORADOR')
+    abrir('GESTOR')
 
     const painel = within(await abrirPainel(user))
     await user.type(
@@ -458,6 +459,21 @@ describe('TrilhasPage — IA (sugestões e ajuda)', () => {
     expect(
       painel.queryByRole('button', { name: 'Criar com este rascunho' }),
     ).not.toBeInTheDocument()
+  })
+
+  it('colaborador não tem o botão da IA nem consulta as sugestões', async () => {
+    let consultou = false
+    server.use(
+      http.get('*/api/trilhas/sugestoes', () => {
+        consultou = true
+        return HttpResponse.json(SUGESTOES)
+      }),
+    )
+    abrir('COLABORADOR')
+
+    await listagemPronta()
+    expect(screen.queryByRole('button', { name: /^IA/ })).toBeNull()
+    expect(consultou).toBe(false)
   })
 
   it('falha da IA na conversa mostra o erro e devolve a pergunta ao campo', async () => {

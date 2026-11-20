@@ -38,10 +38,14 @@ async function idsIniciados(signal: AbortSignal): Promise<Set<string>> {
  * carrega, ou se falhar, devolve `null` — a seção simplesmente não aparece.
  * Trilha iniciada ou inativada (eventos de `eventosTrilha`) sai da lista na hora.
  */
-export function useSugestoesTrilhas(): EstadoSugestoes | null {
+/** `ativo` falso (colaborador, que não tem o botão da IA) não consulta nada. */
+export function useSugestoesTrilhas(ativo = true): EstadoSugestoes | null {
   const [estado, setEstado] = useState<EstadoSugestoes | null>(null)
 
   useEffect(() => {
+    if (!ativo) {
+      return
+    }
     const controlador = new AbortController()
     listarSugestoes({ signal: controlador.signal })
       .then(async (resposta) => {
@@ -65,7 +69,7 @@ export function useSugestoesTrilhas(): EstadoSugestoes | null {
         }
       })
     return () => controlador.abort()
-  }, [])
+  }, [ativo])
 
   useEffect(
     () =>
