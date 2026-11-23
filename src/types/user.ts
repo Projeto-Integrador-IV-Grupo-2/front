@@ -22,4 +22,11 @@ export interface User {
    * `MeResponse` da API ainda não a devolve — sem ela, nada é recomendado.
    */
   area?: RecursoResumo | null
+  /** Empresa (tenant) do usuário. */
+  empresa?: RecursoResumo | null
+  /**
+   * `true` quando o usuário é da empresa dona da plataforma (Nexo): o ADMIN
+   * dela vê o cadastro de empresas.
+   */
+  plataforma?: boolean
 }

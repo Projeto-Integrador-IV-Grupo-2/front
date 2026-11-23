@@ -1,0 +1,192 @@
+@value ateCelular from '../styles/breakpoints.module.css';
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.cabecalho {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.cabecalho h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.hint {
+  margin-top: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+.novo,
+.salvar {
+  padding: var(--space-2) var(--space-5);
+  font-weight: 600;
+  color: var(--color-primary-contrast);
+  background: var(--color-primary);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+}
+
+.novo:hover,
+.salvar:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+
+.salvar:disabled {
+  opacity: 0.6;
+}
+
+.cancelar {
+  padding: var(--space-2) var(--space-4);
+  font-weight: 600;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.aviso {
+  padding: var(--space-3) var(--space-4);
+  color: var(--color-success);
+  background: var(--color-success-bg);
+  border: 1px solid var(--color-success);
+  border-radius: var(--radius-sm);
+}
+
+.erro {
+  padding: var(--space-3) var(--space-4);
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-sm);
+}
+
+.formulario {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.formulario h2 {
+  font-size: 1.125rem;
+  font-weight: 650;
+}
+
+.formulario fieldset {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3) var(--space-4);
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+
+.formulario legend {
+  margin-bottom: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.campo input {
+  padding: var(--space-2) var(--space-3);
+  font-weight: 400;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.campo input[aria-invalid='true'] {
+  border-color: var(--color-danger);
+}
+
+.ajuda {
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+
+.erroCampo {
+  color: var(--color-danger);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.acoes {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.lista {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-3);
+}
+
+.cartao {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.cartao h3 {
+  font-size: 1rem;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.cartao dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-1) var(--space-3);
+  font-size: 0.8125rem;
+}
+
+.cartao dt {
+  color: var(--color-text-muted);
+}
+
+.selo {
+  width: fit-content;
+  padding: 2px var(--space-2);
+  color: var(--color-primary);
+  background: var(--color-primary-soft);
+  border: 1px solid var(--color-primary-soft-line);
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+@media ateCelular {
+  .formulario fieldset {
+    grid-template-columns: 1fr;
+  }
+}
