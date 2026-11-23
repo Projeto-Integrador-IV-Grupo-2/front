@@ -106,8 +106,7 @@ function blocos(texto: string): ReactNode[] {
   })
 }
 
-const MARCAS =
-  /(\*\*.+?\*\*|__.+?__|`[^`]+`|\*[^*\s][^*]*\*|_[^_\s][^_]*_)/g
+const MARCAS = /(\*\*.+?\*\*|__.+?__|`[^`]+`|\*[^*\s][^*]*\*|_[^_\s][^_]*_)/g
 
 /** Negrito, itálico e código dentro de uma linha. */
 function emLinha(texto: string): ReactNode[] {

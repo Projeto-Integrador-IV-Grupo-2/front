@@ -13,7 +13,9 @@ describe('TextoFormatado', () => {
     )
     expect(container.querySelectorAll('ul li')).toHaveLength(1)
     expect(container.querySelectorAll('ol li')).toHaveLength(2)
-    expect(container.querySelector('strong em')).toHaveTextContent('scope creep')
+    expect(container.querySelector('strong em')).toHaveTextContent(
+      'scope creep',
+    )
     expect(container.querySelector('script')).toBeNull()
     expect(screen.getByText('<script>x</script>')).toBeInTheDocument()
   })

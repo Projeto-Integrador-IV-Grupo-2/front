@@ -42,7 +42,9 @@ export default defineConfig({
       dependencies: ['preparacao'],
       use: {
         ...devices['Desktop Chrome'],
-        ...(process.env.E2E_CHANNEL ? { channel: process.env.E2E_CHANNEL } : {}),
+        ...(process.env.E2E_CHANNEL
+          ? { channel: process.env.E2E_CHANNEL }
+          : {}),
       },
     },
   ],

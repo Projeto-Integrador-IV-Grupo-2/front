@@ -39,7 +39,9 @@ test.describe('Acompanhamento — gestor', () => {
       page.getByRole('heading', { name: 'Acompanhamento' }),
     ).toBeVisible()
 
-    await filtros(page).getByLabel('Trilha').selectOption({ label: trilha.nome })
+    await filtros(page)
+      .getByLabel('Trilha')
+      .selectOption({ label: trilha.nome })
 
     const linha = page.getByRole('row').filter({ hasText: trilha.nome })
     await expect(linha).toHaveCount(1)
@@ -51,7 +53,9 @@ test.describe('Acompanhamento — gestor', () => {
     page,
   }) => {
     await page.goto('/acompanhamento')
-    await filtros(page).getByLabel('Trilha').selectOption({ label: trilha.nome })
+    await filtros(page)
+      .getByLabel('Trilha')
+      .selectOption({ label: trilha.nome })
 
     await page
       .getByRole('button', {
@@ -74,7 +78,9 @@ test.describe('Acompanhamento — gestor', () => {
 
   test('exporta o CSV respeitando o filtro', async ({ page }) => {
     await page.goto('/acompanhamento')
-    await filtros(page).getByLabel('Trilha').selectOption({ label: trilha.nome })
+    await filtros(page)
+      .getByLabel('Trilha')
+      .selectOption({ label: trilha.nome })
     await expect(
       page.getByRole('row').filter({ hasText: trilha.nome }),
     ).toHaveCount(1)
@@ -104,8 +110,12 @@ test.describe('Acompanhamento — gestor', () => {
 
   test('filtro sem resultado mostra o estado vazio', async ({ page }) => {
     await page.goto('/acompanhamento')
-    await filtros(page).getByLabel('Trilha').selectOption({ label: trilha.nome })
-    await filtros(page).getByLabel('Status').selectOption({ label: 'Concluída' })
+    await filtros(page)
+      .getByLabel('Trilha')
+      .selectOption({ label: trilha.nome })
+    await filtros(page)
+      .getByLabel('Status')
+      .selectOption({ label: 'Concluída' })
 
     await expect(
       page.getByText('Nenhuma trilha encontrada com os filtros atuais.'),
