@@ -25,12 +25,23 @@ export interface MensagemAssistente {
   criadoEm: string
 }
 
+/** Trecho de documento usado numa resposta, com o ID para abrir o documento. */
+export interface FonteDetalhada {
+  documentoId: string
+  titulo: string
+  trechoId?: string
+  ordem?: number
+  trecho?: string
+}
+
 /** Resposta de `POST /api/assistente/sessoes/{id}/mensagens`. */
 export interface RespostaPergunta {
   /** A sessão já com `atualizadoEm` novo. */
   sessao: SessaoAssistente
   pergunta: MensagemAssistente
   resposta: MensagemAssistente
+  /** Um item por trecho usado; o mesmo documento pode aparecer mais de uma vez. */
+  fontes?: FonteDetalhada[]
 }
 
 export interface PaginacaoSessoes {

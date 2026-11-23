@@ -1,0 +1,35 @@
+.texto {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+
+.texto ul,
+.texto ol {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-left: 1.4em;
+}
+
+.texto ul {
+  list-style: disc;
+}
+
+.texto ol {
+  list-style: decimal;
+}
+
+.texto code {
+  padding: 1px 5px;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  font-size: 0.875em;
+}
+
+.titulo {
+  font-weight: 700;
+}

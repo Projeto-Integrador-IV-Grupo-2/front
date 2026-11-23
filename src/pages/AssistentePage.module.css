@@ -2,7 +2,7 @@
 
 .page {
   width: 100%;
-  max-width: 1040px;
+  max-width: 1280px;
   /* No desktop não há barra superior: só o respiro do conteúdo. */
   height: calc(100dvh - 4rem);
   min-height: 480px;
@@ -54,9 +54,156 @@
   font-size: 0.875rem;
 }
 
+.textoCabecalho {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Só no tablet/celular: a lista de conversas vira um painel que abre e fecha. */
+.botaoConversas {
+  display: none;
+  padding: var(--space-2) var(--space-3);
+  font-size: 0.875rem;
+  font-weight: 600;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.corpo {
+  display: flex;
+  flex: 1;
+  gap: var(--space-4);
+  min-height: 0;
+}
+
+.lateral {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 260px;
+  flex-shrink: 0;
+  min-height: 0;
+  padding: var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.botaoNovaConversa {
+  padding: var(--space-2) var(--space-3);
+  color: var(--color-primary-contrast);
+  background: var(--color-primary);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+
+.botaoNovaConversa:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+
+.botaoNovaConversa:disabled,
+.conversa:disabled,
+.apagarConversa:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.avisoLateral {
+  padding: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+}
+
+.listaConversas {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.listaConversas li {
+  display: flex;
+  align-items: stretch;
+  border-radius: var(--radius-sm);
+}
+
+.listaConversas li:hover,
+.conversaAtiva {
+  background: var(--color-primary-soft);
+}
+
+.conversa {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-2);
+  text-align: left;
+  background: transparent;
+  border: 0;
+}
+
+.tituloConversa {
+  overflow: hidden;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dataConversa {
+  color: var(--color-text-muted);
+  font-size: 0.6875rem;
+}
+
+.apagarConversa {
+  padding: 0 var(--space-2);
+  color: var(--color-text-muted);
+  background: transparent;
+  border: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.apagarConversa:hover:not(:disabled) {
+  color: var(--color-danger);
+}
+
+.seloFila {
+  padding: 1px var(--space-2);
+  color: var(--color-warning);
+  background: var(--color-warning-bg);
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+.botaoCopiar {
+  margin-left: auto;
+  padding: 2px var(--space-2);
+  color: var(--color-text-muted);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+.botaoCopiar:hover {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
 .painelConversa {
   display: flex;
   flex: 1;
+  min-width: 0;
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
@@ -354,11 +501,6 @@
   outline-offset: 0;
 }
 
-.campoPergunta:disabled {
-  opacity: 0.7;
-  cursor: wait;
-}
-
 .rodapeCompositor {
   display: flex;
   align-items: center;
@@ -395,6 +537,27 @@
 @media ateTablet {
   .page {
     height: calc(100dvh - var(--header-height) - 2rem);
+  }
+
+  .botaoConversas {
+    display: inline-flex;
+  }
+
+  .corpo {
+    position: relative;
+  }
+
+  .lateral {
+    position: absolute;
+    inset: 0 auto 0 0;
+    z-index: 5;
+    width: min(300px, 85%);
+    display: none;
+    box-shadow: var(--shadow-md);
+  }
+
+  .lateralAberta {
+    display: flex;
   }
 }
 
