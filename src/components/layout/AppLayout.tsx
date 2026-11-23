@@ -35,6 +35,7 @@ const ICONE_POR_ROTA: Record<string, ReactNode> = {
   [ROTAS.dashboard]: <GridIcon />,
   [ROTAS.trilhas]: <TrilhasIcon />,
   [ROTAS.usuarios]: <PeopleIcon />,
+  [ROTAS.empresas]: <LayersIcon />,
   [ROTAS.areas]: <LayersIcon />,
   [ROTAS.conteudos]: <PlayIcon />,
   [ROTAS.acompanhamento]: <ChartIcon />,
@@ -97,7 +98,7 @@ function LayoutBase() {
 
   // O menu vem da mesma regra que protege as rotas: nada aparece aqui que
   // o ProtectedRoute vá recusar depois.
-  const itens = itensMenuPara(user?.papel)
+  const itens = itensMenuPara(user?.papel, user?.plataforma === true)
   // Subrotas (ex.: /trilhas/:id) herdam o título da seção.
   const itemAtual =
     location.pathname === ROTAS.perfil

@@ -14,6 +14,8 @@ export interface ItemMenu {
   to: string
   rotulo: string
   perfis?: UserRole[]
+  /** Só aparece para quem é da empresa dona da plataforma. */
+  soPlataforma?: boolean
 }
 
 /**
@@ -59,6 +61,13 @@ export const ITENS_MENU: ItemMenu[] = [
   { to: ROTAS.dashboard, rotulo: 'Dashboard' },
   { to: ROTAS.trilhas, rotulo: 'Trilhas' },
   { to: ROTAS.usuarios, rotulo: 'Usuários', perfis: ['ADMIN'] },
+  // Cadastro de empresas: só o ADMIN da Nexo (a API devolve 403 aos outros).
+  {
+    to: ROTAS.empresas,
+    rotulo: 'Empresas',
+    perfis: ['ADMIN'],
+    soPlataforma: true,
+  },
   // Áreas (com a aba Categorias) e Conteúdos são cadastros de gestão. O
   // colaborador estuda os conteúdos pelas trilhas e lê os documentos no
   // Conhecimento, como no protótipo.
@@ -111,6 +120,12 @@ export function temPermissao(
   return papel !== undefined && perfis.includes(papel)
 }
 
-export function itensMenuPara(papel: UserRole | undefined): ItemMenu[] {
-  return ITENS_MENU.filter((item) => temPermissao(item.perfis, papel))
+export function itensMenuPara(
+  papel: UserRole | undefined,
+  plataforma = false,
+): ItemMenu[] {
+  return ITENS_MENU.filter(
+    (item) =>
+      temPermissao(item.perfis, papel) && (!item.soPlataforma || plataforma),
+  )
 }

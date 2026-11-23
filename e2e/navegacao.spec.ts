@@ -47,9 +47,9 @@ test.describe('Menu e permissões — gestor', () => {
     await expect(
       menu(page).getByRole('link', { name: 'Acompanhamento' }),
     ).toBeVisible()
-    await expect(menu(page).getByRole('link', { name: 'Usuários' })).toHaveCount(
-      0,
-    )
+    await expect(
+      menu(page).getByRole('link', { name: 'Usuários' }),
+    ).toHaveCount(0)
 
     await page.goto('/usuarios')
     await expect(
@@ -63,11 +63,13 @@ test.describe('Menu e permissões — colaborador', () => {
 
   test('não vê Usuários nem Acompanhamento no menu', async ({ page }) => {
     await page.goto('/dashboard')
-    await expect(menu(page).getByRole('link', { name: 'Trilhas' })).toBeVisible()
+    await expect(
+      menu(page).getByRole('link', { name: 'Trilhas' }),
+    ).toBeVisible()
     await expect(menu(page).getByRole('link', { name: 'Áreas' })).toBeVisible()
-    await expect(menu(page).getByRole('link', { name: 'Usuários' })).toHaveCount(
-      0,
-    )
+    await expect(
+      menu(page).getByRole('link', { name: 'Usuários' }),
+    ).toHaveCount(0)
     await expect(
       menu(page).getByRole('link', { name: 'Acompanhamento' }),
     ).toHaveCount(0)

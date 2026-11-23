@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, it } from 'vitest'
@@ -101,7 +101,9 @@ describe('AssistentePage', () => {
     await user.type(campo, 'Como solicito férias?')
     await user.keyboard('{Enter}')
 
-    expect(await screen.findByText('Como solicito férias?')).toBeInTheDocument()
+    expect(
+      await within(screen.getByRole('log')).findByText('Como solicito férias?'),
+    ).toBeInTheDocument()
     expect(
       await screen.findByText(
         'Consulte a política interna para ver os detalhes.',
@@ -122,48 +124,104 @@ describe('AssistentePage', () => {
     ).toBeInTheDocument()
   })
 
-  it('mantém a pergunta e bloqueia novo envio enquanto a IA responde', async () => {
+  it('deixa digitar e enfileira a próxima pergunta enquanto a IA responde', async () => {
     const user = userEvent.setup()
     let liberarResposta: (() => void) | undefined
-    let informarInicioConsulta: (() => void) | undefined
     const respostaPendente = new Promise<void>((resolve) => {
       liberarResposta = resolve
     })
-    const consultaIniciada = new Promise<void>((resolve) => {
-      informarInicioConsulta = resolve
-    })
+    const perguntasRecebidas: string[] = []
 
     server.use(
-      http.post('*/api/assistente/sessoes/:sessaoId/mensagens', async () => {
-        informarInicioConsulta?.()
-        await respostaPendente
-        return HttpResponse.json(respostaDaApi('Pergunta pendente'))
-      }),
+      http.post(
+        '*/api/assistente/sessoes/:sessaoId/mensagens',
+        async ({ request }) => {
+          const corpo = (await request.json()) as { conteudo: string }
+          perguntasRecebidas.push(corpo.conteudo)
+          if (perguntasRecebidas.length === 1) await respostaPendente
+          return HttpResponse.json(respostaDaApi(corpo.conteudo))
+        },
+      ),
     )
 
     renderizarComProvedores({ rota: ROTA_ASSISTENTE, usuario: criarUsuario() })
     const campo = await screen.findByRole('textbox', {
       name: 'Escreva sua pergunta',
     })
-    await user.type(campo, 'Pergunta pendente')
+    await user.type(campo, 'Primeira pergunta')
     await user.keyboard('{Enter}')
 
-    expect(await screen.findByText('Pergunta pendente')).toBeInTheDocument()
-    await consultaIniciada
     expect(await screen.findByRole('status')).toHaveTextContent(
       'O assistente está respondendo',
     )
-    expect(campo).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'Enviar' })).toBeDisabled()
+    expect(campo).toBeEnabled()
+
+    await user.type(campo, 'Segunda pergunta')
+    await user.keyboard('{Enter}')
+    expect(await screen.findByText('Na fila')).toBeInTheDocument()
+    expect(perguntasRecebidas).toEqual(['Primeira pergunta'])
 
     await waitFor(() => expect(liberarResposta).toBeDefined())
     liberarResposta?.()
-    expect(
-      await screen.findByText(
-        'Consulte a política interna para ver os detalhes.',
+
+    await waitFor(() =>
+      expect(perguntasRecebidas).toEqual([
+        'Primeira pergunta',
+        'Segunda pergunta',
+      ]),
+    )
+    await waitFor(() =>
+      expect(
+        screen.getAllByText(
+          'Consulte a política interna para ver os detalhes.',
+        ),
+      ).toHaveLength(2),
+    )
+    expect(screen.queryByText('Na fila')).not.toBeInTheDocument()
+  })
+
+  it('abre o documento pelo ID quando a API manda as fontes detalhadas', async () => {
+    const user = userEvent.setup()
+    server.use(
+      http.post('*/api/assistente/sessoes/:sessaoId/mensagens', () =>
+        HttpResponse.json({
+          ...respostaDaApi('Backup?', [TITULO_FONTE, TITULO_FONTE]),
+          fontes: [
+            { documentoId: 'doc-1', titulo: TITULO_FONTE, ordem: 1 },
+            { documentoId: 'doc-1', titulo: TITULO_FONTE, ordem: 2 },
+          ],
+        }),
       ),
+    )
+
+    renderizarComProvedores({ rota: ROTA_ASSISTENTE, usuario: criarUsuario() })
+    const campo = await screen.findByRole('textbox', {
+      name: 'Escreva sua pergunta',
+    })
+    await user.type(campo, 'Backup?')
+    await user.keyboard('{Enter}')
+
+    const links = await screen.findAllByRole('link', { name: TITULO_FONTE })
+    expect(links).toHaveLength(1)
+    expect(links[0]).toHaveAttribute('href', '/conhecimento/doc-1')
+  })
+
+  it('mostra as conversas anteriores e reabre uma delas', async () => {
+    const user = userEvent.setup()
+    renderizarComProvedores({ rota: ROTA_ASSISTENTE, usuario: criarUsuario() })
+
+    const lateral = await screen.findByRole('complementary', {
+      name: 'Conversas anteriores',
+    })
+    const botoes = await within(lateral).findAllByRole('button')
+    const conversa = botoes.find((b) =>
+      b.className.includes('conversa'),
+    ) as HTMLElement
+    await user.click(conversa)
+
+    expect(
+      await screen.findByText('Onde fica a política de reembolso?'),
     ).toBeInTheDocument()
-    expect(campo).toHaveFocus()
   })
 
   it.each([
@@ -203,7 +261,9 @@ describe('AssistentePage', () => {
 
       expect(await screen.findByText(mensagem)).toBeInTheDocument()
       expect(
-        screen.getByText('Minha pergunta continua aqui'),
+        within(screen.getByRole('log')).getByText(
+          'Minha pergunta continua aqui',
+        ),
       ).toBeInTheDocument()
       expect(screen.getByRole('alert')).toBeInTheDocument()
 
@@ -215,7 +275,9 @@ describe('AssistentePage', () => {
         ),
       ).toBeInTheDocument()
       expect(
-        screen.getByText('Minha pergunta continua aqui'),
+        within(screen.getByRole('log')).getByText(
+          'Minha pergunta continua aqui',
+        ),
       ).toBeInTheDocument()
     },
   )

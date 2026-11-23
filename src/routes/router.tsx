@@ -29,6 +29,7 @@ import { TrilhaEstudoPage } from '../pages/TrilhaEstudoPage.tsx'
 import { TrilhasPage } from '../pages/TrilhasPage.tsx'
 import { UsuariosPage } from '../pages/UsuariosPage.tsx'
 import { ROTAS } from './paths.ts'
+import { EmpresasPage } from '../pages/EmpresasPage.tsx'
 import {
   PERFIS_ACOMPANHAMENTO,
   PERFIS_ESTUDO,
@@ -70,7 +71,10 @@ export const routes: RouteObject[] = [
           {
             // Área administrativa: o perfil exigido fica na rota, não na página.
             element: <ProtectedRoute perfis={['ADMIN']} />,
-            children: [{ path: ROTAS.usuarios, element: <UsuariosPage /> }],
+            children: [
+              { path: ROTAS.usuarios, element: <UsuariosPage /> },
+              { path: ROTAS.empresas, element: <EmpresasPage /> },
+            ],
           },
           {
             // Estudar é de quem cursa a trilha; a gestão monta e acompanha.

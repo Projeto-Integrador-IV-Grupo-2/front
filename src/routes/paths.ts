@@ -11,6 +11,8 @@ export const ROTAS = {
   // Fora do menu: o atalho é o "Ver todas" do sino.
   notificacoes: '/notificacoes',
   usuarios: '/usuarios',
+  // Só para o ADMIN da plataforma (Nexo): cadastro das empresas clientes.
+  empresas: '/empresas',
   trilhas: '/trilhas',
   trilhaDetalhe: '/trilhas/:id',
   trilhaEstudo: '/trilhas/:id/estudar',

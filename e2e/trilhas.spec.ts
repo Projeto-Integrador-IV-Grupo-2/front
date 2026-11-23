@@ -30,7 +30,9 @@ test.describe('Trilhas — administrador', () => {
     await expect(dialogo).toBeHidden()
 
     await filtros(page).getByLabel('Buscar').fill(nome)
-    await expect(page.getByRole('link', { name: new RegExp(nome) })).toBeVisible()
+    await expect(
+      page.getByRole('link', { name: new RegExp(nome) }),
+    ).toBeVisible()
   })
 
   test('nome obrigatório: o formulário não envia vazio', async ({ page }) => {

@@ -101,9 +101,7 @@ test.describe('Usuários — gestão pelo administrador', () => {
     await page.getByRole('button', { name: 'Novo usuário' }).click()
     const formulario = page.getByRole('region', { name: 'Novo usuário' })
     await formulario.getByLabel('Nome completo').fill(unico('Pessoa'))
-    await formulario
-      .getByLabel('E-mail')
-      .fill(`${Date.now()}.fraca@nexo.com`)
+    await formulario.getByLabel('E-mail').fill(`${Date.now()}.fraca@nexo.com`)
     await formulario.getByLabel('Senha').fill('fraca')
     await formulario.getByLabel('Data de entrada').fill('2026-01-10')
     await formulario.getByRole('button', { name: 'Cadastrar' }).click()
